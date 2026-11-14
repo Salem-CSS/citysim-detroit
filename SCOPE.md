@@ -71,6 +71,39 @@ Every scenario uses one engine with the same three steps: convert the change int
 
 **Why lead with drones:** Corktown sits inside Michigan Central's Advanced Aerial Innovation Region, which [covers a 3-mile radius around Michigan Central](https://michigancentral.com/?p=3782). Aerialoop already flies a cargo drone route [beyond visual line of sight from Newlab's roof](https://michigancentral.com/?p=22696), the building you're demoing in. A drone scenario is a real decision this neighborhood faces now.
 
+## AI scenario chat
+
+Users don't pick from preset scenarios. They type what they want to happen, and a Strands agent turns it into a structured scenario that the traffic and sentiment engines run. The AI interprets the request. Only the engines produce numbers, so the chat never invents traffic counts or poll results.
+
+1. **User types a request:** "Turn the vacant lot at Michigan and 14th into a 6-story apartment building with a ground-floor grocery."
+2. **Agent parses it with tools:** `geocode` (Amazon Location), `find_parcels`, `lookup_trip_rate` (ITE table), and action tools: `add_building`, `modify_road`, `close_street`, `change_transit`, `add_drone_route`, `rezone`.
+3. **Agent writes a scenario spec** (actions, location, districts, assumptions, confidence).
+4. **Confirmation card in the chat:** "Here's what I understood: 180 apartments + 15,000 sq ft grocery on parcel X." Buttons: Edit, Run. This catches misreadings before a run, and shows judges the AI's reasoning.
+5. **Run:** traffic engine → street loads → each resident's personal impact → sentiment → map and results update.
+6. **Follow-ups edit the spec:** "make it 4 stories," "also cut a lane on Michigan," "compare with the first version."
+
+```json
+{
+  "actions": [
+    {"type": "add_building", "parcel": "<parcel id>", "uses": [
+      {"use": "apartments", "ite_code": 221, "units": 180},
+      {"use": "grocery", "ite_code": 850, "sqft": 15000}]}
+  ],
+  "districts": [6],
+  "assumptions": ["unit count inferred from 6 floors x lot size"],
+  "confidence": "medium"
+}
+```
+
+**Rules that keep it credible**
+
+- A use with no trip rate in the table (a skate park, a mural) gets the nearest code, a **low confidence** label, and its assumption listed.
+- Every scenario spec is saved to DynamoDB, so any run can be replayed and compared.
+- Off-topic or unsafe requests get a polite refusal.
+- Before the demo, write and test **5 demo prompts** end to end. If the agent misreads live, fall back to one of them.
+
+**UI change:** the scenario list on the left becomes a chat panel with the confirmation card and run history. The map and results panel stay the same.
+
 ## Data catalog
 
 Load 17 public datasets in four layers: the city itself, traffic, resident opinion, and scenario rates. Load every dataset citywide, tag each row with its council district, then build 3D detail district by district, starting with Corktown + Southwest. Two more datasets support this: ACS microdata (PUMS) for Detroit as the seed for AI residents, and the 2026 City Council district boundaries for tagging.
@@ -156,6 +189,37 @@ Sentiment comes from AI residents who are built to match real Detroit demographi
 4. **Weight and add up.** Post-stratify to census totals so the mix matches the real district. Report support / neutral / oppose, with a range from rerunning with different persona samples.
 5. **Hearing view (stretch).** Re-weight toward the groups that tend to show up at public hearings, and show the gap between "the neighborhood" and "the room."
 
+**Persona schema: every trait comes from census data**
+
+Census data says who each resident is; the AI decides what that person thinks. Survey and CBO data are used only to check the results (calibration), never as persona inputs.
+
+| Census field | Source | Persona trait (example) |
+| --- | --- | --- |
+| Age, sex | ACS microdata (PUMS) | 62-year-old woman |
+| Household income | PUMS | $34k household income |
+| Renter or owner, years in home | PUMS | Owner, 28 years on this block |
+| Vehicles in household | PUMS | No car |
+| Commute mode and time | PUMS | Takes DDOT 40 minutes to work |
+| Household size, children | PUMS | Lives with 2 grandkids |
+| Work location | LODES | Works in Dearborn |
+| Home block | Fitted to the district's census tracts | Links the persona to their street's traffic and noise |
+
+**Resident prompt template** (sent in batches of 25 personas per Bedrock call)
+
+```
+You are a Detroit resident: {age}, {tenure} for {years_in_home} years, {vehicles},
+{commute}, household income {income}, lives {distance} from {nearest_arterial} in District {district}.
+
+Proposed change: {scenario_summary}
+Your personal impact (computed): {impact_lines}
+
+Answer as this person, in JSON:
+{"support": 1-5, "top_concern": one of [traffic, noise, safety, privacy, rent, jobs, access, none],
+ "reaction": one sentence}
+```
+
+The `{impact_lines}` come from the traffic engine for that person's block (for example "+60 cars/day on your street, new grocery 0.3 mi away, no change to your bus"). The pipeline: census → persona → personal impact → AI reaction → weighted total by district → calibration check.
+
 **Calibration: the step that makes it predictive**
 
 Before running any scenario, ask the AI residents questions that real Detroiters have already answered in DMACS, and compare the results by subgroup.
@@ -171,6 +235,17 @@ Before running any scenario, ask the AI residents questions that real Detroiters
 The gap between simulated and real answers, in percentage points, is the model's **calibration error**. Show it on screen. Where the AI residents are consistently off for a subgroup, apply that offset to scenario results and label it. **Target:** under 10 points on the checks above. Treat this as a goal to test against, not a result to claim until it's measured.
 
 **Drone scenario detail:** the two drone polls disagree sharply (87% vs 23%). The best documented driver is direct experience: people who had seen or heard the drones felt more positive. So the drone persona prompt includes whether the resident lives inside the existing Michigan Central flight corridor. Expect higher support inside it than outside, and noise as the top concern for residents under the route; in Christiansburg noise was the most common complaint, at 17%.
+
+**More data for checking sentiment (calibration only).** DMACS covers general opinion. These add what Detroiters said about specific projects.
+
+| Dataset | What it adds | Source |
+| --- | --- | --- |
+| **Community Benefits Ordinance (CBO) reports** | For every large Detroit project, a resident advisory council writes an itemized list of concerns, and the developer must answer each one | [CBO ordinance](https://detroitmi.gov/sites/detroitmi.localhost/files/2020-01/Community%20Benefits%20Ordinance.pdf), [CBO reports](https://detroitmi.gov/taxonomy/term/6281) |
+| Michigan & Church St CBO report (Corktown) | Residents' impact list starts with concerns about increased traffic; a backtest for the housing scenario | [report](https://training.detroitmi.gov/sites/training.detroitmi/files/2021-07/Michigan%20and%20Church%20St.%20Community%20Benefits%20Report_FINAL.pdf) |
+| Detroit City FC stadium CBO report (2025) | Public meeting summaries and comments; a backtest for the stadium scenario | [report](https://otc.detroitmi.gov/sites/detroitmi.localhost/files/2025-11/DCFC%20Stadium%20Community%20Benefits%20PDD%20Report%20and%20Cover%20Letter.pdf) |
+| Detroit Documenters notes | Notes and transcripts from public meetings, including public comment | [Outlier Media](https://outliermedia.org/detroit-documenters/) |
+
+**How to use it:** run the model on a past CBO project (same site, same size) and compare its top predicted concerns with the advisory council's actual list. Only claim a match once the test has been run.
 
 ## Architecture on AWS
 
@@ -193,6 +268,48 @@ The traffic engine's per-block impacts feed the sentiment run, so sentiment alwa
 
 **Cost and speed guardrails:** cache persona responses by scenario plus impact band, run residents only in the districts a scenario touches (500 per district, up to 2,000 per live run with 4 districts), and pre-run all 7 districts (3,500 residents) overnight as the scale proof.
 
+## Build checklist
+
+**Accounts (first 30 minutes)**
+
+- [ ] AWS account in us-east-1 or us-west-2, billing working, hackathon credits applied if offered
+- [ ] Bedrock model access confirmed for Nova 2 Lite (residents) and a stronger model for the chat agent
+- [ ] Nova requests-per-minute quota checked in Service Quotas; residents batched 25 per call (80 calls per 2,000-resident run)
+- [ ] Census API key (free)
+- [ ] ICPSR account for raw DMACS files (optional; published summaries are enough)
+- [ ] Teammates added to this repo
+- [ ] Shipyard team set up
+
+**AWS services**
+
+| Service | Role |
+| --- | --- |
+| Amplify Hosting | Next.js frontend |
+| API Gateway + Lambda (Python) | Traffic engine and scenario API |
+| Strands Agents on Bedrock AgentCore | AI scenario chat |
+| Bedrock, Nova 2 Lite | AI residents, batched |
+| Step Functions (Distributed Map) | Parallel resident batches |
+| S3 + Athena | Data lake; Overture buildings read in place |
+| DynamoDB | Scenario specs, results, chat history, calibration scores |
+| Amazon Location Service | Base map tiles and geocoding place names for the chat |
+| CloudWatch | Logs while debugging |
+
+**Libraries:** Next.js, deck.gl, MapLibre GL, Carbon React or Tailwind (frontend); geopandas, osmnx, networkx, pandas, duckdb, pyarrow, shapely, gtfs-kit, ipfn (data and engine); strands-agents, boto3 (agent).
+
+**Data downloads (tonight)**
+
+- [ ] Council districts 2026, parcels, zoning
+- [ ] Traffic volumes (AADT) and crashes
+- [ ] DDOT GTFS
+- [ ] SEMCOG building footprints + Overture buildings for Detroit
+- [ ] OSM road network via osmnx
+- [ ] Census ACS tables, TIGER/Line tract and block group boundaries
+- [ ] Census PUMS for Michigan
+- [ ] LODES 8 for Michigan
+- [ ] DMACS summary results
+- [ ] 2–3 CBO reports for calibration
+- [ ] ITE trip rate table (about 25 land-use codes, typed by hand)
+
 ## Build plan
 
 All 6 live scenarios and calibration should run end to end by Sunday 5 AM. That leaves the morning for polish, cached demo runs and three rehearsals before the 11:30 AM submission.
@@ -205,7 +322,7 @@ All 6 live scenarios and calibration should run end to end by Sunday 5 AM. That 
 | AI residents + Bedrock | 5 PM – 11 PM |
 | Calibration vs real polls | 9 PM – 2 AM |
 | Wire 6 live scenarios | 11 PM – 5 AM |
-| Strands agent commands | 12 AM – 4 AM |
+| AI scenario chat (Strands agent) | 12 AM – 4 AM |
 | All 7 districts pre-built | 2 AM – 6 AM |
 | Polish, cache demo runs | 6 AM – 9 AM |
 | Rehearse, video, submit | 9 AM – 11:30 AM |
@@ -223,7 +340,7 @@ Doors lock at 8 PM Saturday. Submission deadline is 12 PM Sunday; aim for 11:30 
 
 1. Hearing-room re-weighting
 2. Stadium and data center scenarios (show them as pre-computed)
-3. Typed commands through the Strands agent (keep click-to-place tools)
+3. Free-form chat (fall back to the 5 tested demo prompts)
 4. Backtest of the traffic model (describe it as next step)
 
 **Never cut:** place scenario → street loads on the map → AI resident forecast with its calibration error shown. That loop is the product.
