@@ -45,7 +45,7 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 | Residents (Bedrock) | — | Scaffolded: prompt + response checks work, batching stubbed | 11-14 17:50 |
 | Agent + Infra (Strands, AWS stack) | — | Not started | 11-14 17:50 |
 | Web (Next.js + deck.gl) | Salem | Static prototype done (`web/prototype/index.html`); Next.js not started | 11-14 17:50 |
-| Deploy (Vercel) | Salem | Switching to Vercel; waiting on GitHub app install, then first deploy | 11-14 17:55 |
+| Deploy (Vercel) | Salem | **Live: https://citysim-detroit.vercel.app** (auto-deploys from `main`) | 11-14 17:58 |
 
 ## Open questions / handoffs
 
@@ -56,6 +56,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 ---
 
 ## Entries
+
+### 2026-11-14 17:58 ET · Salem (AI) · Deploy
+**Did:** First Vercel deploy succeeded. Site is live at **https://citysim-detroit.vercel.app** (serves `web/prototype/index.html`).
+**Files:** none (Vercel dashboard)
+**Contracts changed:** none
+**Decisions:** Vercel project `citysim-detroit` on Salem's Hobby account, root directory `web/prototype`, preset Other, no build. Every push to `main` redeploys. When Next.js is ready: Project Settings → General → Root Directory = `web`, framework auto-detects. The backend API URL will go in Vercel env vars (e.g. `NEXT_PUBLIC_API_URL`).
+**Blocked / needs:** none
+**Next:** —
 
 ### 2026-11-14 17:55 ET · Salem (AI) · Deploy
 **Did:** Dropped Render (the service was configured but never deployed, so nothing exists there). Hosting the frontend on **Vercel** instead.

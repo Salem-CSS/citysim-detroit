@@ -2,6 +2,8 @@
 
 Forecasts **traffic load** and **public sentiment** for proposed changes in Detroit neighborhoods: housing, drone delivery, road diets, bus changes and more. Pick up to 4 of Detroit's 7 City Council districts, place a scenario on a realistic 3D map, and see street-by-street load plus support and opposition from 500 census-based AI residents per district.
 
+**Live prototype:** https://citysim-detroit.vercel.app
+
 Built for the BuilderWars Hackathon (Nov 14–15, 2026, Newlab Detroit), AWS track.
 
 - **Team log (read first, write last):** [LOG.md](LOG.md)
