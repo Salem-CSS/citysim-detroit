@@ -186,6 +186,20 @@ Decisions, each forced by a verified limit:
 
 DynamoDB tables stay as in `infra/README.md`: `scenarios`, `runs`, `calibration`.
 
+### 5.1 AWS decisions (agreed Nov 14)
+
+| Decision | Detail |
+| --- | --- |
+| **Infrastructure as code: SAM** | One `infra/template.yaml`, deployed with `sam build && sam deploy`. No console-built resources, so either teammate (or a Claude Code session) can redeploy. |
+| **Services in use** | S3, DynamoDB, Lambda, Step Functions, Bedrock, API Gateway (HTTP API), Location Service, Budgets, plus CloudWatch and IAM. |
+| **Budgets first** | Create a spending alert before the first Bedrock call. |
+| **Resident model** | `us.amazon.nova-2-lite-v1:0`, read from `BEDROCK_RESIDENT_MODEL` so it can be swapped. The bare ID in `.env.example` fails in us-east-1. Confirm the choice with the calibration comparison in section 10. |
+| **Agent model** | `us.anthropic.claude-haiku-5-5`, read from `BEDROCK_AGENT_MODEL`. Runs in a plain Lambda, not AgentCore (SCOPE.md says AgentCore; BUILD.md is right). |
+| **Every resident batch is a Lambda** | No direct Step Functions–Bedrock integration: each batch must build the prompt, validate answers and retry. |
+| **Athena: not used** | Data prep runs in Python on a laptop; Overture buildings come from the `overturemaps` CLI. |
+| **Dropped** | Bedrock prompt caching (the shared prefix is under the 1,000-token minimum). Secrets Manager (only needed for a Claude API fallback outside Bedrock). |
+| **Deferred** | Bedrock Guardrails, until the core loop works. Not verified. |
+
 ## 6. Data pipeline (`data/`)
 
 Run on a laptop. Output goes to `s3://$DATA_BUCKET/processed/` and `personas/`.
@@ -299,6 +313,7 @@ Fixed alongside it: the resident description uses the same census fields in the 
 
 - Ask each question with the survey's own wording and answer options (copy them from the topline PDFs), so "don't know" and the 7-point satisfaction scale are handled the same way as the real survey.
 - Report simulated %, real %, error in points, and the average. Store with seed and prompt version. Show it whatever it is.
+- **Model comparison (once):** run the calibration questions for one district's 500 residents on Nova 2 Lite and on Claude Haiku 5.5. Keep the model with the lower average error unless its cost or speed rules it out, and record both results. Store the model ID with every calibration record.
 - Drone polls stay as bounds (23% to 87%), plus the US Postal Service OIG 2016 national figure (44% like the idea, 65% of millennials, 24% of boomers) as a third reference. None is a Detroit result.
 - `run_result.calibration.measured` stays `false` until this has run.
 
