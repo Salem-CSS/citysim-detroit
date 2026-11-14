@@ -72,8 +72,8 @@ python -m data.download.all
 This runs three scripts. You can also run them one at a time if one fails:
 
 ```bash
-python -m data.download.detroit    # council districts, parcels, zoning, traffic counts, 311, tracts
-python -m data.download.census     # map boundaries, ACS tables, block population, PUMS
+python -m data.download.detroit    # council districts, roads, traffic counts, parcels, zoning, bus routes and stops, buildings, GTFS, 311
+python -m data.download.census     # map boundaries, ACS tables, block population, PUMS (needs CENSUS_API_KEY; --skip-api for the files that do not)
 python -m data.download.lodes      # where residents work
 ```
 
@@ -88,18 +88,24 @@ find data/raw -type f | sort       # Windows: Get-ChildItem -Recurse data\raw -F
 You should see roughly this (years may differ; the scripts pick the newest published):
 
 ```
+data/raw/manifest.json                                    (source URL, row count and download time for every file)
 data/raw/detroit/council_districts_2026.geojson
-data/raw/detroit/parcels.*
-data/raw/detroit/zoning.*
-data/raw/detroit/traffic_volumes.*
-data/raw/detroit/improve_detroit_311.*
-data/raw/detroit/census_tracts_2020.*
+data/raw/detroit/traffic_volumes_20xx.geojson             (newest count year in the city service)
+data/raw/detroit/roads.geojson
+data/raw/detroit/neighborhoods.geojson
+data/raw/detroit/ddot_routes.geojson
+data/raw/detroit/ddot_stop_ridership.geojson
+data/raw/detroit/zoning.geojson
+data/raw/detroit/parcels.geojson                          (taxpayer name and address columns are not downloaded)
+data/raw/detroit/building_footprints.geojson
+data/raw/detroit/improve_detroit_311.geojson
+data/raw/ddot/ddot_gtfs.zip
 data/raw/census/tiger/tl_20xx_26_tract.zip
 data/raw/census/tiger/tl_20xx_26_bg.zip
 data/raw/census/tiger/tl_20xx_26_tabblock20.zip
 data/raw/census/tiger/tl_20xx_26_place.zip
 data/raw/census/acs/acs5_20xx_B01001_tract_wayne.csv      (+ 8 more tables and variables.json)
-data/raw/census/decennial/dec2020_pl_P1_blocks_wayne.csv
+data/raw/census/decennial/dec2020_pl_P1_P3_blocks_wayne.csv
 data/raw/census/rel/2020_Census_Tract_to_2020_PUMA.txt
 data/raw/census/pums/pums5_20xx_csv_pmi.zip
 data/raw/census/pums/pums5_20xx_csv_hmi.zip
@@ -139,8 +145,8 @@ If the other teammate needs to read the bucket from their machine, create an IAM
 | Problem | Fix |
 | --- | --- |
 | `none of these exist` for a TIGER or PUMS file | That year isn't published yet and the fallback years failed too. Check the URL in a browser, then edit the year lists at the top of `data/config.py`. |
-| ACS step returns HTTP 400/403 | `CENSUS_API_KEY` missing or not activated yet. Click the activation link in the key email. |
-| Detroit dataset `FAILED` | The dataset id changed on detroitdata.org. Search the site for it, copy the id from the URL, update `DATASETS` in `data/download/detroit.py`. |
+| `CENSUS_API_KEY is not set`, or the ACS step returns HTTP 400/403 | The key is required. Put it in `.env`; if it is there, click the activation link in the key email. |
+| Detroit dataset `FAILED` | The layer moved. Find it in the [city services list](https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services) and update `LAYERS` in `data/download/detroit.py`. |
 | Block population request times out | Census API is slow for all of Wayne County at once. Re-run; it skips what's already done. |
 | `aws s3 mb` says bucket exists | Bucket names are global. Use `citysim-data-$ACCOUNT-<your initials>` and update `DATA_BUCKET` in `.env`. |
 | `ModuleNotFoundError: data` | Run commands from the repo root, not inside `data/`. |

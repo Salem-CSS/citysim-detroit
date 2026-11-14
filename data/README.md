@@ -23,11 +23,12 @@ Everything lands in `data/raw/` (gitignored). Re-running skips files you already
 | --- | --- | --- |
 | TIGER/Line | MI tracts, block groups, 2020 blocks, places | Tract and block geometry; Detroit boundary |
 | ACS 5-year (API) | 9 tract tables for Wayne County (`config.ACS_TABLES`) | IPF control totals for personas |
-| 2020 Census PL (API) | Block population, Wayne County | Assigning each persona a home block |
+| 2020 Census PL (API) | Block population, total and 18+, Wayne County | Assigning each persona a home block |
 | Census relationship file | 2020 tract to 2020 PUMA | Which PUMS records cover Detroit |
 | ACS PUMS 5-year | Michigan person + household CSVs | Seed records for AI residents |
 | LODES 8 | MI OD, RAC, WAC, block crosswalk | Where residents work; trip distribution |
-| Detroit Open Data | 2026 council districts, parcels, zoning, traffic volumes, 311, 2020 tracts | District tagging, sites, AADT |
+| City of Detroit feature services | 2026 council districts, road network, newest traffic volumes, parcels (no taxpayer columns), zoning, neighborhoods, DDOT routes and stop ridership, building footprints, 311 | District tagging, routing, sites, AADT, transit, map |
+| DDOT | GTFS feed (`data/raw/ddot/ddot_gtfs.zip`) | Bus schedule |
 
 Scripts try the newest vintage first and fall back to older ones if a file isn't published yet.
 

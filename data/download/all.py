@@ -2,6 +2,7 @@
 from data.download import census, lodes, detroit
 
 if __name__ == "__main__":
+    census.require_key()   # stop now, not after 20 minutes of city downloads
     detroit.main()
-    census.main()
+    census.main([])
     lodes.main()
