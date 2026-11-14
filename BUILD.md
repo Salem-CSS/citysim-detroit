@@ -148,6 +148,8 @@ Build the full traffic path for one action first, on fixtures, then on real data
 
 Build entirely on fixtures. Don't wait for the backend.
 
+**Design reference:** [`web/prototype/index.html`](web/prototype/index.html) is the static prototype of this screen. Match its layout, design tokens (`:root` CSS variables) and component split (listed in its header comment). Rules: no text under 13px, body 15px, touch targets 40px or larger.
+
 **Do** (`web/`, Next.js + deck.gl + MapLibre):
 - Amazon Location (or MapLibre demo) base map centered on Corktown
 - Extruded buildings layer from a GeoJSON fixture, colored by impact
