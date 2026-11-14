@@ -272,6 +272,22 @@ Run on a laptop. Output goes to `s3://$DATA_BUCKET/processed/` and `personas/`.
 - **Range:** bootstrap resample of personas within district, 200 draws, 5th–95th percentile. This is sampling spread only, not model error; label it so.
 - **Cache key:** spec hash + persona id + impact lines.
 
+### 9.1 Resident questionnaire (proposed Nov 14, not yet agreed)
+
+One fixed set, identical wording and answer options for every resident on every proposal. Questions 1, 2 and 7 are what `residents/prompt.py` asks today. Questions 3–6 are new and each adds a field to `run_result`, so the frontend lane must agree. If fewer are wanted, cut 4 first.
+
+| # | Question | Answer options | Feeds |
+| --- | --- | --- | --- |
+| 1 | Do you support or oppose this proposal? | 1 strongly oppose to 5 strongly support | Support split |
+| 2 | What worries you most about it? | traffic, noise, safety, privacy, rent, jobs, access, none | "What worries people" |
+| 3 | What is the biggest benefit to you, if any? | jobs, housing, convenience, safety, less traffic, none | Why supporters support |
+| 4 | Would it make daily life for your household better, worse or no different? | better, worse, no different | Personal impact vs general opinion |
+| 5 | How likely are you to speak at a public meeting about it? | not likely, somewhat, very | "The neighborhood vs the room" |
+| 6 | What one change would make you more supportive? | smaller, different location, limited hours, community benefits, nothing | "Test a fix" suggestions |
+| 7 | Say what you think in one sentence. | Free text under 200 characters | Quotes |
+
+Fixed alongside it: the resident description uses the same census fields in the same order for everyone, followed by that resident's computed impact lines. The calibration questions (section 10) are a separate set asked once per resident set.
+
 ## 10. Calibration (`residents/calibrate.py`)
 
 | Check | Real value | Source |
