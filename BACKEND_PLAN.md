@@ -36,7 +36,7 @@ Checked live from this session on Nov 14, 2026: endpoints were queried, field li
 | Overture buildings | Confirmed | Latest release `2026-10-21.0`, schema v2.0.0 (a breaking change in Sept 2026). `height` and `num_floors` still present. |
 | Crashes | Confirmed | One layer per year 2011–2024. |
 | 311 (Improve Detroit) | Confirmed | 765,518 points with request type and neighborhood. |
-| Census API | Confirmed, **key now mandatory** | Requests without a key return a "Missing Key" page. ACS 2024 5-year endpoint is live. Table pulls could not be tested without a key. |
+| Census API | Confirmed, **key now mandatory** | Requests without a key return a "Missing Key" page. With a key: all 9 ACS 2024 tables return 627 Wayne County tracts, and P1 + P3 return 32,022 blocks. Tracts 5214 + 5215 total 2,824 residents (ACS 2024), not the scope's 2,520. |
 | TIGER 2025 | Confirmed | Tract, block group, 2020 block (122 MB), place and PUMA files all present. |
 | PUMS 2024 5-year | Confirmed | Michigan person (70 MB) and household (32 MB) zips present. All needed variables exist. `PUMA` uses 2020 definitions only. |
 | LODES 8 Michigan | Confirmed, older than scoped | Newest **OD and WAC year is 2021**. 2022 and 2023 exist for RAC only. |
@@ -133,7 +133,12 @@ Riders affected can be computed (stop boardings × headway change × published e
 
 ### 4.8 Rezoning: maximum units under a zone
 
-The zoning layer carries codes, not limits. **Replace with:** a hand-typed `data/zoning_capacity.csv` from the Detroit Zoning Ordinance (Chapter 50), one row per zone with the ordinance section cited. A zone missing from the table returns "not supported yet". Not yet typed or checked.
+The zoning layer carries codes, not limits, and the ordinance sets **no units-per-lot limit** for apartments in any zone. It limits floor area (FAR), height and lot coverage. **Replace with:**
+
+- `data/zoning_capacity.csv`, typed Nov 14 from the ordinance text (Chapter 50, Articles VIII–XIII), one row per zone with section numbers.
+- Maximum floor area = parcel area × FAR. Units = floor area ÷ average unit size, where **average unit size is a stated input**, never a default.
+- This works only for zones with a numeric apartment FAR: R2 (0.50, capped at 8 units), R3 (0.70), R4 (1.00), R5 (1.50), R6 (2.00), B1 (1.00), B2 (1.50), B4 (2.00), SD4 (4.50). Every other zone returns "no numeric limit in the ordinance" (height-only, volume-based, or set per project).
+- **Caveat:** the official sites refused this session, so the table was read from a third-party mirror of the code text (newest amendment in it took effect March 2024). Check the nine FAR values against the official code before showing rezone results. Amendments from 2025 could not be read.
 
 ### 4.9 Stadium trips
 
@@ -247,7 +252,7 @@ Run on a laptop. Output goes to `s3://$DATA_BUCKET/processed/` and `personas/`.
 | `modify_road` (close) | count moved to detour path | segment | Sourced + one labelled assumption |
 | `add_drone_route` | path geometry, persona positions | flights, packages per flight, packages per van route, band width | Traffic effect is a district total only (4.2) |
 | `change_transit` | route headways, stop boardings, elasticity 0.5 | new headway; diversion share if car trips wanted | Riders lost sourced; car shift input-only (4.7) |
-| `rezone` | parcel area × zoning table → `add_building` | new zone | Blocked until the zoning table is typed (4.8) |
+| `rezone` | parcel area × FAR from the zoning table → `add_building` | new zone, average unit size | Nine zones computable; table needs an official-source check (4.8) |
 | `add_event_surge` | seats, FHWA occupancy | attendance share, auto share, events per year | Sourced with stated inputs (4.9) |
 
 ### 8.3 Tests
@@ -328,10 +333,10 @@ Steps 4–5, 6, 7 and 10 can run in parallel once 2 and 3 are done.
 
 ## 14. Open items that need a person
 
-1. **Census API key** in `.env`. Nothing census-related runs without it.
+1. **Census API key** in `.env`. Nothing census-related runs without it. (Tested Nov 14: works.)
 2. **GTFS and OSM hosts** refused this session: test both from a laptop. Neither blocks the plan (route headways and the road network have confirmed alternatives).
 3. **DDOT stop ridership period:** ask DDOT or find the layer's metadata before quoting riders-lost numbers on stage.
-4. **Zoning capacity table:** someone types it from the ordinance, or `rezone` stays "not supported yet".
+4. **Zoning capacity table:** typed from a mirror of the ordinance. Someone opens the official code in a browser and confirms the nine FAR values (4.8).
 5. **K, D and lane capacity:** read the FDOT Quality/Level of Service tables directly for a citation, or keep them labelled as assumptions.
 6. **DMACS Wave 21 open microdata:** download from U-M Deep Blue if subgroup calibration is wanted.
 7. **Demo script:** the housing line "all counted streets stay green" and the drone line "van trips removed from Michigan Ave" both need rewording once real results exist (see 4.2 and 8.3).
