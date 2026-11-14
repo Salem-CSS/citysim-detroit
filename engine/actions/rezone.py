@@ -1,4 +1,4 @@
-"""rezone: Max units under new zone -> add_building."""
+"""rezone: values: parcels, new_zone. Max units under new zone -> add_building logic."""
 
-def run(action: dict, ctx) -> dict:
+def run(values: dict, ctx) -> dict:
     raise NotImplementedError("rezone")

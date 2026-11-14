@@ -13,20 +13,6 @@
       48
     ]
   },
-  "worries": [
-    {
-      "concern": "noise",
-      "share": 34
-    },
-    {
-      "concern": "privacy",
-      "share": 21
-    },
-    {
-      "concern": "safety",
-      "share": 18
-    }
-  ],
   "groups": [
     {
       "dimension": "exposure",
@@ -82,8 +68,8 @@
         "neutral": 18,
         "oppose": 24
       },
-      "top_concern": "noise",
-      "n": 500
+      "n": 500,
+      "top_reason": "noise"
     },
     {
       "district": 5,
@@ -92,8 +78,8 @@
         "neutral": 22,
         "oppose": 29
       },
-      "top_concern": "noise",
-      "n": 500
+      "n": 500,
+      "top_reason": "noise"
     },
     {
       "district": 4,
@@ -102,8 +88,8 @@
         "neutral": 24,
         "oppose": 35
       },
-      "top_concern": "privacy",
-      "n": 500
+      "n": 500,
+      "top_reason": "privacy"
     },
     {
       "district": 7,
@@ -112,8 +98,8 @@
         "neutral": 37,
         "oppose": 30
       },
-      "top_concern": "safety",
-      "n": 500
+      "n": 500,
+      "top_reason": "safety"
     }
   ],
   "quotes": [
@@ -122,21 +108,24 @@
       "text": "I see them every day already. Faster deliveries help since I don't have a car.",
       "stance": "support",
       "who": "Renter, 27, District 5",
-      "district": 5
+      "district": 5,
+      "reason": "access"
     },
     {
       "persona_id": "d6-0031",
       "text": "If it takes vans off Michigan, fine. I just don't want them buzzing over my yard at 6 AM.",
       "stance": "neutral",
       "who": "Homeowner, 62, District 6",
-      "district": 6
+      "district": 6,
+      "reason": "noise"
     },
     {
       "persona_id": "d4-0408",
       "text": "Who's watching the camera footage from these things over our houses?",
       "stance": "oppose",
       "who": "Homeowner, 58, District 4",
-      "district": 4
+      "district": 4,
+      "reason": "privacy"
     }
   ],
   "segments": [
@@ -170,9 +159,9 @@
     {
       "block_geoid": "261635214001000",
       "support": 61,
-      "top_concern": "noise",
       "n": 38,
-      "in_noise_band": true
+      "in_noise_band": true,
+      "top_reason": "noise"
     }
   ],
   "calibration": {
@@ -188,6 +177,33 @@
     "dropped": 9,
     "drop_rate": 0.0045,
     "unreliable": false,
-    "seconds": 38
-  }
+    "seconds": 38,
+    "quotes_requested": 200
+  },
+  "spec_version": 1,
+  "reasons": [
+    {
+      "reason": "noise",
+      "share": 34,
+      "share_among_oppose": 52
+    },
+    {
+      "reason": "privacy",
+      "share": 21,
+      "share_among_oppose": 27
+    },
+    {
+      "reason": "safety",
+      "share": 18,
+      "share_among_oppose": 15
+    },
+    {
+      "reason": "access",
+      "share": 14
+    },
+    {
+      "reason": "none",
+      "share": 13
+    }
+  ]
 }

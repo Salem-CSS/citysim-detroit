@@ -60,7 +60,10 @@ Agents can't do this part. Do it while Step 1 runs.
 Write the shared formats that every other lane builds against.
 
 **Create:**
-- `contracts/scenario_spec.schema.json`: `actions[]` (each with `type` from the 6 actions plus its parameters), `districts[]`, `assumptions[]`, `confidence` (low / medium / high), `prompt`, `spec_id`
+- `contracts/actions.json`: the 6 action types and their **constraints** (label, type, unit, range, options, default). One source of truth for agent, UI and engine.
+- `contracts/scenario_spec.schema.json` (v2): `spec_id`, `version`, `status` (draft / confirmed), `prompt` (record only), neutral `summary`, `districts[]`, `confidence`, `actions[]` each with `constraints[]` (`value` + `source`: from_question / assumed / edited)
+- `contracts/impacts.schema.json`: per-block impacts and each resident's impact lines
+- `contracts/resident_response.schema.json`: `stance` (support / neutral / oppose), `reason` (fixed list), optional `quote` for the ~10% sample
 - `contracts/run_result.schema.json`: `spec_id`, `segments[]` (segment id, geometry ref, AADT before/after, lanes, load before/after, color), `districts[]` (support / neutral / oppose %, range, top concerns, 5 sample quotes), `calibration` (per-check error, average error), `run_stats` (valid, retried, dropped, drop rate), `cached` flag
 - `contracts/persona.schema.json`: persona id, district, home block, age, sex, income, tenure, years in home, vehicles, commute mode/time, household size, children, work tract
 - `fixtures/`: about 50 street segments, 20 parcels and 100 personas for District 6 (Corktown/Southwest), plus one complete `run_result` example. Hand-made values are fine.
@@ -136,7 +139,7 @@ Build the full traffic path for one action first, on fixtures, then on real data
 3. **Distribute:** split by destination using LODES flows from the site's tract (top destinations, grouped by direction).
 4. **Assign:** shortest path on the OSM graph from the site to each destination group. **Precompute the graph and paths offline** and load a pickle in Lambda.
 5. **Load:** `(AADT × K × D) / (through lanes per direction × 800)` with K = 0.09, D = 0.55, all editable via spec `assumptions`.
-6. **Per-block impact:** for each home block, cars/day added on its nearest street, plus distance to the site. This feeds the residents.
+6. **Per-block impact:** for each home block, cars/day change on its nearest street, distance to the site, noise-zone flag and distance, bus wait before/after. Turn them into each resident's impact lines with `engine/impact_lines.py` and output `contracts/impacts.schema.json`. This feeds the residents.
 
 **Tests:** 400 apartments at Michigan and 14th gives 400 × 4.54 = 1,816 raw daily trips before adjustment. The Michigan Ave load stays under 0.75.
 
@@ -166,11 +169,11 @@ Build entirely on fixtures. Don't wait for the backend.
 ## Step 7 — Resident runner (Lane C, 5:30–11:00 PM)
 
 **Do** (`residents/`):
-- Build prompts from the SCOPE.md template: persona traits + `scenario_summary` + `impact_lines` from the engine's per-block output
+- Build prompts with `residents/prompt.build(personas, confirmed_spec, impact_lines)`: persona traits + the spec's neutral `summary` + each resident's impact lines. Never send the raw prompt
 - Batch 25 personas per Bedrock call, Nova 2 Lite, temperature 0.7, JSON-only output
-- Validate each item: `support` 1–5, `top_concern` from the fixed list, `reaction` under 200 chars, `persona_id` matches
+- Validate each item with `residents/validate.check`: `stance` support / neutral / oppose, `reason` from the fixed list, `quote` only for the ~10% quote sample (`wants_quote`), `persona_id` matches
 - Retry failed personas once in a smaller batch. Still invalid means dropped. Log valid / retried / dropped / drop rate. Flag the run if drops exceed 5%
-- Aggregate: post-stratify to district census totals, report support (4–5) / neutral (3) / oppose (1–2), top 3 concerns, 5 representative quotes
+- Aggregate: post-stratify to district census totals, report support / neutral / oppose shares, reasons (overall and among opponents), support by group (exposure from impacts flags, tenure, age, vehicles), 5 representative quotes
 - Range: rerun aggregation on 3 bootstrap resamples, report min–max
 - Exponential backoff on 429s, capped concurrency
 - Cache by `hash(scenario summary + impact band + persona_id)`
@@ -194,7 +197,7 @@ Build entirely on fixtures. Don't wait for the backend.
 ## Step 9 — Calibration (Lane C, 9:00 PM–2:00 AM)
 
 **Do:**
-- Ask all personas the 3 DMACS Wave 22 questions in SCOPE.md (safety walking, neighborhood satisfaction, right direction)
+- Ask all personas the 3 DMACS Wave 22 statements in `data/calibration_targets.json` (support = agree), using `residents/prompt.CALIBRATION_TEMPLATE`
 - Compute simulated %, real %, absolute error per check and average error
 - Add the persona sanity check (share living in Detroit 20+ years vs 78%) from persona traits
 - Store in DynamoDB `calibration` with seed + prompt version
@@ -208,7 +211,7 @@ Build entirely on fixtures. Don't wait for the backend.
 
 **Do** (`agent/`, Strands Agents in a plain Lambda, not AgentCore):
 - Tools: `geocode` (Amazon Location), `find_parcels`, `lookup_trip_rate`, and one tool per engine action: `add_building`, `modify_road`, `add_drone_route`, `change_transit`, `rezone`, `add_event_surge`
-- Output is always a spec that passes `scenario_spec.schema.json`, plus a one-line plain-English summary for the confirmation card
+- Output is always a v2 spec that passes `scenario_spec.schema.json`: actions built with `contracts/spec.new_action` (every constraint present, `source` set), neutral `summary` from `summary_line`, `status: draft`. The left panel draws one block per constraint
 - Follow-ups edit the current spec ("make it 4 stories," "also cut a lane on Michigan")
 - Actions not built yet return "not supported yet". Off-topic or unsafe requests get a short refusal
 - System prompt: the agent interprets only, never states traffic or sentiment numbers

@@ -1,45 +1,155 @@
 {
   "spec_id": "spec-demo-drone",
-  "prompt": "Expand the Newlab drone route to 200 flights a day over Corktown",
-  "summary": "Drone delivery route from the Newlab rooftop, 200 flights a day over Districts 6, 5 and 4",
+  "version": 1,
+  "parent_spec_id": null,
+  "status": "confirmed",
+  "prompt": "What if we expand the Newlab drone route to 200 flights a day over Corktown?",
+  "summary": "Proposal: Drone delivery route (takes off from: Newlab rooftop, flights a day: 200 flights, flying height: 200 ft, flying hours: 7 AM to 9 PM, delivery vans it replaces: 1 in 5) in Districts 4, 5, 6, 7.",
   "districts": [
-    6,
-    5,
     4,
+    5,
+    6,
     7
   ],
-  "assumptions": [
-    "flying height 200 ft (default)",
-    "1 in 5 van deliveries replaced (default)"
-  ],
   "confidence": "medium",
-  "parent_spec_id": null,
+  "unsupported": [],
   "actions": [
     {
+      "action_id": "add_drone_route-a1",
       "type": "add_drone_route",
-      "hub": {
-        "lat": 42.3289,
-        "lon": -83.0776
-      },
-      "path": [
+      "title": "Drone delivery route",
+      "constraints": [
         {
-          "lat": 42.3289,
-          "lon": -83.0776
+          "id": "hub",
+          "label": "Takes off from",
+          "type": "select",
+          "options": [
+            {
+              "value": "newlab",
+              "label": "Newlab rooftop"
+            },
+            {
+              "value": "mc_garage",
+              "label": "Michigan Central garage"
+            },
+            {
+              "value": "bagley_lot",
+              "label": "Corktown lot on Bagley"
+            }
+          ],
+          "show": "panel",
+          "value": "newlab",
+          "source": "from_question"
         },
         {
-          "lat": 42.3355,
-          "lon": -83.056
+          "id": "flights_per_day",
+          "label": "Flights a day",
+          "type": "number",
+          "unit": "flights",
+          "min": 0,
+          "max": 1000,
+          "step": 25,
+          "show": "panel",
+          "value": 200,
+          "source": "from_question"
         },
         {
-          "lat": 42.347,
-          "lon": -83.033
+          "id": "altitude_ft",
+          "label": "Flying height",
+          "type": "select",
+          "options": [
+            {
+              "value": 200,
+              "label": "200 ft"
+            },
+            {
+              "value": 300,
+              "label": "300 ft"
+            },
+            {
+              "value": 400,
+              "label": "400 ft"
+            }
+          ],
+          "ui": "segmented",
+          "show": "panel",
+          "value": 200,
+          "source": "assumed"
+        },
+        {
+          "id": "flying_hours",
+          "label": "Flying hours",
+          "type": "select",
+          "options": [
+            {
+              "value": "7-21",
+              "label": "7 AM to 9 PM"
+            },
+            {
+              "value": "8-20",
+              "label": "8 AM to 8 PM"
+            },
+            {
+              "value": "0-24",
+              "label": "24 hours"
+            }
+          ],
+          "show": "panel",
+          "value": "7-21",
+          "source": "assumed"
+        },
+        {
+          "id": "van_share_replaced",
+          "label": "Delivery vans it replaces",
+          "type": "select",
+          "options": [
+            {
+              "value": 0.1,
+              "label": "1 in 10"
+            },
+            {
+              "value": 0.2,
+              "label": "1 in 5"
+            },
+            {
+              "value": 0.33,
+              "label": "1 in 3"
+            }
+          ],
+          "show": "panel",
+          "value": 0.2,
+          "source": "assumed"
+        },
+        {
+          "id": "path",
+          "label": "Flight path",
+          "type": "path",
+          "show": "map",
+          "value": [
+            [
+              -83.0777,
+              42.3289
+            ],
+            [
+              -83.06,
+              42.336
+            ],
+            [
+              -83.03,
+              42.346
+            ],
+            [
+              -83.0,
+              42.356
+            ],
+            [
+              -82.975,
+              42.362
+            ]
+          ],
+          "source": "assumed"
         }
-      ],
-      "flights_per_day": 200,
-      "van_share_replaced": 0.2,
-      "packages_per_van_trip": 120,
-      "altitude_ft": 200,
-      "noise_band_ft": 500
+      ]
     }
   ]
 }

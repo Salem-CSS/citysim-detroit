@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "impacts.schema.json",
+  "title": "Impacts",
+  "description": "Engine output for one confirmed spec version: what changes on each home block, and the plain-language impact lines each resident sees. Lines are built by deterministic template code from the numbers, never by an AI.",
+  "type": "object",
+  "required": [
+    "spec_id",
+    "spec_version",
+    "blocks",
+    "persona_impacts"
+  ],
+  "properties": {
+    "spec_id": {
+      "type": "string"
+    },
+    "spec_version": {
+      "type": "integer"
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "block_geoid",
+          "district"
+        ],
+        "properties": {
+          "block_geoid": {
+            "type": "string",
+            "pattern": "^26163[0-9]{10}$"
+          },
+          "district": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "nearest_street": {
+            "type": "string"
+          },
+          "cars_per_day_delta": {
+            "type": "number",
+            "description": "Change in daily cars on the block's nearest counted street."
+          },
+          "street_full_before_pct": {
+            "type": "number"
+          },
+          "street_full_after_pct": {
+            "type": "number"
+          },
+          "distance_to_site_m": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "in_noise_zone": {
+            "type": "boolean"
+          },
+          "distance_to_flight_path_ft": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "bus_wait_min_before": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "bus_wait_min_after": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "persona_impacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "persona_id",
+          "block_geoid",
+          "lines"
+        ],
+        "properties": {
+          "persona_id": {
+            "type": "string"
+          },
+          "block_geoid": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "minItems": 1,
+            "maxItems": 4,
+            "description": "e.g. 'A drone route passes about 200 ft from your home', '+60 cars a day on your street (Vernor)'. Use 'No direct change near your home' when nothing applies."
+          },
+          "flags": {
+            "type": "object",
+            "description": "Booleans used for the Who tab grouping, e.g. in_noise_zone.",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  }
+}

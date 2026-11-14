@@ -19,6 +19,7 @@ Two people are building CitySim Detroit at the same time, each with their own AI
 
 - Stay in your lane's folders (see BUILD.md "Lanes"). If you must touch another lane's files, say so in the log.
 - Engines produce numbers; the AI never invents traffic counts, trip rates or poll results.
+- Residents answer only support / neutral / oppose + one reason (quote for a ~10% sample), and never see the raw prompt.
 - Never commit secrets (`.env`, keys) or data files (`data/raw/`, `data/processed/`, `*.parquet`).
 - If you hit a merge conflict in LOG.md, keep both sides' entries.
 - Don't rewrite history (`git push --force`) on `main`.
@@ -32,5 +33,6 @@ Two people are building CitySim Detroit at the same time, each with their own AI
 | DATA_SETUP.md | Download data and load into S3 |
 | BUILDINGS.md | 3D building layer pipeline |
 | LOG.md | Team change log (read first, write last) |
-| contracts/ | JSON schemas shared by all lanes |
+| contracts/ | JSON schemas shared by all lanes (start with contracts/README.md) |
+| contracts/actions.json | The 6 action types and their editable constraints |
 | web/prototype/index.html | Frontend design reference |

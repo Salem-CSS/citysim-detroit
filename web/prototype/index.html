@@ -16,9 +16,10 @@
   Flow
     1. Pick districts in the top bar (up to 4).
     2. Ask a question in the bottom bar.
-    3. The left panel opens with editable BLOCKS generated from the question
-       (one group per engine action; each block is one constraint).
-    4. "Ask residents" runs; the right panel fills with results per district.
+    3. The left panel opens with editable BLOCKS: scenario_spec.actions[].constraints
+       (one group per action; one block per constraint; contracts/actions.json).
+    4. "Ask residents" confirms the spec; residents answer only support / neutral / oppose
+       + one reason (quote for ~10%); the right panel fills with results per district.
     5. Click the map to open a resident card. Edit blocks and "Ask again".
 
   Component map (class -> React component)
@@ -1273,7 +1274,7 @@ button { cursor: pointer; }
   <div class="rcard panel" id="rcard" role="dialog" aria-label="Resident details" hidden>
     <div class="rcard__head"><span class="avatar" id="rcAvatar">H</span><div><b id="rcWho">Homeowner, 62</b><div class="muted" style="font-size:14px" id="rcWhere">Corktown · 28 years on this block</div></div><button type="button" class="icon-btn" aria-label="Close" id="rcClose"><svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
     <p id="rcQuote">"If it takes vans off Michigan, fine. I just don't want them buzzing over my yard at 6 AM."</p>
-    <dl><dt>Feels</dt><dd id="rcFeel">Neutral (3 of 5)</dd><dt>Top worry</dt><dd id="rcWorry">Noise</dd><dt>Lives in noise zone</dt><dd id="rcZone">Yes</dd></dl>
+    <dl><dt>Stance</dt><dd id="rcFeel">Neutral</dd><dt>Main reason</dt><dd id="rcWorry">Noise</dd><dt>Lives in noise zone</dt><dd id="rcZone">Yes</dd></dl>
   </div>
 
 </div>
@@ -1285,27 +1286,27 @@ var DISTRICTS = {
   4:{c:"#A371F7",area:"East side",s:41,n:24,o:35,w:"Privacy"}, 5:{c:"#4C8DFF",area:"Downtown, Midtown",s:49,n:22,o:29,w:"Noise"},
   6:{c:"#DB61A2",area:"Corktown, Southwest",s:58,n:18,o:24,w:"Noise"}, 7:{c:"#2EC4B6",area:"West side",s:33,n:37,o:30,w:"Safety"}
 };
-// Block templates per engine action (mirrors contracts/scenario_spec actions).
+// Block templates per engine action. Mirrors contracts/actions.json (ids + labels). In web/, render blocks from scenario_spec.actions[].constraints instead.
 var ACTIONS = {
   add_drone_route: { title:"Drone delivery route", icon:"drone", match:/drone/i, blocks:[
     {id:"hub", label:"Takes off from", type:"select", options:["Newlab rooftop","Michigan Central garage","Corktown lot on Bagley"]},
-    {id:"flights", label:"Flights a day", type:"stepper", value:200, step:25, min:25, unit:"flights", fromQ:/(\d+)\s*flights?/i},
-    {id:"height", label:"Flying height", type:"seg", options:["200 ft","300 ft","400 ft"], value:"200 ft", assumed:true},
-    {id:"hours", label:"Flying hours", type:"select", options:["7 AM to 9 PM","8 AM to 8 PM","24 hours"], assumed:true},
-    {id:"vans", label:"Delivery vans it replaces", type:"select", options:["1 in 5","1 in 10","1 in 3"], assumed:true} ]},
+    {id:"flights_per_day", label:"Flights a day", type:"stepper", value:200, step:25, min:25, unit:"flights", fromQ:/(\d+)\s*flights?/i},
+    {id:"altitude_ft", label:"Flying height", type:"seg", options:["200 ft","300 ft","400 ft"], value:"200 ft", assumed:true},
+    {id:"flying_hours", label:"Flying hours", type:"select", options:["7 AM to 9 PM","8 AM to 8 PM","24 hours"], assumed:true},
+    {id:"van_share_replaced", label:"Delivery vans it replaces", type:"select", options:["1 in 5","1 in 10","1 in 3"], assumed:true} ]},
   add_building: { title:"New building", icon:"spark", match:/apartment|housing|homes|building|units|grocery|store/i, blocks:[
     {id:"site", label:"Site", type:"select", options:["Vacant lot at Michigan and 14th","Lot on Bagley at 16th","Parking lot on Trumbull"]},
     {id:"homes", label:"Apartments", type:"stepper", value:400, step:25, min:0, unit:"homes", fromQ:/(\d+)\s*(apartments|homes|units)/i},
     {id:"floors", label:"Floors", type:"stepper", value:7, step:1, min:1, unit:"floors", assumed:true},
-    {id:"ground", label:"Ground floor", type:"seg", options:["Homes","Shops","Grocery"], value:"Homes", assumed:true, fromQ:/grocery/i, qValue:"Grocery"},
-    {id:"parking", label:"Parking spaces per home", type:"select", options:["0.5","1","None"], assumed:true} ]},
+    {id:"ground_floor", label:"Ground floor", type:"seg", options:["Homes","Shops","Grocery"], value:"Homes", assumed:true, fromQ:/grocery/i, qValue:"Grocery"},
+    {id:"parking_per_home", label:"Parking spaces per home", type:"select", options:["0.5","1","None"], assumed:true} ]},
   modify_road: { title:"Road change", icon:"spark", match:/lane|road diet|close .*street|bike/i, blocks:[
     {id:"street", label:"Street", type:"select", options:["Michigan Ave (Trumbull to 14th)","W Vernor Hwy","Trumbull Ave"]},
-    {id:"lanes", label:"Car lanes removed", type:"stepper", value:1, step:1, min:0, unit:"each way"},
-    {id:"bike", label:"Add a protected bike lane", type:"seg", options:["Yes","No"], value:"No", fromQ:/bike/i, qValue:"Yes"} ]},
+    {id:"lanes_removed", label:"Car lanes removed", type:"stepper", value:1, step:1, min:0, unit:"each way"},
+    {id:"bike_lane", label:"Add a protected bike lane", type:"seg", options:["Yes","No"], value:"No", fromQ:/bike/i, qValue:"Yes"} ]},
   change_transit: { title:"Bus service", icon:"spark", match:/bus|transit|route \d+/i, blocks:[
     {id:"route", label:"Bus route", type:"select", options:["29 Linwood","16 Dexter","27 Joy"]},
-    {id:"freq", label:"Buses per hour", type:"stepper", value:2, step:1, min:0, unit:"per hour"} ]}
+    {id:"buses_per_hour", label:"Buses per hour", type:"stepper", value:2, step:1, min:0, unit:"per hour"} ]}
 };
 var ICONS = { drone: '<svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6.5" width="4" height="3" rx="1"/><path d="M6 7L3.5 4.5M10 7l2.5-2.5M6 9l-2.5 2.5M10 9l2.5 2.5"/><circle cx="3" cy="4" r="1.6"/><circle cx="13" cy="4" r="1.6"/><circle cx="3" cy="12" r="1.6"/><circle cx="13" cy="12" r="1.6"/></svg>', spark: '<svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l1.3 3.7L13 7l-3.7 1.3L8 12l-1.3-3.7L3 7l3.7-1.3z"/></svg>' };
 var app=document.getElementById('app'), map=document.getElementById('map');
@@ -1424,9 +1425,9 @@ document.getElementById('resetBtn').addEventListener('click',function(){ if(stat
 // Resident card on map click (after results)
 var rc=document.getElementById('rcard');
 var PEOPLE=[
-  {who:"Homeowner, 62",where:"Corktown · 28 years on this block",q:"If it takes vans off Michigan, fine. I just don't want them buzzing over my yard at 6 AM.",feel:"Neutral (3 of 5)",w:"Noise",z:"Yes"},
-  {who:"Renter, 27",where:"Midtown · no car",q:"I see them every day already. Faster deliveries help since I don't have a car.",feel:"Supports (5 of 5)",w:"None",z:"Yes"},
-  {who:"Homeowner, 58",where:"East side · 15 years on this block",q:"Who's watching the camera footage from these things over our houses?",feel:"Opposes (2 of 5)",w:"Privacy",z:"No"}];
+  {who:"Homeowner, 62",where:"Corktown · 28 years on this block",q:"If it takes vans off Michigan, fine. I just don't want them buzzing over my yard at 6 AM.",feel:"Neutral",w:"Noise",z:"Yes"},
+  {who:"Renter, 27",where:"Midtown · no car",q:"I see them every day already. Faster deliveries help since I don't have a car.",feel:"Supports",w:"None",z:"Yes"},
+  {who:"Homeowner, 58",where:"East side · 15 years on this block",q:"Who's watching the camera footage from these things over our houses?",feel:"Opposes",w:"Privacy",z:"No"}];
 var pi=0;
 map.addEventListener('click',function(e){
   if(!state.asked) return;

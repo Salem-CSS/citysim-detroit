@@ -1,29 +1,50 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "scenario_spec.schema.json",
-  "title": "Scenario spec",
-  "description": "What the chat agent produces from a typed proposal. The engines run this. The agent never writes numbers that the engines compute.",
+  "title": "Scenario spec (v2)",
+  "description": "The standard format a typed question is broken into. Each action carries its constraints; each constraint is one editable block in the left panel. Residents see only `summary` plus their own computed impact, never the raw prompt.",
   "type": "object",
   "required": [
     "spec_id",
+    "version",
+    "status",
     "prompt",
-    "actions",
+    "summary",
     "districts",
-    "assumptions",
     "confidence",
-    "summary"
+    "actions"
   ],
   "properties": {
     "spec_id": {
       "type": "string"
     },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Bumps every time the user edits blocks and asks again."
+    },
+    "parent_spec_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Previous version, for compare."
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "confirmed"
+      ],
+      "description": "draft: shown in the panel for review. confirmed: the user pressed Ask residents."
+    },
     "prompt": {
       "type": "string",
-      "description": "The user's words, verbatim."
+      "description": "The user's words, verbatim. Kept for the record; NOT sent to residents."
     },
     "summary": {
       "type": "string",
-      "description": "One plain-English line for the confirmation card."
+      "maxLength": 240,
+      "description": "One neutral, plain-English sentence describing the proposal, rebuilt from the constraint values. This is what residents are asked about."
     },
     "districts": {
       "type": "array",
@@ -36,12 +57,6 @@
       "maxItems": 4,
       "uniqueItems": true
     },
-    "assumptions": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
     "confidence": {
       "enum": [
         "low",
@@ -49,269 +64,140 @@
         "high"
       ]
     },
-    "parent_spec_id": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "description": "Set when a follow-up edits an earlier spec."
+    "unsupported": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Parts of the question no action covers (UI says 'not supported yet')."
     },
     "actions": {
       "type": "array",
       "minItems": 1,
       "items": {
-        "oneOf": [
-          {
-            "$ref": "#/$defs/add_building"
+        "type": "object",
+        "required": [
+          "action_id",
+          "type",
+          "title",
+          "constraints"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
           },
-          {
-            "$ref": "#/$defs/modify_road"
+          "type": {
+            "enum": [
+              "add_drone_route",
+              "add_building",
+              "modify_road",
+              "change_transit",
+              "rezone",
+              "add_event_surge"
+            ]
           },
-          {
-            "$ref": "#/$defs/add_drone_route"
+          "title": {
+            "type": "string"
           },
-          {
-            "$ref": "#/$defs/change_transit"
-          },
-          {
-            "$ref": "#/$defs/rezone"
-          },
-          {
-            "$ref": "#/$defs/add_event_surge"
+          "constraints": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/constraint"
+            }
           }
-        ]
+        }
       }
     }
   },
   "$defs": {
-    "point": {
+    "constraint": {
       "type": "object",
       "required": [
-        "lat",
-        "lon"
+        "id",
+        "label",
+        "type",
+        "value",
+        "source"
       ],
       "properties": {
-        "lat": {
-          "type": "number"
+        "id": {
+          "type": "string",
+          "description": "Matches an id in contracts/actions.json for this action type."
         },
-        "lon": {
-          "type": "number"
-        }
-      }
-    },
-    "use": {
-      "type": "object",
-      "required": [
-        "use",
-        "ite_code"
-      ],
-      "properties": {
-        "use": {
+        "label": {
           "type": "string"
         },
-        "ite_code": {
-          "type": "integer"
-        },
-        "units": {
-          "type": "number",
-          "minimum": 0
-        },
-        "sqft": {
-          "type": "number",
-          "minimum": 0
-        },
-        "seats": {
-          "type": "number",
-          "minimum": 0
-        }
-      }
-    },
-    "add_building": {
-      "type": "object",
-      "required": [
-        "type",
-        "site",
-        "uses"
-      ],
-      "properties": {
         "type": {
-          "const": "add_building"
-        },
-        "parcel_id": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "site": {
-          "$ref": "#/$defs/point"
-        },
-        "floors": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "uses": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/use"
-          }
-        }
-      }
-    },
-    "modify_road": {
-      "type": "object",
-      "required": [
-        "type",
-        "segment_ids",
-        "change"
-      ],
-      "properties": {
-        "type": {
-          "const": "modify_road"
-        },
-        "segment_ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1
-        },
-        "change": {
           "enum": [
-            "remove_lanes",
-            "add_lanes",
-            "close",
-            "bike_lane"
+            "number",
+            "select",
+            "path",
+            "parcels",
+            "text"
           ]
         },
-        "lanes_delta": {
-          "type": "integer"
+        "value": {
+          "description": "Current value. number -> number; select -> one option value; path -> [[lon,lat],...]; parcels -> [parcel_id,...]."
         },
-        "bike_shift_share": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        }
-      }
-    },
-    "add_drone_route": {
-      "type": "object",
-      "required": [
-        "type",
-        "hub",
-        "path",
-        "flights_per_day"
-      ],
-      "properties": {
-        "type": {
-          "const": "add_drone_route"
-        },
-        "hub": {
-          "$ref": "#/$defs/point"
-        },
-        "path": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/point"
-          },
-          "minItems": 2
-        },
-        "flights_per_day": {
-          "type": "number",
-          "minimum": 0
-        },
-        "van_share_replaced": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
-          "default": 0.2
-        },
-        "packages_per_van_trip": {
-          "type": "number",
-          "minimum": 1
-        },
-        "altitude_ft": {
-          "type": "number",
-          "default": 200
-        },
-        "noise_band_ft": {
-          "type": "number",
-          "default": 500
-        }
-      }
-    },
-    "change_transit": {
-      "type": "object",
-      "required": [
-        "type",
-        "route_id",
-        "trips_per_hour"
-      ],
-      "properties": {
-        "type": {
-          "const": "change_transit"
-        },
-        "route_id": {
+        "unit": {
           "type": "string"
         },
-        "trips_per_hour": {
-          "type": "number",
-          "minimum": 0
+        "min": {
+          "type": "number"
         },
-        "new_route": {
+        "max": {
+          "type": "number"
+        },
+        "step": {
+          "type": "number"
+        },
+        "options": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/point"
+            "type": "object",
+            "required": [
+              "value",
+              "label"
+            ],
+            "properties": {
+              "value": {},
+              "label": {
+                "type": "string"
+              }
+            }
           }
-        }
-      }
-    },
-    "rezone": {
-      "type": "object",
-      "required": [
-        "type",
-        "parcel_ids",
-        "new_zone"
-      ],
-      "properties": {
-        "type": {
-          "const": "rezone"
         },
-        "parcel_ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1
+        "ui": {
+          "enum": [
+            "stepper",
+            "select",
+            "segmented"
+          ]
         },
-        "new_zone": {
-          "type": "string"
-        }
-      }
-    },
-    "add_event_surge": {
-      "type": "object",
-      "required": [
-        "type",
-        "site",
-        "seats",
-        "events_per_year"
-      ],
-      "properties": {
-        "type": {
-          "const": "add_event_surge"
+        "show": {
+          "enum": [
+            "panel",
+            "map",
+            "hidden"
+          ],
+          "default": "panel"
         },
-        "site": {
-          "$ref": "#/$defs/point"
+        "show_if": {
+          "type": "object",
+          "description": "Show this block only when another constraint has one of these values."
         },
-        "seats": {
-          "type": "number",
-          "minimum": 0
+        "source": {
+          "enum": [
+            "from_question",
+            "assumed",
+            "edited"
+          ],
+          "description": "from_question: taken from the user's words. assumed: a default the agent filled in (UI shows an 'assumed' tag). edited: changed by the user in the panel."
         },
-        "events_per_year": {
-          "type": "number",
-          "minimum": 0
+        "note": {
+          "type": "string",
+          "description": "Optional one-line explanation shown under the block."
         }
       }
     }

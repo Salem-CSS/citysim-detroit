@@ -1,4 +1,4 @@
-"""change_transit: GTFS frequency change -> riders lost -> split to other routes / car / lost trips."""
+"""change_transit: values: route, buses_per_hour. GTFS frequency change -> wait time before/after per block."""
 
-def run(action: dict, ctx) -> dict:
+def run(values: dict, ctx) -> dict:
     raise NotImplementedError("change_transit")

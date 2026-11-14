@@ -41,14 +41,15 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 | --- | --- | --- | --- |
 | Data (census, LODES, Detroit open data → S3) | Partner | Not started. Scripts ready; follow DATA_SETUP.md | 11-14 17:50 |
 | Buildings (Overture + SEMCOG → S3) | Partner | Not started. Follow BUILDINGS.md after data | 11-14 17:50 |
-| Engine (traffic Lambda) | — | Scaffolded: load + trips work, 6 actions are stubs | 11-14 17:50 |
-| Residents (Bedrock) | — | Scaffolded: prompt + response checks work, batching stubbed | 11-14 17:50 |
+| Engine (traffic Lambda) | — | Load, trips, impact lines work; 6 actions are stubs taking v2 `values` | 11-14 19:05 |
+| Residents (Bedrock) | — | v2 framework: prompt + checks + tests done (stance/reason/quote sample); batching stubbed | 11-14 19:05 |
 | Agent + Infra (Strands, AWS stack) | — | Not started | 11-14 17:50 |
 | Web (Next.js + deck.gl) | Salem | Static prototype done (`web/prototype/index.html`); Next.js not started | 11-14 17:50 |
 | Deploy (Vercel) | Salem | **Live: https://citysim-detroit.vercel.app** (auto-deploys from `main`) | 11-14 17:58 |
 
 ## Open questions / handoffs
 
+- **For Partner:** contracts changed to v2 (see 19:05 entry). If your AI already wrote code against the old `top_concern` / 1–5 `support` / `assumptions` fields, update it.
 - **For Partner:** run DATA_SETUP.md, then BUILDINGS.md. Post bucket name, object count and building totals here when done.
 - **For Partner:** confirm which AWS region you're using (docs assume `us-east-1`; Overture/Athena work runs in `us-west-2`).
 - **For Salem:** pick the final frontend direction before Next.js work starts (current pick: combined design in `web/prototype`).
@@ -56,6 +57,19 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 ---
 
 ## Entries
+
+### 2026-11-14 19:05 ET · Salem (AI) · All lanes (contracts)
+**Did:** Switched the whole repo to the **v2 question framework**: question → standard spec with constraints (editable blocks) → user edits → confirmed spec → engine impacts → per-resident impact lines → residents answer **only support / neutral / oppose + one reason** (quote for a fixed ~10% sample) → totals.
+**Files:** contracts/actions.json (new), contracts/scenario_spec.schema.json (v2), contracts/impacts.schema.json (new), contracts/resident_response.schema.json (new), contracts/run_result.schema.json, contracts/spec.py (new helpers), contracts/README.md, fixtures/* (all updated + impacts.drone.json, resident_responses.drone.json), residents/prompt.py, residents/validate.py, residents/{batch,aggregate,calibrate}.py docstrings, residents/tests/, agent/system_prompt.md, agent/tools.py, engine/handler.py, engine/actions/*, engine/impact_lines.py (new), engine/tests/, data/calibration_targets.json, SCOPE.md, BUILD.md, web/prototype/index.html
+**Contracts changed:**
+- `scenario_spec`: actions now carry `constraints[]` (`id, label, type, value, unit, min, max, step, options, ui, show, show_if, source`); added `version`, `status` (draft/confirmed), `unsupported`; removed `assumptions` (use `source: "assumed"`). `summary` is the neutral sentence residents are asked about.
+- `actions.json`: one source of truth for the 6 action types and their constraints.
+- `impacts` (new): blocks[] numbers + persona_impacts[].lines (templates, no AI).
+- `resident_response` (new): `stance` support/neutral/oppose, `reason` fixed list (`none` only with neutral), `quote` only for the sample.
+- `run_result`: `worries` → `reasons` (with `share_among_oppose`); `districts[].top_concern` and `blocks[].top_concern` → `top_reason`; quotes need `reason`; added `spec_version`, `run_stats.quotes_requested`.
+**Decisions:** Residents never see the raw prompt. Calibration questions are asked as statements (support = agree). Engine action modules now take `values` dicts (`contracts.spec.values(action)`).
+**Blocked / needs:** none. Tests: `python -m pytest engine/tests residents/tests` (8 pass).
+**Next:** —
 
 ### 2026-11-14 18:10 ET · Salem (AI) · Web
 **Did:** Removed the welcome card. Rebuilt the prototype map in Detroit's shape: north-up camera, city outline (8 Mile, riverfront, southwest wedge), Detroit River, Belle Isle, Highland Park and Hamtramck cut out, all 7 council districts outlined in their colors. Unselected districts in the top picker are dimmed on the map. Main roads on real-ish paths (Woodward, Gratiot, Grand River, Michigan, Jefferson, Vernor, I-94). Drone route runs from Michigan Central east across Districts 6, 5, 4.
