@@ -4,6 +4,8 @@ Download, clean and district-tag every dataset, then build the AI residents. Own
 
 ## Get the raw files
 
+Full walkthrough for the AWS owner, including the S3 upload: [../DATA_SETUP.md](../DATA_SETUP.md).
+
 The download scripts need normal internet access (census.gov, lehd.ces.census.gov, detroitdata.org). Run them on a laptop:
 
 ```bash

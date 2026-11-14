@@ -6,6 +6,7 @@ Built for the BuilderWars Hackathon (Nov 14–15, 2026, Newlab Detroit), AWS tra
 
 - **Full project scope:** [SCOPE.md](SCOPE.md)
 - **Step-by-step build guide:** [BUILD.md](BUILD.md)
+- **Data setup (AWS owner does this first):** [DATA_SETUP.md](DATA_SETUP.md)
 - **Stack:** Next.js + deck.gl, API Gateway, Lambda, Step Functions, Amazon Bedrock (Nova 2 Lite), Strands Agents, DynamoDB, S3 + Athena
 
 All data comes from public sources listed in the scope.
@@ -24,4 +25,4 @@ web/         Next.js + deck.gl app; web/prototype/ is the design reference
 demo/        demo prompts and cached runs
 ```
 
-Get the data: see [data/README.md](data/README.md) (`python -m data.download.all`).
+**Get the data:** follow [DATA_SETUP.md](DATA_SETUP.md) (download, then upload to S3).
