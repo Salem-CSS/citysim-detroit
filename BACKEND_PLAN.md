@@ -1,0 +1,337 @@
+# CitySim Detroit — Backend Master Plan
+
+Written Nov 14, 2026. Covers `data/`, `engine/`, `residents/`, `agent/`, `infra/` and the API. It changes no existing file: every correction to a script, schema, fixture or doc is listed here as a proposed change for its owner to apply. [SCOPE.md](SCOPE.md) says what and why, [BUILD.md](BUILD.md) gives the order; where this plan disagrees with them, it says so and gives the evidence.
+
+## 1. The rule this plan enforces
+
+Every number the site shows must be one of four things, and the API must say which:
+
+| Kind | Example | How it is labelled in the result |
+| --- | --- | --- |
+| **Data** | AADT, lanes, census counts, bus headways | dataset name + vintage |
+| **Published rate** | ITE trips per unit, FHWA vehicle occupancy | citation + URL |
+| **User input** | flights per day, units, seats | echoed from the spec |
+| **Assumption** | K, D, lane capacity, noise-band width | listed in `assumptions[]`, editable |
+
+If none of the four is available, the backend returns "not available" for that field. It never substitutes a default silently. Section 4 lists the places where the current scope would have required invented numbers, and what replaces them.
+
+## 2. What was verified today
+
+Checked live from this session on Nov 14, 2026: endpoints were queried, field lists and row counts read, published PDFs opened. "Not checked" means the host refused this session, not that the source is bad.
+
+### 2.1 Data sources
+
+| Source | Status | What was found |
+| --- | --- | --- |
+| Council districts 2026 | Confirmed | 7 polygons, `district_number`, names are only "District 1"…"District 7". GeoJSON download works. |
+| Traffic volumes | Confirmed, better than scoped | One layer per year, **2017–2024**. 2024 has 1,427 rows (1,038 roads + 389 ramps) with `num_aadt`, `num_lanes`, `posted_speed`, `nfc_name`, and `route_id` + begin/end milepoint. `num_lanes` filled on 98.5%. |
+| City road layer (`City_of_Detroit_Roads`) | Confirmed, not in the scope | 38,117 segments with node ids (`BPT`, `EPT`), `PR` + milepoints, `LANES`, `NFC`. 99.9% of segments form one connected network. **98.2% of 2024 counted road segments join to it exactly** by `PR` + milepoint overlap. |
+| Parcels | Confirmed, but the catalog points at a stale copy | The catalog's `Parcels_Current` was last edited Feb 2025. `parcel_file_current` was edited today: 377,940 parcels with `zoning_district`, `property_class_description` (vacant classes), `total_square_footage`, `census_tract_geoid_2020`, `cross_street_1/2`, `neighborhood`. |
+| Zoning | Confirmed | 28,290 polygons, `ZONING_REV` code + description. No density or unit limits in the data. |
+| Neighborhoods | Confirmed | 205 named polygons. Its `council_district` column is the old map. |
+| DDOT routes (`DDOT_Bus_Routes_202509`) | Confirmed | 37 routes with peak, base and night headways in minutes, run pick June 2026. |
+| DDOT stop ridership (`BusStopAmenitiesForArcGIS`) | Found, provenance unstated | 5,101 stops with `Boardings`, `Alightings`, `Ridership_at_Stop`; boardings sum to 57,517. The layer has no description, so the period (weekday? which month?) is unknown. |
+| DDOT GTFS | Not checked | detroitmi.gov and the MobilityData API refused this session. Test from a laptop. |
+| Building footprints (city, SEMCOG-derived) | Confirmed | 380,076 footprints; `STORIES` and `MEDIAN_HGT` filled on 98.8%; last edited 2020. |
+| Overture buildings | Confirmed | Latest release `2026-10-21.0`, schema v2.0.0 (a breaking change in Sept 2026). `height` and `num_floors` still present. |
+| Crashes | Confirmed | One layer per year 2011–2024. |
+| 311 (Improve Detroit) | Confirmed | 765,518 points with request type and neighborhood. |
+| Census API | Confirmed, **key now mandatory** | Requests without a key return a "Missing Key" page. ACS 2024 5-year endpoint is live. Table pulls could not be tested without a key. |
+| TIGER 2025 | Confirmed | Tract, block group, 2020 block (122 MB), place and PUMA files all present. |
+| PUMS 2024 5-year | Confirmed | Michigan person (70 MB) and household (32 MB) zips present. All needed variables exist. `PUMA` uses 2020 definitions only. |
+| LODES 8 Michigan | Confirmed, older than scoped | Newest **OD and WAC year is 2021**. 2022 and 2023 exist for RAC only. |
+| OSM via Overpass | Not checked | Overpass and Geofabrik refused this session. |
+| DMACS microdata | Partly confirmed | Wave 22 is on ICPSR for member institutions; Wave 21 has an open release on U-M Deep Blue. Toplines publish citywide percentages only, no subgroup tables. |
+
+### 2.2 Published numbers
+
+| Claim in the repo | Verdict | Correct value and source |
+| --- | --- | --- |
+| DMACS Wave 22, Aug 6 – Oct 1, 2025 | Confirmed | 2,158 completes, margin ±2.96 pts ([toplines](https://detroitsurvey.umich.edu/wp-content/uploads/2025/11/W22-Toplines-Nov-2025.pdf)) |
+| 70% feel safe walking in their neighborhood | **Wrong** | W22 Q76: somewhat safe 58% + very safe 27% = **85%** |
+| 67% satisfied with their neighborhood | Confirmed | W22 Q11: 24 + 27 + 16 = 67% |
+| 55% say Detroit is headed in the right direction | Confirmed | W22 Q32 |
+| 78% lived in Detroit 20+ years | Confirmed | W22 Q5, but see 4.4: personas cannot reproduce it |
+| 32% "used public transit recently" | Wrong wave and wording | Wave 20 Q80: used public transportation in Detroit **in the past year**, 32% ([toplines](https://detroitsurvey.umich.edu/wp-content/uploads/2024/11/W20-Toplines-8-30-24-2.pdf)) |
+| ITE 221: 4.54 daily, 0.39 PM | Confirmed | Palm Beach County sheet, ITE 11th edition |
+| ITE 850: 93.84 daily | Confirmed | PM peak is **8.95** (blank in `ite_rates.csv`) |
+| Christiansburg: 87% positive, noise 17% | Confirmed | n = 821, Nov 2020. The 17% is the share who mentioned noise as a negative ([article](https://issues.org/when-the-drone-is-in-your-backyard-nelsen-guthrie-vinsel/)) |
+| IMechE: 23% support, 45% of 18–24s | Confirmed | n = 2,010, Great Britain, 2019 |
+| Aerial region covers a 3-mile radius | Confirmed | Michigan Central, Oct 2023 |
+| Aerialoop route | Partly confirmed | 1-mile round trip, Newlab to "The 23rd", over the rail corridor. Flights per day, altitude and payload are **not published**. |
+| Michigan Ave AADT 10,309, 5 lanes | Right number, wrong year and place | 10,309 is the **2020** count for the segment **west of I-75**. That segment is 12,847 in 2024. Michigan at 14th (I-75 to Rosa Parks) is **8,347** in 2024. 5 lanes confirmed. |
+| Districts average about 91,000 | Confirmed | 87,393 to 94,815 per district |
+| Downtown and Midtown are District 5 | **Wrong** | Under the 2026 map, Campus Martius and most of Downtown are in District 6. District 5 holds Wayne State, New Center, Eastern Market, Lafayette Park. |
+| K = 0.09, D = 0.55, 800 cars per lane-hour | **No source found** | K and D appear as FDOT planning defaults in search snippets only. Nothing found for 800. Keep all three as labelled assumptions. |
+
+### 2.3 AWS facts
+
+| Item | Verified fact |
+| --- | --- |
+| Nova 2 Lite | ID `amazon.nova-2-lite-v1:0` is right, but us-east-1 has no in-region on-demand. Call `us.amazon.nova-2-lite-v1:0`. No manual model-access step. Quotas vary by account: read them in Service Quotas. |
+| JSON from Nova | Bedrock "structured outputs" is not supported for it. Use a tool schema with `toolChoice: {"tool": {...}}`, and wrap the array in an object. |
+| Chat-agent model | `us.anthropic.claude-haiku-5-5` (structured output supported) or `amazon.nova-pro-v1:0`. There is no Nova 2 Pro. |
+| Strands | `strands-agents` 1.65 on PyPI. Official Lambda layer exists (`…:layer:strands-agents-py3_12-x86_64:2`, an older 1.40). Structured output via `structured_output_model`. Sessions via `S3SessionManager`. |
+| Step Functions | Inline Map: 40 concurrent iterations. 256 KB per state payload. |
+| API Gateway HTTP API | 30-second hard timeout. A run cannot be synchronous. |
+| DynamoDB | 400 KB per item. Large results go to S3 with a pointer. |
+| Lambda | Zip limit 250 MB unzipped including layers. `AWSSDKPandas-Python312:32` layer gives pandas, numpy, pyarrow. No managed geopandas layer. |
+| Amazon Location | Places v2, `boto3.client("geo-places").geocode(...)`, no place index needed. No bounding-box filter: bias with `BiasPosition`. Whether free-text intersections resolve is untested. |
+
+## 3. Bugs in the current download scripts
+
+These fail today or fetch the wrong thing. Fix before the first data run.
+
+1. **`data/download/detroit.py` saves a web page for traffic volumes and tracts.** Those two catalog entries have no file resource, so the "first preferred format" logic falls through to the HTML link. Pull traffic volumes from the feature service (layer 7 = 2024, paged at 1,000 rows) and drop the tracts entry (TIGER already covers it).
+2. **Parcels come from the stale copy.** Switch to `parcel_file_current`, paged at 2,000 rows, and drop the taxpayer name and address columns on download.
+3. **`CENSUS_API_KEY` is treated as optional.** The API now refuses keyless requests. Fail fast with a clear message.
+4. **Block population pulls `P1_001N` only.** Personas are adults: also pull `P3_001N` (population 18 and over).
+5. **Missing downloads:** the city road layer, DDOT routes, stop ridership, neighborhoods, city building footprints, GTFS.
+6. **`DETROIT_PUMAS_FALLBACK` holds 2010 PUMA codes.** PUMS 2024 uses 2020 definitions. Derive Detroit's PUMAs from the tract-to-PUMA file and the tracts inside the city; delete the fallback.
+7. **`detroit_pumas()` returns all of Wayne County.** Filter to tracts that intersect the Detroit place boundary.
+8. **`engine/trips.py` reads `pm_peak_rate` as optional** only because code 850 was blank. Fill it (8.95).
+
+## 4. Where the scope would have needed invented numbers
+
+Each item is a feature that cannot be built as written without making data up, with the honest replacement.
+
+### 4.1 Block popover: "38 residents here, 61% support"
+
+500 personas per district spread over roughly 2,000 populated blocks is under one persona per block. A block-level support percentage would be one simulated person. **Replace with:** the block's real census population (data), plus simulated support reported at **tract** level with its `n`, suppressed below `n = 10`.
+
+### 4.2 Drone: "1 in 5 delivery vans replaced" and vans taken off Michigan Ave
+
+No dataset gives delivery-van volume in Corktown, so a share of it cannot be computed, and nothing says which streets the vans use. The fixture's Michigan Ave drop from 10,309 to 10,180 has no source. **Replace with:**
+
+- Van trips removed = flights per day × packages per flight ÷ packages per van route. All three are stated inputs. Published anchors: one package per flight (Wing, [FAA environmental assessment](https://www.faa.gov/uas/advanced_operations/nepa_and_drones/06272025_Final_EA_Wing_Central_Florida.pdf)); 250–300 packages per van route (one Amazon driver profile, anecdotal).
+- Report the result as a district total. Leave street loads unchanged and say why.
+- With those anchors, 200 flights replace less than one van route a day. The honest traffic finding for the drone demo is "no measurable change", and the story is sentiment.
+
+### 4.3 Drone noise band of 500 ft
+
+The only measured source found (the FAA assessment for Wing) puts the 60 dB day-night contour within 65 ft of a launch site and reports about 56–62 dBA for a pass at 165 ft. That does not support a 500 ft "noise" band. **Replace with:** a band labelled "under the flight path", width a stated input, used to flag who sees and hears the route. Quote the FAA figures in the Method tab.
+
+### 4.4 "78% lived in Detroit 20+ years" computed from persona traits
+
+PUMS records when a household moved into its current home, in bands. It has no field for years lived in the city. **Replace with:** drop this check. Use persona checks that are computable: renter share and zero-car share against ACS, per district (already the Step 4 "done when").
+
+### 4.5 `years_in_home` as an integer
+
+Same field: PUMS `MV` is a band ("10 to 19 years"). **Replace with:** a `years_in_home_band` string. The prompt says "in this home 10 to 19 years".
+
+### 4.6 Closure and road-diet rerouting
+
+Rerouting existing traffic needs to know where it is going. There is no origin-destination matrix for Detroit streets in the catalog. **Replace with:**
+
+- Lane removal: same counted volume over fewer lanes. Fully computable.
+- Closure: move the closed segment's counted volume onto the shortest alternative path between its two ends, and label it "simple detour assumption".
+- Bike-lane mode shift: only if the user states a share. No default.
+
+### 4.7 Bus cuts: riders shifting to cars
+
+Riders affected can be computed (stop boardings × headway change × published elasticity of about 0.5, [VTPI summary of TCRP 95](https://www.vtpi.org/tranelas.pdf)). The share who switch to driving has no citable single value. **Replace with:** report riders lost; add car trips only if the user states a diversion share. Label stop ridership "DDOT stop counts, period unstated" until DDOT confirms it. "Job access recomputed from GTFS" is cut: it needs a transit router.
+
+### 4.8 Rezoning: maximum units under a zone
+
+The zoning layer carries codes, not limits. **Replace with:** a hand-typed `data/zoning_capacity.csv` from the Detroit Zoning Ordinance (Chapter 50), one row per zone with the ordinance section cited. A zone missing from the table returns "not supported yet". Not yet typed or checked.
+
+### 4.9 Stadium trips
+
+ITE has no stadium rate on the open sheet. **Replace with:** vehicles = seats × attendance share × auto share ÷ vehicle occupancy. Occupancy 2.5 (range 2.2–2.8) and auto-share examples come from [FHWA, Managing Travel for Planned Special Events](https://ops.fhwa.dot.gov/publications/fhwaop04010/chapter5_03.htm). Attendance share and auto share are stated inputs.
+
+### 4.10 Loads on "every street"
+
+Only 1,038 road segments citywide have a 2024 count. **Replace with:** a load only where a count exists. Other streets show added trips with `counted: false` and no load or color.
+
+### 4.11 ITE codes with no open rate
+
+Data center (160), high-rise housing (222), public park, stadium and convenience store are not on the open sheet. The agent may only use codes present in `ite_rates.csv`; a data center prompt returns "no published rate available" until a second open sheet is found.
+
+### 4.12 Smaller items
+
+- **District names** ("Corktown, Southwest"): derive from the neighborhoods layer joined to the 2026 districts. The prototype's labels are partly wrong.
+- **Time-of-day control:** the data has a daily count and one evening-peak rate. Offer "Daily" and "Evening peak" only.
+- **Work location:** attach only to personas the census record shows as employed. LODES 2021 is the newest year.
+- **Calibration by subgroup:** toplines are citywide. Subgroup calibration needs the Wave 21 open microdata; without it, report citywide error only and apply no subgroup offsets.
+
+## 5. Architecture
+
+```
+POST /chat ──► chat Lambda (Strands, Haiku 5.5) ──► spec saved to DynamoDB
+POST /run  ──► start Step Functions (Standard), return run_id at once
+                 1. engine Lambda        spec → segments, trips, per-tract and per-persona impacts → S3
+                 2. plan Lambda          touched districts → list of 25-persona batches (S3 keys only)
+                 3. inline Map (max 20)  residents_batch Lambda → Nova 2 Lite → batch result to S3
+                 4. aggregate Lambda     weights, splits, groups, quotes, range → run_result to S3
+                 5. DynamoDB             status = done, pointer to the S3 result
+GET /run/{id}       status + batches done / total; result when done
+GET /runs           run history for the compare view
+GET /calibration    latest calibration record
+GET /layers/...     static layers from S3: districts, counted segments, tracts, buildings
+```
+
+Decisions, each forced by a verified limit:
+
+- **Runs are asynchronous with polling** (30-second API limit).
+- **Every state passes S3 keys, not data** (256 KB state limit). A 2,000-resident run stays far below the execution history limit.
+- **`run_result` lives in S3**; DynamoDB holds status and the pointer (400 KB item limit).
+- **No geopandas or osmnx in any Lambda.** All geometry work happens offline in `data/`. Lambdas load small Parquet and NumPy files, so the engine fits a zip with the pandas layer. Shortest paths use a plain Dijkstra over the 38,000-edge graph.
+- **Chat is the one synchronous call.** If the agent with tool calls runs past 20 seconds in testing, move `/chat` to a Lambda function URL.
+- **Map concurrency starts at 20**, raised only after reading the account's Nova quota.
+
+DynamoDB tables stay as in `infra/README.md`: `scenarios`, `runs`, `calibration`.
+
+## 6. Data pipeline (`data/`)
+
+Run on a laptop. Output goes to `s3://$DATA_BUCKET/processed/` and `personas/`.
+
+### 6.1 Processed artifacts
+
+| Artifact | Built from | Used by |
+| --- | --- | --- |
+| `districts.geojson` + `district_labels.json` | Council districts 2026, neighborhoods | everything; labels for the UI |
+| `network_nodes.parquet`, `network_edges.parquet` | City road layer (`BPT`, `EPT`, length, name, class) | engine routing |
+| `counted_segments.parquet` + `.geojson` | 2024 traffic volumes joined to edges by `PR` + milepoint | engine loads; map layer |
+| `blocks.parquet` | TIGER 2020 blocks, P1 and P3, district by centroid, nearest edge, nearest arterial and distance | personas; impacts |
+| `tract_controls.parquet` | ACS 2024 tables, split to districts by block population | personas; zero-car share |
+| `tract_od.parquet` | LODES 2021 OD, summed block → tract, top destinations per tract | trip distribution; work tract |
+| `parcels_d{n}.parquet` | `parcel_file_current`, centroid lat/lon, no owner columns | agent `find_parcels` |
+| `intersections.parquet` | Road-layer nodes with the street names that meet there | agent geocoding fallback |
+| `transit_routes.parquet`, `transit_stops.parquet` | DDOT routes (headways), stop ridership | `change_transit` |
+| `buildings_d{n}` | City footprints (stories, height); Overture for buildings added since 2020 | map layer |
+| `manifest.json` | every step | source URL, vintage, row count, download time |
+
+### 6.2 Rules
+
+- **District tagging uses the 2026 polygons**, never a dataset's own district column: parcels, 311 and neighborhoods all still carry the old map.
+- **A tract split by a district line** is shared out by block population on each side.
+- **Lanes:** use `num_lanes` from the 2024 count row, the same vintage as the count. The road layer agrees with it on only 708 of 1,000 comparable segments, so write the disagreements to `lane_audit.csv` and review the Corktown ones by hand.
+- **Through lanes per direction** is derived from total lanes: two-way, subtract a center turn lane when the total is odd, then halve (5 → 2, matching Michigan Ave); one-way, all lanes. This is an assumption and is listed as one.
+- **OSM is optional.** The city road layer already gives a connected, joinable network. Use OSM only if one-way directions are needed.
+
+### 6.3 Done when
+
+`manifest.json` lists every artifact; at least 95% of counted road segments carry an edge id (98.2% measured today); every block and parcel has a 2026 district.
+
+## 7. Personas (`data/personas/`)
+
+1. **Seed:** PUMS 2024 5-year, Michigan, households in Detroit's 2020 PUMAs, housing units only (group quarters excluded; say so in the Method tab). Adults 18+.
+2. **Controls per district:** ACS 2024 tract tables summed with the block-population split. Household tables: income (B19001), tenure × vehicles (B25044), tenure × household size (B25009). Person table: age × sex (B01001).
+3. **Fit:** IPF on household weights against the three household tables. Draw 500 adults per district from the fitted households, seed 1114. Then rake the 500 to age × sex; that raked value is the `weight` column.
+4. **Traits straight from the record:** age, sex, `HINCP × ADJINC`, tenure, vehicles, household size, children (`HUPAC`), commute mode (`JWTRNS`) and minutes (`JWMNP`), move-in band (`MV`), employment (`ESR`).
+5. **Home block:** within the district, in proportion to block adult population (P3).
+6. **Work tract:** employed personas only, drawn from LODES 2021 flows out of the home tract.
+7. **Precomputed per persona:** nearest edge, nearest arterial and distance, so the engine never does geometry.
+
+**Done when:** 500 rows per district pass the schema; renter share and zero-car share are within 5 points of ACS for each district.
+
+**Known limit to state:** LODES work tracts and PUMS commute minutes come from different sources and will not always agree for one persona.
+
+## 8. Traffic engine (`engine/`)
+
+### 8.1 Shared path
+
+1. **Trips:** size × rate from `ite_rates.csv`. Daily and evening peak.
+2. **Detroit adjustment:** × (1 − zero-car household share of the site's tract, ACS B25044). Raw and adjusted both returned.
+3. **Distribute:** LODES 2021 tract flows. Housing uses where the site tract's residents work; job and retail uses use where the site tract's workers live. Destinations outside Detroit are routed to the network node nearest the destination's direction at the city edge (an assumption, listed).
+4. **Assign:** shortest path by length ÷ posted speed on the city network; each edge on a path gets that destination's share.
+5. **Load:** on counted segments only, `(AADT × K × D) ÷ (through lanes per direction × capacity)`, before and after. K, D and capacity come from the spec's assumptions and default to 0.09, 0.55 and 800, shown as unsourced planning assumptions.
+6. **Impacts:** for each persona, added vehicles per day on their nearest edge, distance to the site, and action-specific flags. For each tract, the same in aggregate.
+
+### 8.2 Actions
+
+| Action | Computed from | Inputs the user must state | Status |
+| --- | --- | --- | --- |
+| `add_building` | ITE rate, ACS, LODES, network, 2024 counts | use, size | Fully sourced |
+| `modify_road` (lanes) | 2024 count, lanes | lanes removed | Fully sourced |
+| `modify_road` (close) | count moved to detour path | segment | Sourced + one labelled assumption |
+| `add_drone_route` | path geometry, persona positions | flights, packages per flight, packages per van route, band width | Traffic effect is a district total only (4.2) |
+| `change_transit` | route headways, stop boardings, elasticity 0.5 | new headway; diversion share if car trips wanted | Riders lost sourced; car shift input-only (4.7) |
+| `rezone` | parcel area × zoning table → `add_building` | new zone | Blocked until the zoning table is typed (4.8) |
+| `add_event_surge` | seats, FHWA occupancy | attendance share, auto share, events per year | Sourced with stated inputs (4.9) |
+
+### 8.3 Tests
+
+- 400 units × 4.54 = 1,816 raw daily trips; × 0.39 = 156 at evening peak.
+- Michigan Ave at 14th, 2024: 8,347 vehicles, 2 through lanes per direction → load 0.26. One lane per direction → 0.52. (The repo's 0.32 → 0.64 uses the 2020 count from a different segment; update `test_load.py` and the docs.)
+- A spec with an ITE code not in the table raises, and the agent reports "no published rate".
+- Engine returns in under 2 seconds for a District 6 spec.
+
+## 9. Residents (`residents/`)
+
+- **Call:** Converse on `us.amazon.nova-2-lite-v1:0`, 25 personas per call, forced tool `submit_reactions` whose schema is `{items: [{persona_id, support 1–5, top_concern enum, reaction}]}`.
+- **Prompt:** persona traits + scenario summary + that persona's computed impact lines. Impact lines are built only from engine output; a persona with no computed change gets "no direct change".
+- **Checks:** as in SCOPE (validate, retry failed personas once, drop, flag above 5%).
+- **Aggregate:** weighted by the persona `weight`. Outputs: overall and per-district split, worries, groups (exposure, tenure, age, vehicles), tract-level support with `n`, quotes.
+- **Quotes** are verbatim model text for a real persona id, with `who` built from that persona's traits. Never edited.
+- **Range:** bootstrap resample of personas within district, 200 draws, 5th–95th percentile. This is sampling spread only, not model error; label it so.
+- **Cache key:** spec hash + persona id + impact lines.
+
+## 10. Calibration (`residents/calibrate.py`)
+
+| Check | Real value | Source |
+| --- | --- | --- |
+| Feel somewhat or very safe walking in their neighborhood | **85%** | DMACS W22 Q76 |
+| Somewhat, mostly or very satisfied with their neighborhood | 67% | DMACS W22 Q11 |
+| Detroit headed in the right direction | 55% | DMACS W22 Q32 |
+| Used public transportation in Detroit in the past year | 32% | DMACS W20 Q80 |
+
+- Ask each question with the survey's own wording and answer options (copy them from the topline PDFs), so "don't know" and the 7-point satisfaction scale are handled the same way as the real survey.
+- Report simulated %, real %, error in points, and the average. Store with seed and prompt version. Show it whatever it is.
+- Drone polls stay as bounds (23% to 87%), plus the US Postal Service OIG 2016 national figure (44% like the idea, 65% of millennials, 24% of boomers) as a third reference. None is a Detroit result.
+- `run_result.calibration.measured` stays `false` until this has run.
+
+## 11. Scenario agent (`agent/`)
+
+- Strands in a Lambda, model `us.anthropic.claude-haiku-5-5`, output forced through `structured_output_model` matching the spec schema, then validated again with `contracts/validate.py`.
+- Conversation state in `S3SessionManager`, keyed by a session id from the frontend.
+- **Tools return data only:** `geocode` (Amazon Location, biased to Detroit, falling back to `intersections.parquet` for "Michigan and 14th"), `find_parcels` (nearest parcels with class, zoning, area), `lookup_trip_rate` (exact rows of `ite_rates.csv`), `find_segment`, `find_route`.
+- **Missing inputs:** where section 8.2 lists a required input the user did not give, the agent asks for it on the confirmation card rather than filling a default. Assumptions with a citation may be pre-filled and are listed.
+- The agent writes no traffic or sentiment numbers. "Test a fix" suggestions are prompt text only.
+
+## 12. Contract changes to propose
+
+Not applied. Each needs the frontend lane's agreement and a fixture update.
+
+| Schema | Change | Why |
+| --- | --- | --- |
+| `run_result` | `blocks[]` → `tracts[]` with `support`, `n`, `population` | 4.1 |
+| `run_result` | per-number provenance: `sources[]` (dataset, vintage, URL) and `assumptions[]` with `kind` | section 1 |
+| `run_result` | `segments[].aadt_year`; `load_*` nullable when `counted` is false | 4.10 |
+| `run_result` | `district_totals` for trips that are not assigned to streets | 4.2 |
+| `persona` | `years_in_home` → `years_in_home_band`; add `employed` | 4.5 |
+| `scenario_spec` | drone: drop `van_share_replaced`, add `packages_per_flight`, rename `noise_band_ft` → `path_band_ft` | 4.2, 4.3 |
+| `scenario_spec` | transit: add `car_diversion_share` (optional); event: add `attendance_share`, `auto_share` | 4.7, 4.9 |
+| fixtures | drone fixture: street loads unchanged; Michigan Ave values from 2024 | 4.2 |
+| `calibration_targets.json` | safe walking 70 → 85; drop the 20-year check; add the W20 transit check | 2.2 |
+| `ite_rates.csv` | add the 24 verified rows from the Palm Beach sheet; fill 850 PM peak | 2.2 |
+
+## 13. Build order
+
+| # | Step | Owner | Done when |
+| --- | --- | --- | --- |
+| 1 | Census key, AWS account, read Nova quota | Human | `converse` returns from `us.amazon.nova-2-lite-v1:0` |
+| 2 | Fix the download scripts (section 3) and download | Data | every file in the manifest, no HTML saved as data |
+| 3 | Agree the contract changes (section 12) | All lanes | schemas and fixtures updated together |
+| 4 | Processed artifacts (6.1) | Data | 6.3 passes |
+| 5 | Personas | Data | section 7 check passes for District 6, then all 7 |
+| 6 | Engine: `add_building`, then `modify_road` | Engine | 8.3 tests pass on real data |
+| 7 | Infra: tables, state machine, API, with stub Lambdas | Infra | `POST /run` → poll → result from S3 |
+| 8 | Residents: batch, validate, aggregate | Residents | 500 District 6 personas, drop rate under 5% |
+| 9 | Calibration | Residents | record stored and returned by `GET /calibration` |
+| 10 | Agent | Agent | the 5 test prompts behave, 3 times running |
+| 11 | Drone, event, transit actions | Engine | each returns a valid result with its inputs labelled |
+| 12 | Rezone | Engine | only if the zoning table is typed and cited |
+| 13 | Cache the 3 demo runs | All | saved under `demo/` with `cached: true` |
+
+Steps 4–5, 6, 7 and 10 can run in parallel once 2 and 3 are done.
+
+## 14. Open items that need a person
+
+1. **Census API key** in `.env`. Nothing census-related runs without it.
+2. **GTFS and OSM hosts** refused this session: test both from a laptop. Neither blocks the plan (route headways and the road network have confirmed alternatives).
+3. **DDOT stop ridership period:** ask DDOT or find the layer's metadata before quoting riders-lost numbers on stage.
+4. **Zoning capacity table:** someone types it from the ordinance, or `rezone` stays "not supported yet".
+5. **K, D and lane capacity:** read the FDOT Quality/Level of Service tables directly for a citation, or keep them labelled as assumptions.
+6. **DMACS Wave 21 open microdata:** download from U-M Deep Blue if subgroup calibration is wanted.
+7. **Demo script:** the housing line "all counted streets stay green" and the drone line "van trips removed from Michigan Ave" both need rewording once real results exist (see 4.2 and 8.3).
