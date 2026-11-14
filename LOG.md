@@ -57,6 +57,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 18:10 ET · Salem (AI) · Web
+**Did:** Removed the welcome card. Rebuilt the prototype map in Detroit's shape: north-up camera, city outline (8 Mile, riverfront, southwest wedge), Detroit River, Belle Isle, Highland Park and Hamtramck cut out, all 7 council districts outlined in their colors. Unselected districts in the top picker are dimmed on the map. Main roads on real-ish paths (Woodward, Gratiot, Grand River, Michigan, Jefferson, Vernor, I-94). Drone route runs from Michigan Central east across Districts 6, 5, 4.
+**Files:** web/prototype/index.html, web/prototype/tools/detroit_map.py (generator)
+**Contracts changed:** none
+**Decisions:** City and district shapes are **approximate** (hand-placed lon/lat in `tools/detroit_map.py`). The real app must draw them from `data/raw/detroit/council_districts_2026.geojson` and the TIGER Detroit place boundary.
+**Blocked / needs:** real district GeoJSON from Partner's data run.
+**Next:** —
+
 ### 2026-11-14 17:58 ET · Salem (AI) · Deploy
 **Did:** First Vercel deploy succeeded. Site is live at **https://citysim-detroit.vercel.app** (serves `web/prototype/index.html`).
 **Files:** none (Vercel dashboard)
