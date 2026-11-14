@@ -4,7 +4,7 @@ Nov 14, 2026 · BuilderWars Hackathon (AWS Student Builder Group at Wayne State 
 
 ## Overview
 
-CitySim Detroit predicts two things for any proposed change in a Detroit neighborhood: **how much traffic it adds to each street** and **how residents will feel about it**. A user picks a scenario (400 apartments, a drone delivery hub, a bus cut), places it on a 3D map of any of Detroit's seven City Council districts, and gets street-by-street load numbers plus a forecast of support and opposition by neighborhood, with quotes from AI residents.
+CitySim Detroit predicts two things for any proposed change in a Detroit neighborhood: **how much traffic it adds to each street** and **how residents will feel about it**. A user types a proposed change in plain English ("400 apartments at Michigan and 14th," "a drone delivery hub," "cut the 29 bus to every 30 minutes") for up to 4 of Detroit's seven City Council districts, sees it on a 3D map, and gets street-by-street load numbers plus a forecast of support and opposition by neighborhood, with quotes from AI residents.
 
 **Who it's for:** city planners, City Council staff, community groups, and developers who want to know before a public hearing what traffic and opposition to expect.
 
@@ -12,7 +12,7 @@ CitySim Detroit predicts two things for any proposed change in a Detroit neighbo
 
 **Success at BuilderWars (Sunday noon):**
 
-- 6 scenarios that run end to end on real data in any district, plus 2 that are pre-computed
+- Any typed prompt that maps to the 6 engine actions runs end to end on real data in up to 4 selected districts
 - Traffic load for every counted street, before and after
 - A sentiment forecast that is checked against at least one real poll result
 - A live demo under 4 minutes, built on Bedrock, a Strands agent, Step Functions, Lambda and DynamoDB
@@ -30,7 +30,7 @@ The user picks up to 4 of Detroit's seven City Council districts, and CitySim bu
 | Generate 500 resident profiles per district from census data, 3,500 total | Once, Saturday night | Free: census math, no AI calls |
 | Prepare 3D buildings for all 7 districts as map tiles | Once, Saturday night | Free |
 | User selects 4 districts | Live | Loads pre-built tiles and profiles in seconds |
-| Run a scenario | Live | 2,000 Bedrock calls (500 × 4), run in parallel |
+| Run a scenario | Live | 80 Bedrock calls (2,000 residents, 25 per call), run in parallel |
 
 Resident profiles come from census math alone. The AI is only called when residents react to a scenario, so building districts costs nothing and only scenario runs use Bedrock.
 
@@ -52,22 +52,20 @@ Yes, the districts can be modeled realistically from real data. Use two layers: 
 
 **Pulling the data from AWS is itself a talking point:** Overture publishes its buildings as GeoParquet on S3, so the build reads it with Athena directly and clips it to the 4 selected districts.
 
-## Scenario library
+## Engine actions
 
-Every scenario uses one engine with the same three steps: convert the change into **trips added or removed**, put those trips on **specific streets**, then ask **survey-grounded AI residents** how they feel. Ship 6 scenarios live and 2 pre-computed; the rest are stretch goals.
+There are no preset scenarios. Users type what they want, and the AI scenario chat (next section) turns the request into one or more of **6 engine actions**. Every action runs the same three steps: convert the change into **trips added or removed**, put those trips on **specific streets**, then ask **survey-grounded AI residents** how they feel. A prompt can combine actions ("6-story apartments with a grocery, and cut a lane on Michigan" = `add_building` + `modify_road`); the engine sums their traffic impact and residents react to the combined result.
 
-| Scenario | User sets | Traffic method | Sentiment anchored to | Build status |
-| --- | --- | --- | --- | --- |
-| Apartments / housing | units, floors, site | ITE code 221: 4.54 car trips per unit per day, 0.39 at evening peak ([rates](https://discover.pbc.gov/engineering/traffic/PDF/Traffic%20Documents/Trip_Generation_Rates.pdf)) | DMACS housing-cost and neighborhood questions | Live (done in mockup) |
-| **Drone delivery hub / corridor** | hub site, flights per day, share of van deliveries replaced, flight path | Delivery-van trips removed = packages moved to drones ÷ packages per van trip (user input); flight path drawn as a noise band | Drone-delivery polls (Christiansburg, VA: 87% positive; UK: 23% support), age gap | Live |
-| Road diet | lanes removed on a segment | Same traffic, fewer lanes: Michigan Ave 5 → 3 lanes takes load from 0.32 to 0.64 | DMACS traffic and safety questions | Live |
-| Bus route cut or frequency change | route, trips per hour | Riders who lose a route shift partly to cars; job access recomputed from GTFS | DMACS transit-use questions | Live |
-| Grocery store | square footage, site | ITE code 850: 93.84 trips per 1,000 sq ft per day ([rates](https://files.ceqanet.lci.ca.gov/217302-3/attachment/it9Prc7V4pZceNolKLv3PMYQgfbMQ3hEtOqaIlspIoh-DejQ6SWdagVQl1kV-doZziYduylG-kdmCvnk0)) | DMACS food-access and neighborhood questions | Live |
-| Rezoning | parcels, new zoning class | Maximum allowed units under the new zone → housing method | DMACS development and displacement questions | Live |
-| Data center | megawatts or square footage | ITE data center rate (low traffic); add construction trucks as a separate phase | Local news and public comment themes | Pre-computed |
-| Stadium / event venue | seats, events per year | Event-day surge on top of daily traffic | Public comment themes | Pre-computed |
-| Autonomous shuttle | route, vehicles, hours | Car trips replaced by shuttle riders (user input) | Autonomous-vehicle polls | Stretch |
-| Protected bike lanes | segment, lanes converted | Road-diet method plus a user-set share of drivers who switch to bikes | DMACS safety questions | Stretch |
+| Action | Covers prompts like | User or agent sets | Traffic method | Sentiment anchored to | Build order |
+| --- | --- | --- | --- | --- | --- |
+| `add_building` | apartments, grocery, office, data center, mixed-use | parcel, land use(s), units or sq ft | ITE rate × size. Apartments: code 221, 4.54 car trips per unit per day, 0.39 at evening peak ([rates](https://discover.pbc.gov/engineering/traffic/PDF/Traffic%20Documents/Trip_Generation_Rates.pdf)). Grocery: code 850, 93.84 trips per 1,000 sq ft per day ([rates](https://files.ceqanet.lci.ca.gov/217302-3/attachment/it9Prc7V4pZceNolKLv3PMYQgfbMQ3hEtOqaIlspIoh-DejQ6SWdagVQl1kV-doZziYduylG-kdmCvnk0)). Data center adds construction trucks as a separate phase | DMACS housing-cost, food-access and neighborhood questions | 1 |
+| `modify_road` | road diet, street closure, protected bike lane | segment, lanes removed or closed, optional share switching to bikes | Same traffic, fewer lanes: Michigan Ave 5 → 3 lanes takes load from 0.32 to 0.64. Closures reroute trips to the next shortest path | DMACS traffic and safety questions | 2 |
+| `add_drone_route` | drone delivery hub, expand the Newlab corridor | hub site, flights per day, share of van deliveries replaced, flight path | Delivery-van trips removed = packages moved to drones ÷ packages per van trip; flight path drawn as a noise band; hub adds staff and truck trips | Drone-delivery polls (Christiansburg, VA: 87% positive; UK: 23% support), age gap | 3 |
+| `change_transit` | bus route cut, more frequent service, autonomous shuttle | route, trips per hour (or new shuttle route) | Riders who lose service shift partly to cars; job access recomputed from GTFS | DMACS transit-use questions; autonomous-vehicle polls for shuttles | 4 |
+| `rezone` | rezoning, upzoning | parcels, new zoning class | Maximum allowed units under the new zone → `add_building` | DMACS development and displacement questions | 5 |
+| `add_event_surge` | stadium, concert venue | seats, events per year | Event-day surge on top of daily traffic | Public comment themes, DCFC stadium CBO report | 6 |
+
+If time runs out before an action is built, the agent still parses the prompt and the confirmation card says "not supported yet" instead of guessing.
 
 **Why lead with drones:** Corktown sits inside Michigan Central's Advanced Aerial Innovation Region, which [covers a 3-mile radius around Michigan Central](https://michigancentral.com/?p=3782). Aerialoop already flies a cargo drone route [beyond visual line of sight from Newlab's roof](https://michigancentral.com/?p=22696), the building you're demoing in. A drone scenario is a real decision this neighborhood faces now.
 
@@ -100,9 +98,9 @@ Users don't pick from preset scenarios. They type what they want to happen, and 
 - A use with no trip rate in the table (a skate park, a mural) gets the nearest code, a **low confidence** label, and its assumption listed.
 - Every scenario spec is saved to DynamoDB, so any run can be replayed and compared.
 - Off-topic or unsafe requests get a polite refusal.
-- Before the demo, write and test **5 demo prompts** end to end. If the agent misreads live, fall back to one of them.
+- Before the demo, write and test **3 demo prompts** end to end (drone, housing, one combined prompt), matched to the demo script. If the agent misreads live, fall back to one of them.
 
-**UI change:** the scenario list on the left becomes a chat panel with the confirmation card and run history. The map and results panel stay the same.
+**UI:** the left panel is the chat, with the confirmation card and run history. The map and results panel sit beside it.
 
 ## Data catalog
 
@@ -308,7 +306,7 @@ The traffic engine's per-block impacts feed the sentiment run, so sentiment alwa
 - [ ] LODES 8 for Michigan
 - [ ] DMACS summary results
 - [ ] 2–3 CBO reports for calibration
-- [ ] ITE trip rate table (about 25 land-use codes, typed by hand)
+- [ ] ITE trip rate table (25–40 land-use codes, typed by hand, so free-form prompts find a match)
 
 ## Implementation rules
 
@@ -346,7 +344,7 @@ Ask all 3,500 residents the same questions DMACS asked real Detroiters, then com
 
 ### Fallbacks
 
-- **Cached demo runs:** the 5 demo prompts are run ahead of time and saved. If Bedrock throttles, the Wi-Fi drops, or a run fails, the app loads the cached result and labels it "cached run."
+- **Cached demo runs:** the 3 demo prompts are run ahead of time and saved. If Bedrock throttles, the Wi-Fi drops, or a run fails, the app loads the cached result and labels it "cached run."
 - **Offline frontend mode:** the frontend can load cached results from local JSON with no backend.
 - **Backup video:** 1–2 minute screen recording of the full demo path, uploaded to Shipyard with the submission.
 - **Throttling:** residents batched 25 per call, concurrency capped; exponential backoff on 429 errors.
@@ -364,7 +362,7 @@ Ask all 3,500 residents the same questions DMACS asked real Detroiters, then com
 
 ## Build plan
 
-All 6 live scenarios and calibration should run end to end by Sunday 5 AM. That leaves the morning for polish, cached demo runs and three rehearsals before the 11:30 AM submission.
+The chat, all 6 engine actions and calibration should run end to end by Sunday 5 AM. That leaves the morning for polish, cached demo runs and three rehearsals before the 11:30 AM submission.
 
 | Task | Sat Nov 14 → Sun Nov 15 |
 | --- | --- |
@@ -373,7 +371,7 @@ All 6 live scenarios and calibration should run end to end by Sunday 5 AM. That 
 | Traffic engine + LODES | 3 PM – 9 PM |
 | AI residents + Bedrock | 5 PM – 11 PM |
 | Calibration vs real polls | 9 PM – 2 AM |
-| Wire 6 live scenarios | 11 PM – 5 AM |
+| Build 6 engine actions | 11 PM – 5 AM |
 | AI scenario chat (Strands agent) | 12 AM – 4 AM |
 | All 7 districts pre-built | 2 AM – 6 AM |
 | Polish, cache demo runs | 6 AM – 9 AM |
@@ -391,11 +389,11 @@ Shared: the JSON formats for the scenario spec and run result, agreed before eit
 **Cut order if behind** (cut from the top):
 
 1. Hearing-room re-weighting
-2. Stadium and data center scenarios (show them as pre-computed)
-3. Free-form chat (fall back to the 5 tested demo prompts)
-4. Backtest of the traffic model (describe it as next step)
+2. Backtest of the traffic model (describe it as next step)
+3. `add_event_surge` and `rezone` actions (agent replies "not supported yet")
+4. `change_transit` action
 
-**Never cut:** place scenario → street loads on the map → AI resident forecast with its calibration error shown. That loop is the product.
+**Never cut:** typed prompt → confirmation card → street loads on the map → AI resident forecast with its calibration error shown. That loop is the product. If the agent misreads live, run one of the 3 cached demo prompts.
 
 ## Demo script and judge Q&A
 
@@ -403,7 +401,7 @@ The pitch runs 3.5 minutes and leads with the drone scenario. A drone corridor a
 
 1. **Hook (20 s).** "There's a cargo drone route flying off this building's roof right now. Should it expand over Corktown homes? Today a city finds out at a public hearing. We find out in 30 seconds."
 2. **Drone scenario (60 s).** Type "Expand the Newlab drone route to 200 flights a day over Corktown." The map shows the flight band, van trips removed from Michigan Ave, and the sentiment split inside vs. outside the corridor, with noise as the top concern under the route.
-3. **Housing scenario (40 s).** Place 400 apartments. All counted streets stay green, and support divides by renter vs. owner. Point out the surprise: "The data says traffic isn't the problem here. Rent is."
+3. **Housing scenario (40 s).** Type "Build 400 apartments at Michigan and 14th." All counted streets stay green, and support divides by renter vs. owner. Point out the surprise: "The data says traffic isn't the problem here. Rent is."
 4. **Trust (30 s).** Open the calibration panel: simulated vs. real DMACS answers, error in points. "We don't just ask an AI how people feel. We check it against how Detroiters actually answered."
 5. **Scale and architecture (30 s).** All 7 districts, 3,500 residents, cost per run, the architecture diagram.
 6. **Team and lesson (10 s).** One sentence each.
@@ -429,7 +427,7 @@ The biggest risk is overclaiming. Every number on screen should show where it ca
 | 2020 traffic counts run low | Loads understated | Say so on screen; load newer counts if time allows |
 | ITE rates come from suburban sites | Car trips overstated in a dense, lower-car area | Show the Detroit car-ownership adjustment beside the raw rate |
 | DMACS download slower than expected | Weaker calibration | Fall back to published DMACS summary percentages |
-| Bedrock throttling during the live demo | Slow or failed run | Cache the 3 demo scenarios; cap concurrency and reuse cached responses |
+| Bedrock throttling during the live demo | Slow or failed run | Cache the 3 demo prompts; cap concurrency and reuse cached responses |
 | Drone polls are from other places (Virginia, UK) | Drone anchor may not fit Detroit | Present them as bounds (23% to 87%), not as a Detroit result |
 | Personal data concerns | Judges ask about privacy | Only aggregated public data; no real individuals modeled |
 
