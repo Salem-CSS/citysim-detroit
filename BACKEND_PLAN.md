@@ -138,7 +138,7 @@ The zoning layer carries codes, not limits, and the ordinance sets **no units-pe
 - `data/zoning_capacity.csv`, typed Nov 14 from the ordinance text (Chapter 50, Articles VIII–XIII), one row per zone with section numbers.
 - Maximum floor area = parcel area × FAR. Units = floor area ÷ average unit size, where **average unit size is a stated input**, never a default.
 - This works only for zones with a numeric apartment FAR: R2 (0.50, capped at 8 units), R3 (0.70), R4 (1.00), R5 (1.50), R6 (2.00), B1 (1.00), B2 (1.50), B4 (2.00), SD4 (4.50). Every other zone returns "no numeric limit in the ordinance" (height-only, volume-based, or set per project).
-- **Caveat:** the official sites refused this session, so the table was read from a third-party mirror of the code text (newest amendment in it took effect March 2024). Check the nine FAR values against the official code before showing rezone results. Amendments from 2025 could not be read.
+- **Checked Nov 14 from a laptop:** all nine FAR values match the official code on [Municode](https://library.municode.com/mi/detroit/codes/code_of_ordinances?nodeId=COCH50_CH50ZO_ARTXIIIINDIST) (version Oct 9, 2025, Sec. 50-13-3 to 50-13-7, 50-13-42, 50-13-43, 50-13-45, 50-13-132). Only the FAR column was checked; the table's other columns and the R2 8-unit cap still come from the third-party mirror.
 
 ### 4.9 Stadium trips
 
@@ -352,7 +352,7 @@ Steps 4–5, 6, 7 and 10 can run in parallel once 2 and 3 are done.
 1. **Census API key** in `.env`. Nothing census-related runs without it. (Tested Nov 14: works.)
 2. **GTFS and OSM hosts** refused this session: test both from a laptop. Neither blocks the plan (route headways and the road network have confirmed alternatives).
 3. **DDOT stop ridership period:** ask DDOT or find the layer's metadata before quoting riders-lost numbers on stage.
-4. **Zoning capacity table:** typed from a mirror of the ordinance. Someone opens the official code in a browser and confirms the nine FAR values (4.8).
+4. **Zoning capacity table:** done Nov 14. The nine FAR values match the official code (4.8). Other columns are still from the mirror.
 5. **K, D and lane capacity:** read the FDOT Quality/Level of Service tables directly for a citation, or keep them labelled as assumptions.
 6. **DMACS Wave 21 open microdata:** download from U-M Deep Blue if subgroup calibration is wanted.
 7. **Demo script:** the housing line "all counted streets stay green" and the drone line "van trips removed from Michigan Ave" both need rewording once real results exist (see 4.2 and 8.3).
