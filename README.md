@@ -5,6 +5,7 @@ Forecasts **traffic load** and **public sentiment** for proposed changes in Detr
 Built for the BuilderWars Hackathon (Nov 14–15, 2026, Newlab Detroit), AWS track.
 
 - **Full project scope:** [SCOPE.md](SCOPE.md)
+- **Step-by-step build guide:** [BUILD.md](BUILD.md)
 - **Stack:** Next.js + deck.gl, API Gateway, Lambda, Step Functions, Amazon Bedrock (Nova 2 Lite), Strands Agents, DynamoDB, S3 + Athena
 
 All data comes from public sources listed in the scope.
