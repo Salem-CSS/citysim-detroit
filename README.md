@@ -4,6 +4,7 @@ Forecasts **traffic load** and **public sentiment** for proposed changes in Detr
 
 Built for the BuilderWars Hackathon (Nov 14–15, 2026, Newlab Detroit), AWS track.
 
+- **Team log (read first, write last):** [LOG.md](LOG.md)
 - **Full project scope:** [SCOPE.md](SCOPE.md)
 - **Step-by-step build guide:** [BUILD.md](BUILD.md)
 - **Data setup (AWS owner does this first):** [DATA_SETUP.md](DATA_SETUP.md)
