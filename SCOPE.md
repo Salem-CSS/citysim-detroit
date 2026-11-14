@@ -310,6 +310,58 @@ The traffic engine's per-block impacts feed the sentiment run, so sentiment alwa
 - [ ] 2–3 CBO reports for calibration
 - [ ] ITE trip rate table (about 25 land-use codes, typed by hand)
 
+## Implementation rules
+
+### Persona sampling
+
+- **Seed data:** ACS 5-year PUMS household and person records for the Detroit PUMAs.
+- **Fitting:** iterative proportional fitting (`ipfn`) to each district's census-tract totals on 5 controls: **age band, household income band, tenure (rent/own), vehicles available (0 / 1 / 2+), household size**.
+- **Draw:** 500 personas per district (3,500 for all 7), sampled from the fitted weights.
+- **Extra traits** carried from the PUMS record, not fitted: commute mode and time, years in home, children in household. Work location attached from LODES for the home tract.
+- **Home block:** assigned within the tract in proportion to block population.
+- **Reproducible:** fixed random seed (`SEED=1114`) stored with each persona set; the same seed always gives the same 3,500 residents.
+- **Stored** as `personas/district_{n}.parquet` in S3, one row per resident.
+
+### Output checks for resident responses
+
+1. Every response is parsed as JSON and validated against the schema: `support` integer 1–5, `top_concern` from the fixed list, `reaction` a string under 200 characters, `persona_id` matching the batch.
+2. Any invalid or missing item is retried once (the failed personas only, in a smaller batch).
+3. Still invalid after one retry: dropped from the totals.
+4. Every run logs `responses_valid`, `responses_retried`, `responses_dropped` and the **drop rate**, shown in the Method tab. If the drop rate passes 5%, the run is flagged as unreliable.
+
+### Calibration plan
+
+Ask all 3,500 residents the same questions DMACS asked real Detroiters, then compare. Source: [DMACS Wave 22, Aug 6 – Oct 1, 2025](https://detroitsurvey.umich.edu).
+
+| Check | Real Detroit answer | Question asked to residents |
+| --- | --- | --- |
+| Feel safe walking in their neighborhood | 70% somewhat or very safe | "How safe do you feel walking in your neighborhood?" |
+| Satisfied with their neighborhood | 67% somewhat, mostly or very satisfied | "How satisfied are you with your neighborhood as a place to live?" |
+| Detroit headed in the right direction | 55% | "Is Detroit generally headed in the right direction?" |
+| Persona sanity check (demographic, not opinion) | 78% have lived in Detroit 20+ years | Computed directly from persona traits |
+
+- **Error measure:** absolute difference in percentage points between the residents' answer and the real one, per check, plus the average across the 3 opinion checks.
+- **Target:** average error under 10 points. Shown on screen whatever the result.
+- **When it runs:** once after personas are generated (Saturday night), and again after any prompt change. Results stored in DynamoDB with the persona seed and prompt version.
+
+### Fallbacks
+
+- **Cached demo runs:** the 5 demo prompts are run ahead of time and saved. If Bedrock throttles, the Wi-Fi drops, or a run fails, the app loads the cached result and labels it "cached run."
+- **Offline frontend mode:** the frontend can load cached results from local JSON with no backend.
+- **Backup video:** 1–2 minute screen recording of the full demo path, uploaded to Shipyard with the submission.
+- **Throttling:** residents batched 25 per call, concurrency capped; exponential backoff on 429 errors.
+
+### Submission checklist (Shipyard, due 12:00 PM Sunday; aim for 11:30 AM)
+
+- [ ] Project title: CitySim Detroit
+- [ ] Elevator pitch (1–2 sentences)
+- [ ] Track: AWS
+- [ ] Public GitHub repo with all code committed during the 24 hours: https://github.com/Salem-CSS/citysim-detroit
+- [ ] **AI tools used, all listed:** Claude (planning, scope, design mockups, code assistance), Amazon Bedrock with Amazon Nova models (AI residents), Strands Agents (scenario chat), plus any coding assistants used during the build
+- [ ] Demo video (optional, but upload the backup recording)
+- [ ] Both team members checked in Saturday
+- [ ] Be at the table with a working demo by 12:30 PM
+
 ## Build plan
 
 All 6 live scenarios and calibration should run end to end by Sunday 5 AM. That leaves the morning for polish, cached demo runs and three rehearsals before the 11:30 AM submission.
@@ -329,12 +381,12 @@ All 6 live scenarios and calibration should run end to end by Sunday 5 AM. That 
 
 Doors lock at 8 PM Saturday. Submission deadline is 12 PM Sunday; aim for 11:30 AM.
 
-| Role | Owns | Hands off to |
-| --- | --- | --- |
-| Data + traffic | dataset pulls, GeoParquet in S3, traffic engine Lambda | load per segment and impact per block for the sentiment run |
-| AI + sentiment | personas, Step Functions fan-out, calibration, Strands agent | support scores, concerns, quotes, calibration error |
-| Frontend | 3D map (deck.gl), scenario tools, impact and sentiment panels | the live demo |
-| AWS + demo (floater) | IAM, API Gateway, DynamoDB, caching, pitch, backup video | submission on Shipyard |
+| Role | Owns |
+| --- | --- |
+| Frontend | Next.js app, 3D map (deck.gl), chat panel and confirmation card, results panels, offline cached mode |
+| Backend / AWS | Data pipelines, personas, traffic engine (Lambda), Strands chat agent, Step Functions + Bedrock resident runs, calibration, DynamoDB, API Gateway, caching |
+
+Shared: the JSON formats for the scenario spec and run result, agreed before either side starts.
 
 **Cut order if behind** (cut from the top):
 
