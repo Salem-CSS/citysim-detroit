@@ -9,3 +9,19 @@ Built for the BuilderWars Hackathon (Nov 14–15, 2026, Newlab Detroit), AWS tra
 - **Stack:** Next.js + deck.gl, API Gateway, Lambda, Step Functions, Amazon Bedrock (Nova 2 Lite), Strands Agents, DynamoDB, S3 + Athena
 
 All data comes from public sources listed in the scope.
+
+## Repo layout
+
+```
+contracts/   JSON schemas shared by every lane (scenario spec, run result, persona)
+fixtures/    sample data matching the schemas, for building before real data lands
+data/        download scripts (census, LODES, Detroit open data), cleaning, personas
+engine/      traffic engine Lambda: actions -> trips -> streets -> load
+residents/   Bedrock batch runner, response checks, aggregation, calibration
+agent/       Strands scenario-chat agent
+infra/       AWS stack
+web/         Next.js + deck.gl app; web/prototype/ is the design reference
+demo/        demo prompts and cached runs
+```
+
+Get the data: see [data/README.md](data/README.md) (`python -m data.download.all`).

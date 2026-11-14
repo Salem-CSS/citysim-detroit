@@ -1,0 +1,385 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run_result.schema.json",
+  "title": "Run result",
+  "description": "Everything the frontend shows after a run. Percentages are 0-100. Load is volume/capacity (0-1+); the UI shows it as '% full'.",
+  "type": "object",
+  "required": [
+    "spec_id",
+    "run_id",
+    "status",
+    "overall",
+    "worries",
+    "districts",
+    "segments",
+    "run_stats"
+  ],
+  "properties": {
+    "spec_id": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "running",
+        "done",
+        "failed"
+      ]
+    },
+    "cached": {
+      "type": "boolean",
+      "default": false
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "overall": {
+      "allOf": [
+        {
+          "type": "object",
+          "required": [
+            "support",
+            "neutral",
+            "oppose"
+          ],
+          "properties": {
+            "support": {
+              "type": "number"
+            },
+            "neutral": {
+              "type": "number"
+            },
+            "oppose": {
+              "type": "number"
+            },
+            "support_range": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        }
+      ],
+      "description": "Census-weighted across all selected districts."
+    },
+    "worries": {
+      "type": "array",
+      "description": "Share of residents naming each top concern, sorted desc.",
+      "items": {
+        "type": "object",
+        "required": [
+          "concern",
+          "share"
+        ],
+        "properties": {
+          "concern": {
+            "enum": [
+              "traffic",
+              "noise",
+              "safety",
+              "privacy",
+              "rent",
+              "jobs",
+              "access",
+              "none"
+            ]
+          },
+          "share": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "groups": {
+      "type": "array",
+      "description": "Support by resident group (Who tab).",
+      "items": {
+        "type": "object",
+        "required": [
+          "dimension",
+          "label",
+          "support"
+        ],
+        "properties": {
+          "dimension": {
+            "enum": [
+              "exposure",
+              "tenure",
+              "age",
+              "vehicles"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "support": {
+            "type": "number"
+          },
+          "n": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "districts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "district",
+          "split",
+          "top_concern"
+        ],
+        "properties": {
+          "district": {
+            "type": "integer"
+          },
+          "split": {
+            "type": "object",
+            "required": [
+              "support",
+              "neutral",
+              "oppose"
+            ],
+            "properties": {
+              "support": {
+                "type": "number"
+              },
+              "neutral": {
+                "type": "number"
+              },
+              "oppose": {
+                "type": "number"
+              },
+              "support_range": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          },
+          "top_concern": {
+            "enum": [
+              "traffic",
+              "noise",
+              "safety",
+              "privacy",
+              "rent",
+              "jobs",
+              "access",
+              "none"
+            ]
+          },
+          "n": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "quotes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "persona_id",
+          "text",
+          "stance"
+        ],
+        "properties": {
+          "persona_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "stance": {
+            "enum": [
+              "support",
+              "neutral",
+              "oppose"
+            ]
+          },
+          "who": {
+            "type": "string",
+            "description": "e.g. 'Homeowner, 62, District 6'"
+          },
+          "district": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "segments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "segment_id",
+          "name",
+          "aadt_before",
+          "aadt_after",
+          "load_before",
+          "load_after"
+        ],
+        "properties": {
+          "segment_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "counted": {
+            "type": "boolean"
+          },
+          "aadt_before": {
+            "type": "number"
+          },
+          "aadt_after": {
+            "type": "number"
+          },
+          "lanes": {
+            "type": "integer"
+          },
+          "load_before": {
+            "type": "number"
+          },
+          "load_after": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "trips": {
+      "type": "object",
+      "properties": {
+        "daily_raw": {
+          "type": "number"
+        },
+        "daily_adjusted": {
+          "type": "number"
+        },
+        "pm_peak": {
+          "type": "number"
+        }
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "description": "Per-block popover data.",
+      "items": {
+        "type": "object",
+        "required": [
+          "block_geoid"
+        ],
+        "properties": {
+          "block_geoid": {
+            "type": "string"
+          },
+          "support": {
+            "type": "number"
+          },
+          "top_concern": {
+            "enum": [
+              "traffic",
+              "noise",
+              "safety",
+              "privacy",
+              "rent",
+              "jobs",
+              "access",
+              "none"
+            ]
+          },
+          "n": {
+            "type": "integer"
+          },
+          "in_noise_band": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "calibration": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "real": {
+                "type": "number"
+              },
+              "simulated": {
+                "type": "number"
+              },
+              "error_pts": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "avg_error_pts": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "measured": {
+          "type": "boolean"
+        }
+      }
+    },
+    "run_stats": {
+      "type": "object",
+      "required": [
+        "residents",
+        "valid",
+        "retried",
+        "dropped",
+        "drop_rate"
+      ],
+      "properties": {
+        "residents": {
+          "type": "integer"
+        },
+        "bedrock_calls": {
+          "type": "integer"
+        },
+        "valid": {
+          "type": "integer"
+        },
+        "retried": {
+          "type": "integer"
+        },
+        "dropped": {
+          "type": "integer"
+        },
+        "drop_rate": {
+          "type": "number"
+        },
+        "unreliable": {
+          "type": "boolean"
+        },
+        "seconds": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

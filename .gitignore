@@ -1,0 +1,22 @@
+# data (downloaded / generated; never commit)
+data/raw/
+data/interim/
+data/processed/
+*.parquet
+*.zip
+*.gz
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+# node
+node_modules/
+.next/
+# secrets
+.env
+.env.*
+!.env.example
+# aws
+.aws-sam/
+cdk.out/

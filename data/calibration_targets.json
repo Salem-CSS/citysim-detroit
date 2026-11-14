@@ -1,0 +1,41 @@
+{
+  "source": "DMACS Wave 22, Aug 6 - Oct 1, 2025 (https://detroitsurvey.umich.edu)",
+  "checks": [
+    {
+      "id": "safe_walking",
+      "label": "Feel safe walking in their neighborhood",
+      "real_pct": 70,
+      "question": "How safe do you feel walking in your neighborhood?"
+    },
+    {
+      "id": "neighborhood_satisfied",
+      "label": "Satisfied with their neighborhood",
+      "real_pct": 67,
+      "question": "How satisfied are you with your neighborhood as a place to live?"
+    },
+    {
+      "id": "right_direction",
+      "label": "Detroit headed in the right direction",
+      "real_pct": 55,
+      "question": "Is Detroit generally headed in the right direction?"
+    }
+  ],
+  "sanity": [
+    {
+      "id": "lived_20_years",
+      "label": "Lived in Detroit 20+ years",
+      "real_pct": 78,
+      "computed_from": "persona traits"
+    }
+  ],
+  "drone_bounds": {
+    "low": {
+      "pct": 23,
+      "source": "IMechE 2019, UK"
+    },
+    "high": {
+      "pct": 87,
+      "source": "Christiansburg, VA (Nelsen, Guthrie, Vinsel 2021)"
+    }
+  }
+}

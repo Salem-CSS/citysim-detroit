@@ -1,0 +1,193 @@
+{
+  "spec_id": "spec-demo-drone",
+  "run_id": "run-0001",
+  "status": "done",
+  "cached": true,
+  "created_at": "2026-11-14T21:00:00Z",
+  "overall": {
+    "support": 45,
+    "neutral": 25,
+    "oppose": 30,
+    "support_range": [
+      42,
+      48
+    ]
+  },
+  "worries": [
+    {
+      "concern": "noise",
+      "share": 34
+    },
+    {
+      "concern": "privacy",
+      "share": 21
+    },
+    {
+      "concern": "safety",
+      "share": 18
+    }
+  ],
+  "groups": [
+    {
+      "dimension": "exposure",
+      "label": "Under the flight path",
+      "support": 54
+    },
+    {
+      "dimension": "exposure",
+      "label": "Everywhere else",
+      "support": 37
+    },
+    {
+      "dimension": "tenure",
+      "label": "Renters",
+      "support": 52
+    },
+    {
+      "dimension": "tenure",
+      "label": "Homeowners",
+      "support": 38
+    },
+    {
+      "dimension": "age",
+      "label": "Under 35",
+      "support": 57
+    },
+    {
+      "dimension": "age",
+      "label": "35 to 64",
+      "support": 44
+    },
+    {
+      "dimension": "age",
+      "label": "65 and over",
+      "support": 34
+    },
+    {
+      "dimension": "vehicles",
+      "label": "No car",
+      "support": 55
+    },
+    {
+      "dimension": "vehicles",
+      "label": "Has a car",
+      "support": 42
+    }
+  ],
+  "districts": [
+    {
+      "district": 6,
+      "split": {
+        "support": 58,
+        "neutral": 18,
+        "oppose": 24
+      },
+      "top_concern": "noise",
+      "n": 500
+    },
+    {
+      "district": 5,
+      "split": {
+        "support": 49,
+        "neutral": 22,
+        "oppose": 29
+      },
+      "top_concern": "noise",
+      "n": 500
+    },
+    {
+      "district": 4,
+      "split": {
+        "support": 41,
+        "neutral": 24,
+        "oppose": 35
+      },
+      "top_concern": "privacy",
+      "n": 500
+    },
+    {
+      "district": 7,
+      "split": {
+        "support": 33,
+        "neutral": 37,
+        "oppose": 30
+      },
+      "top_concern": "safety",
+      "n": 500
+    }
+  ],
+  "quotes": [
+    {
+      "persona_id": "d5-0112",
+      "text": "I see them every day already. Faster deliveries help since I don't have a car.",
+      "stance": "support",
+      "who": "Renter, 27, District 5",
+      "district": 5
+    },
+    {
+      "persona_id": "d6-0031",
+      "text": "If it takes vans off Michigan, fine. I just don't want them buzzing over my yard at 6 AM.",
+      "stance": "neutral",
+      "who": "Homeowner, 62, District 6",
+      "district": 6
+    },
+    {
+      "persona_id": "d4-0408",
+      "text": "Who's watching the camera footage from these things over our houses?",
+      "stance": "oppose",
+      "who": "Homeowner, 58, District 4",
+      "district": 4
+    }
+  ],
+  "segments": [
+    {
+      "segment_id": "seg-michigan-01",
+      "name": "Michigan Ave",
+      "counted": true,
+      "aadt_before": 10309,
+      "aadt_after": 10180,
+      "lanes": 5,
+      "load_before": 0.32,
+      "load_after": 0.32
+    },
+    {
+      "segment_id": "seg-vernor-01",
+      "name": "W Vernor Hwy",
+      "counted": true,
+      "aadt_before": 8900,
+      "aadt_after": 8840,
+      "lanes": 2,
+      "load_before": 0.55,
+      "load_after": 0.55
+    }
+  ],
+  "trips": {
+    "daily_raw": -120,
+    "daily_adjusted": -120,
+    "pm_peak": -11
+  },
+  "blocks": [
+    {
+      "block_geoid": "261635214001000",
+      "support": 61,
+      "top_concern": "noise",
+      "n": 38,
+      "in_noise_band": true
+    }
+  ],
+  "calibration": {
+    "checks": [],
+    "avg_error_pts": null,
+    "measured": false
+  },
+  "run_stats": {
+    "residents": 2000,
+    "bedrock_calls": 80,
+    "valid": 1991,
+    "retried": 14,
+    "dropped": 9,
+    "drop_rate": 0.0045,
+    "unreliable": false,
+    "seconds": 38
+  }
+}

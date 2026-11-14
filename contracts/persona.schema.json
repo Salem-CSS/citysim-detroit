@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "persona.schema.json",
+  "title": "Persona row",
+  "description": "One AI resident. Every trait comes from census data (PUMS + LODES). Stored as personas/district_{n}.parquet.",
+  "type": "object",
+  "required": [
+    "persona_id",
+    "district",
+    "tract_geoid",
+    "block_geoid",
+    "age",
+    "sex",
+    "hh_income",
+    "tenure",
+    "vehicles",
+    "hh_size",
+    "weight"
+  ],
+  "properties": {
+    "persona_id": {
+      "type": "string",
+      "description": "d{district}-{0000}"
+    },
+    "district": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 7
+    },
+    "tract_geoid": {
+      "type": "string",
+      "pattern": "^26163[0-9]{6}$"
+    },
+    "block_geoid": {
+      "type": "string",
+      "pattern": "^26163[0-9]{10}$"
+    },
+    "age": {
+      "type": "integer",
+      "minimum": 18
+    },
+    "sex": {
+      "enum": [
+        "female",
+        "male"
+      ]
+    },
+    "hh_income": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "tenure": {
+      "enum": [
+        "owner",
+        "renter"
+      ]
+    },
+    "years_in_home": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "vehicles": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "commute_mode": {
+      "enum": [
+        "drive_alone",
+        "carpool",
+        "bus",
+        "walk",
+        "bike",
+        "work_from_home",
+        "other",
+        "not_working"
+      ]
+    },
+    "commute_minutes": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "hh_size": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "children": {
+      "type": "boolean"
+    },
+    "work_tract_geoid": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "weight": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Post-stratification weight to district census totals."
+    },
+    "pums_serialno": {
+      "type": "string"
+    }
+  }
+}

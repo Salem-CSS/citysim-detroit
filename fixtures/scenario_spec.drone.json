@@ -1,0 +1,45 @@
+{
+  "spec_id": "spec-demo-drone",
+  "prompt": "Expand the Newlab drone route to 200 flights a day over Corktown",
+  "summary": "Drone delivery route from the Newlab rooftop, 200 flights a day over Districts 6, 5 and 4",
+  "districts": [
+    6,
+    5,
+    4,
+    7
+  ],
+  "assumptions": [
+    "flying height 200 ft (default)",
+    "1 in 5 van deliveries replaced (default)"
+  ],
+  "confidence": "medium",
+  "parent_spec_id": null,
+  "actions": [
+    {
+      "type": "add_drone_route",
+      "hub": {
+        "lat": 42.3289,
+        "lon": -83.0776
+      },
+      "path": [
+        {
+          "lat": 42.3289,
+          "lon": -83.0776
+        },
+        {
+          "lat": 42.3355,
+          "lon": -83.056
+        },
+        {
+          "lat": 42.347,
+          "lon": -83.033
+        }
+      ],
+      "flights_per_day": 200,
+      "van_share_replaced": 0.2,
+      "packages_per_van_trip": 120,
+      "altitude_ft": 200,
+      "noise_band_ft": 500
+    }
+  ]
+}
