@@ -286,9 +286,9 @@ Run on a laptop. Output goes to `s3://$DATA_BUCKET/processed/` and `personas/`.
 - **Range:** bootstrap resample of personas within district, 200 draws, 5th–95th percentile. This is sampling spread only, not model error; label it so.
 - **Cache key:** spec hash + persona id + impact lines.
 
-### 9.1 Resident questionnaire (proposed Nov 14, not yet agreed)
+### 9.1 Resident questionnaire (all seven agreed Nov 14)
 
-One fixed set, identical wording and answer options for every resident on every proposal. Questions 1, 2 and 7 are what `residents/prompt.py` asks today. Questions 3–6 are new and each adds a field to `run_result`, so the frontend lane must agree. If fewer are wanted, cut 4 first.
+One fixed set, identical wording and answer options for every resident on every proposal. All seven are in `residents/prompt.py` (`PROMPT_VERSION = q7-2026-11-14`). Questions 3–6 each add a field to `run_result`; that schema change is still waiting on the frontend lane.
 
 | # | Question | Answer options | Feeds |
 | --- | --- | --- | --- |
