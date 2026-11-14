@@ -147,4 +147,4 @@ If the other teammate needs to read the bucket from their machine, create an IAM
 
 ## What's next
 
-Once `raw/` is in S3, the Data lane continues with BUILD.md Step 3 (clean and district-tag) and Step 4 (personas). Those write to `processed/` and `personas/` in the same bucket.
+Next: build the 3D building layer with [BUILDINGS.md](BUILDINGS.md). Once `raw/` is in S3, the Data lane also continues with BUILD.md Step 3 (clean and district-tag) and Step 4 (personas). Those write to `processed/` and `personas/` in the same bucket.
