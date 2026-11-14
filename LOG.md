@@ -45,7 +45,7 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 | Residents (Bedrock) | — | Scaffolded: prompt + response checks work, batching stubbed | 11-14 17:50 |
 | Agent + Infra (Strands, AWS stack) | — | Not started | 11-14 17:50 |
 | Web (Next.js + deck.gl) | Salem | Static prototype done (`web/prototype/index.html`); Next.js not started | 11-14 17:50 |
-| Deploy (Render) | Salem | Web service configured; first deploy pending | 11-14 17:50 |
+| Deploy (Vercel) | Salem | Switching to Vercel; waiting on GitHub app install, then first deploy | 11-14 17:55 |
 
 ## Open questions / handoffs
 
@@ -56,6 +56,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 ---
 
 ## Entries
+
+### 2026-11-14 17:55 ET · Salem (AI) · Deploy
+**Did:** Dropped Render (the service was configured but never deployed, so nothing exists there). Hosting the frontend on **Vercel** instead.
+**Files:** none yet (Vercel dashboard)
+**Contracts changed:** none
+**Decisions:** Vercel project settings: repo `Salem-CSS/citysim-detroit`, branch `main`, framework preset **Other**, root directory `web/prototype`, no build command, no install command. When Next.js lands in `web/`, change the root directory to `web` and the framework preset to Next.js (auto-detected). Backend stays on AWS; the site calls API Gateway. Ignore the Render entry below.
+**Blocked / needs:** Salem to install the Vercel GitHub app for this repo.
+**Next:** first deploy, then post the live URL here.
 
 ### 2026-11-14 17:50 ET · Salem (AI) · Deploy
 **Did:** Configured a Render **web service** (not static) for the site: repo `Salem-CSS/citysim-detroit`, branch `main`, Python 3, region Virginia (US East), free instance. Until the Next.js app exists it serves the prototype with `python -m http.server $PORT --directory web/prototype`. Auto-deploys on commits that touch `web/**`.
