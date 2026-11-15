@@ -909,6 +909,8 @@ var mapView = (function () {
   function ease(t) { t = Math.max(0, Math.min(1, t)); return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
   function buildLayers() {
     if (!build || !build.ready) return [];
+    if (build.kind === 'building') return buildingLayers();
+    if (build.kind === 'drone') return droneLayers();
     var t = performance.now() - build.t0, L = [], a = build.a, b = build.b || build.a, route = !!build.b, path = build.path || [a, b];
     var pd = route ? ease(t / DRAW) : 1;                                         // 1. the route draws itself along the streets
     var head = along(path, pd).head;
@@ -933,6 +935,66 @@ var mapView = (function () {
     }
     return L;
   }
+  // ---- new building: ripple, then a block rises floor by floor and stays ----
+  function footprint(c, w, d, ang) {           // w x d metres, rotated ang degrees, around c
+    var k = 111320 * Math.cos(c[1] * Math.PI / 180), r = ang * Math.PI / 180, cs = Math.cos(r), sn = Math.sin(r);
+    return [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2], [-w / 2, -d / 2]].map(function (p) {
+      return [c[0] + (p[0] * cs - p[1] * sn) / k, c[1] + (p[0] * sn + p[1] * cs) / 110540]; });
+  }
+  function buildingLayers() {
+    var t = performance.now() - build.t0, o = build.opts, H = o.floors * 3.4, RISE_B = 1600, L = [];
+    var rip = [{ p: build.a }];
+    L.push(new deck.ScatterplotLayer({ id: 'b-ripple', data: rip, getPosition: function (d) { return d.p; }, stroked: true, filled: false,
+      radiusUnits: 'meters', lineWidthUnits: 'pixels', getLineWidth: 3, getRadius: 20 + 140 * ease(t / 1100),
+      getLineColor: [56, 189, 248, Math.round(255 * Math.max(0, 1 - t / 1100))], updateTriggers: { getRadius: t, getLineColor: t } }));
+    var k = ease((t - 300) / RISE_B), h = Math.max(0.5, H * k);
+    L.push(new deck.SolidPolygonLayer({ id: 'b-site', data: [{ p: o.poly }], getPolygon: function (d) { return d.p; }, extruded: false,
+      getFillColor: [56, 189, 248, 70] }));
+    L.push(new deck.SolidPolygonLayer({ id: 'b-block', data: [{ p: o.poly }], getPolygon: function (d) { return d.p; }, extruded: true, wireframe: true,
+      getElevation: h, getFillColor: [59, 130, 246, 235], getLineColor: [191, 219, 254, 255], material: { ambient: .55, diffuse: .7, shininess: 20 },
+      updateTriggers: { getElevation: h } }));
+    var floorsUp = Math.min(o.floors, Math.floor(o.floors * k + 0.001));       // floor lines appear as it rises
+    var lines = []; for (var i = 1; i < floorsUp; i++) lines.push(o.poly.map(function (c) { return [c[0], c[1], i * 3.4]; }));
+    L.push(new deck.PathLayer({ id: 'b-floors', data: lines, getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 1.2,
+      getColor: [191, 219, 254, 180], updateTriggers: { getPath: floorsUp } }));
+    return L;
+  }
+
+  // ---- drone route: raised flight line draws, drone flies it once, soft noise pulses under it ----
+  function droneLayers() {
+    var t = performance.now() - build.t0, o = build.opts, alt = o.alt, a = build.a, b = build.b, L = [];
+    var N = 48, arc = []; for (var i = 0; i <= N; i++) { var f = i / N, up = Math.min(1, f / 0.12, (1 - f) / 0.12);   // climb, cruise, descend
+      arc.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, alt * ease(up)]); }
+    var pd = ease(t / DRAW), n = Math.max(1, Math.round(N * pd));
+    L.push(new deck.PathLayer({ id: 'd-ground', data: [{ p: arc.slice(0, n + 1).map(function (c) { return [c[0], c[1], 0]; }) }], getPath: function (d) { return d.p; },
+      widthUnits: 'pixels', getWidth: 2, getColor: [148, 163, 184, 140], updateTriggers: { getPath: n } }));
+    L.push(new deck.PathLayer({ id: 'd-route', data: [{ p: arc.slice(0, n + 1) }], getPath: function (d) { return d.p; },
+      widthUnits: 'pixels', getWidth: 5, getColor: [56, 189, 248, 240], capRounded: true, jointRounded: true, updateTriggers: { getPath: n } }));
+    var ends = [{ p: a, s: 0 }, { p: b, s: DRAW * 0.85 }];
+    L.push(new deck.ColumnLayer({ id: 'd-pad', data: ends, diskResolution: 24, radius: 18, extruded: true, getPosition: function (d) { return d.p; },
+      getElevation: function (d) { return 1.5 * ease((t - d.s) / 400); }, getFillColor: [37, 99, 235, 255], updateTriggers: { getElevation: t } }));
+    if (t > DRAW) {
+      var k = ease((t - DRAW) / DRIVE), idx = Math.min(N, k * N), i0 = Math.floor(idx), i1 = Math.min(N, i0 + 1), fr = idx - i0;
+      var p = [arc[i0][0] + (arc[i1][0] - arc[i0][0]) * fr, arc[i0][1] + (arc[i1][1] - arc[i0][1]) * fr, arc[i0][2] + (arc[i1][2] - arc[i0][2]) * fr];
+      var ang = Math.atan2(b[1] - a[1], (b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180)) * 180 / Math.PI;
+      L.push(new deck.SimpleMeshLayer({ id: 'd-drone', data: [p], mesh: DRONE, getPosition: function (q) { return q; }, getOrientation: [0, -ang, 0],
+        getColor: [250, 204, 21], material: { ambient: .7, diffuse: .6 }, updateTriggers: { getPosition: k } }));
+      if (k < 1) L.push(new deck.ScatterplotLayer({ id: 'd-noise', data: [[p[0], p[1]]], getPosition: function (q) { return q; }, stroked: true, filled: true,
+        radiusUnits: 'meters', lineWidthUnits: 'pixels', getLineWidth: 2, getRadius: 60 + 40 * ((t / 500) % 1),
+        getFillColor: [56, 189, 248, 30], getLineColor: [56, 189, 248, Math.round(160 * (1 - (t / 500) % 1))], updateTriggers: { getPosition: k, getRadius: t, getLineColor: t } }));
+    }
+    return L;
+  }
+  function boxMesh(parts) {                  // parts: [[cx, cy, cz, sx, sy, sz], ...] -> one mesh
+    var P = [], N = [];
+    parts.forEach(function (b) { var x0 = b[0] - b[3] / 2, x1 = b[0] + b[3] / 2, y0 = b[1] - b[4] / 2, y1 = b[1] + b[4] / 2, z0 = b[2] - b[5] / 2, z1 = b[2] + b[5] / 2;
+      var v = [[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]];
+      function q(a, c, d, e, n) { [a, c, d, a, d, e].forEach(function (w) { P.push(w[0], w[1], w[2]); N.push(n[0], n[1], n[2]); }); }
+      q(v[4],v[5],v[6],v[7],[0,0,1]); q(v[3],v[2],v[1],v[0],[0,0,-1]); q(v[0],v[1],v[5],v[4],[0,-1,0]); q(v[2],v[3],v[7],v[6],[0,1,0]); q(v[1],v[2],v[6],v[5],[1,0,0]); q(v[3],v[0],v[4],v[7],[-1,0,0]); });
+    return { attributes: { positions: { value: new Float32Array(P), size: 3 }, normals: { value: new Float32Array(N), size: 3 } } };
+  }
+  var DRONE = boxMesh([[0, 0, 0, 8, 8, 2.5], [0, 0, 0, 26, 2.4, 1.2], [0, 0, 0, 2.4, 26, 1.2],      // drawn ~10x real size so it reads from above
+    [12, 0, 1.2, 9, 9, 0.6], [-12, 0, 1.2, 9, 9, 0.6], [0, 12, 1.2, 9, 9, 0.6], [0, -12, 1.2, 9, 9, 0.6]]);
   var BUS = (function () {                   // 12 m x 2.6 m x 3.2 m box, long axis = x
     var x = 14, y = 3.5, z = 7, P = [], N = [];
     function q(a, b, c, d, n) { [a, b, c, a, c, d].forEach(function (v) { P.push(v[0], v[1], v[2]); N.push(n[0], n[1], n[2]); }); }
@@ -940,7 +1002,7 @@ var mapView = (function () {
     q(v[4],v[5],v[6],v[7],[0,0,1]); q(v[0],v[1],v[5],v[4],[0,-1,0]); q(v[2],v[3],v[7],v[6],[0,1,0]); q(v[1],v[2],v[6],v[5],[1,0,0]); q(v[3],v[0],v[4],v[7],[-1,0,0]);
     return { attributes: { positions: { value: new Float32Array(P), size: 3 }, normals: { value: new Float32Array(N), size: 3 } } };
   })();
-  function buildLoop() { if (!build) return; render(); if (!build.ready || performance.now() - build.t0 < DRAW + DRIVE + 400) requestAnimationFrame(buildLoop); }
+  function buildLoop() { if (!build) return; render(); if (!build.ready || performance.now() - build.t0 < DRAW + DRIVE + 600) requestAnimationFrame(buildLoop); }
   function cached(name, key, fn) { if (memo[name] && memo[name].key === key) return memo[name].v; var v = fn(); memo[name] = { key: key, v: v }; return v; }
 
 
@@ -1112,19 +1174,22 @@ var mapView = (function () {
     answerCounts: function () { var c = { support: 0, neutral: 0, oppose: 0 }; residents.forEach(function (r) { if (r.stance) c[r.stance]++; }); return c; },
     find: function (fn) { return residents.filter(function (r) { return on(r.d) && fn(r); }); },
     setRoute: function (a, b) { route = a && b ? [a, b] : null; render(); },
-    playBuild: function (kind, a, b) {        // returns ms until the animation's main beat is done
-      var B = build = { kind: kind, a: a, b: b || null, t0: 0, ready: false, path: null };
+    playBuild: function (kind, a, b, opts) {  // returns ms until the animation's main beat is done
+      opts = opts || {};
+      if (kind === 'building') opts.poly = footprint(a, opts.w || 40, opts.d || 28, opts.ang || 0);
+      var B = build = { kind: kind, a: a, b: b || null, t0: 0, ready: false, path: null, opts: opts };
       var pts = b ? [a, b] : [a], lo = [Math.min.apply(null, pts.map(function (p) { return p[0]; })), Math.min.apply(null, pts.map(function (p) { return p[1]; }))],
           hi = [Math.max.apply(null, pts.map(function (p) { return p[0]; })), Math.max.apply(null, pts.map(function (p) { return p[1]; }))];
       var left = document.getElementById('app').classList.contains('has-blocks') ? 400 : 60;
       var pad = { top: 140, bottom: 140, left: left, right: 460 };
       var cam = map.cameraForBounds([lo, hi], { padding: pad, maxZoom: 16 }) || {};
-      map.easeTo({ center: cam.center || a, zoom: Math.min((cam.zoom || 16) - 0.4, 16), pitch: 50, bearing: map.getBearing(), duration: 700 });
-      var go = function () { if (build !== B || B.ready) return; if (b) { try { B.path = roadPath(a, b); } catch (e) { B.path = null; } } B.ready = true; B.t0 = performance.now(); };
+      map.easeTo({ center: cam.center || a, zoom: Math.min((cam.zoom || 16) - 0.4, kind === 'building' ? 16.6 : 16), pitch: kind === 'drone' ? 60 : 50, bearing: map.getBearing(), duration: 700 });
+      if (kind === 'building') { var cb = map.cameraForBounds([[a[0] - .002, a[1] - .0015], [a[0] + .002, a[1] + .0015]], { padding: pad, maxZoom: 17 }) || {}; cam = cb; }
+      var go = function () { if (build !== B || B.ready) return; if (b && kind === 'transit') { try { B.path = roadPath(a, b); } catch (e) { B.path = null; } } B.ready = true; B.t0 = performance.now(); };
       map.once('moveend', function () { map.once('idle', go); setTimeout(go, 900); });   // street tiles for the framed view are loaded by then
       setTimeout(go, 2000);
       requestAnimationFrame(buildLoop);
-      return 1300 + (b ? DRAW + DRIVE : RISE + 300);
+      return 1300 + (kind === 'building' ? 2100 : b ? DRAW + DRIVE : RISE + 300);
     },
     clearBuild: function () { build = null; render(); },
     pick: function (what, cb, key, near) {           // top-down view; next click on a road/intersection returns its name + point. near = [lon, lat] to look at
@@ -1500,11 +1565,30 @@ function placeOf(a,id){
   return c && c.resolved && c.resolved.lon!=null && (!inp || inp.value.trim()===String(c.value||'').trim()) ? [c.resolved.lon,c.resolved.lat] : null;
 }
 // play the "added to the world" animation for the proposal, if we know where it goes; returns its length in ms (0 = none)
+// preset sites and hubs from contracts/actions.json -> approximate map points (animation framing only)
+var PRESET_LL={ michigan_14th:[-83.0789,42.3306], bagley_16th:[-83.0806,42.3262], trumbull_lot:[-83.0679,42.3318],
+  newlab:[-83.0763,42.3291], mc_garage:[-83.0745,42.3305], bagley_lot:[-83.0790,42.3270], corktown_lot:[-83.0679,42.3318], eastern_market:[-83.0420,42.3480] };
+function presetOf(a,id){ var el=body.querySelector('[data-k="'+a.action_id+'.'+id+'"]'), c=(a.constraints||[]).filter(function(x){return x.id===id;})[0]; if(!c) return null;
+  var v=c.value; if(el){ var lab=el.tagName==='SELECT'?el.value:(el.querySelector('[aria-pressed="true"]')||{}).textContent; var m=(c.options||[]).filter(function(o){return o.label===lab;})[0]; if(m) v=m.value; }
+  return PRESET_LL[v]||null; }
+function valOf(a,id){ var c=(a.constraints||[]).filter(function(x){return x.id===id;})[0]; if(!c) return null;
+  var el=body.querySelector('[data-k="'+a.action_id+'.'+id+'"]');
+  if(el && el.querySelector('output')) return +el.querySelector('output').dataset.v;
+  if(el){ var lab=el.tagName==='SELECT'?el.value:(el.querySelector('[aria-pressed="true"]')||{}).textContent; var m=(c.options||[]).filter(function(o){return o.label===lab;})[0]; if(m) return m.value; }
+  return c.value; }
 function playProposal(){
-  var a=(state.spec?state.spec.actions:[]).filter(function(x){ return x.type==='change_transit'; })[0]; if(!a) return 0;
-  var f=placeOf(a,'from'), t=placeOf(a,'to'), w=placeOf(a,'where');
-  if(f&&t) return mapView.playBuild('transit',f,t);
-  if(f||t||w) return mapView.playBuild('transit',f||t||w,null);
+  var acts=state.spec?state.spec.actions:[];
+  var bus=acts.filter(function(x){ return x.type==='change_transit'; })[0];
+  if(bus){ var f=placeOf(bus,'from'), t=placeOf(bus,'to'), w=placeOf(bus,'where');
+    if(f&&t) return mapView.playBuild('transit',f,t);
+    if(f||t||w) return mapView.playBuild('transit',f||t||w,null); }
+  var bl=acts.filter(function(x){ return x.type==='add_building'; })[0];
+  if(bl){ var p=placeOf(bl,'where')||presetOf(bl,'site'); if(p){ var fl=+valOf(bl,'floors')||5, homes=+valOf(bl,'homes')||0;
+    var area=Math.max(900, Math.min(4000, homes ? homes*85/fl*1.25 : 1100)), w=Math.sqrt(area*1.4), d=area/w;          // footprint from homes per floor (illustration)
+    return mapView.playBuild('building',p,null,{floors:Math.max(1,Math.min(40,fl)), w:w, d:d}); } }
+  var dr=acts.filter(function(x){ return x.type==='add_drone_route'; })[0];
+  if(dr){ var a0=placeOf(dr,'from')||presetOf(dr,'hub'), b0=placeOf(dr,'to')||placeOf(dr,'where');
+    if(a0&&b0){ var ft=+valOf(dr,'altitude_ft')||200; return mapView.playBuild('drone',a0,b0,{alt:Math.max(30,Math.min(150,ft*0.3048))}); } }
   return 0;
 }
 function syncRoute(){
