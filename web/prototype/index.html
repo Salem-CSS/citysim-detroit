@@ -131,6 +131,11 @@ button { cursor: pointer; }
 .toggle[aria-pressed="true"] .knob { background: #2563EB; }
 .toggle[aria-pressed="true"] .knob::after { transform: translateX(14px); }
 .map-key i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.key-min { width: 28px; height: 28px; border-radius: 8px; border: 0; background: var(--raised); color: var(--text-2); display: grid; place-items: center; cursor: pointer; flex: 0 0 auto; }
+.key-min svg { transition: transform .2s; }
+.map-key.is-min { gap: 0; padding: 6px; }
+.map-key.is-min > :not(.key-min) { display: none !important; }
+.map-key.is-min .key-min svg { transform: rotate(180deg); }
 
 /* top bar */
 .topbar { position: absolute; top: 16px; left: 16px; right: 16px; z-index: 3; display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
@@ -256,6 +261,10 @@ button { cursor: pointer; }
 .cmp .a1 { background: #C7D2FE; color: #1E1B4B; } .cmp .a2 { background: #818CF8; color: #1E1B4B; } .cmp .a3 { background: #4338CA; color: #EEF2FF; }
 .cmp .srow .side { text-align: right; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .cmp .srow .side small { display: block; font-size: 12px; font-weight: 600; color: var(--text-3); }
+.cmp .srow .side { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+.cmp .srow .side .sv { color: var(--support); } .cmp .srow .side .ov { color: var(--oppose); font-size: 15px; }
+.cmp .ptab { max-width: none; }
+.cmp h2 { margin: 0; }
 .cmp .key { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--text-2); margin-top: 8px; }
 .cmp .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 .cmp .takeaway { padding: 14px 16px; border-radius: var(--r-sm); background: var(--raised); font-size: 15px; line-height: 1.55; }
@@ -292,6 +301,32 @@ button { cursor: pointer; }
 .loader .logo-dot { animation: pulse 1.2s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 @keyframes pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .loader .logo-bars rect, .loader .logo-dot { animation: none; } }
+.lean { margin: 10px 0 0; font-size: 16px; font-weight: 600; color: var(--text); }
+.drows { display: flex; flex-direction: column; gap: 6px; }
+.drow2 { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; width: 100%; padding: 12px 14px; border: 1px solid transparent; border-radius: var(--r-sm);
+  background: var(--raised); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.drow2:hover { border-color: rgba(148,163,184,0.4); }
+.drow2 .nm { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; }
+.drow2 .nm .dot { width: 12px; height: 12px; }
+.drow2 .pcts { display: flex; gap: 12px; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.drow2 .pcts .s { color: var(--support); } .drow2 .pcts .o { color: var(--oppose); }
+.drow2 .pcts small { font-size: 12px; font-weight: 600; color: var(--text-3); margin-left: 2px; }
+.drow2 .split { grid-column: 1 / -1; height: 8px; }
+.drow2 .sub { grid-column: 1 / -1; font-size: 13px; color: var(--text-3); }
+.fact-line { padding: 12px 14px; border-radius: var(--r-sm); background: var(--raised); font-size: 15px; }
+.fact-line details { margin-top: 6px; } .fact-line summary, .fineprint summary { cursor: pointer; font-size: 13px; color: var(--text-3); }
+.fact-line details p, .fineprint p { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: var(--text-2); }
+.fineprint summary { font-size: 13px; }
+.results.is-compare .hide-compare { display: none; }
+.gtoggle { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--raised); }
+.gtoggle button { border: 0; background: transparent; color: var(--text-2); font: inherit; font-size: 13px; font-weight: 700; padding: 5px 10px; border-radius: 8px; cursor: pointer; }
+.gtoggle button[aria-pressed="true"] { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+.gtoggle button[aria-pressed="true"][data-m="oppose"] { color: var(--oppose); }
+.gtoggle button[aria-pressed="true"][data-m="support"] { color: var(--support); }
+.gtoggle button:disabled { opacity: .4; cursor: not-allowed; }
+.hrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.hrow h3 { margin: 0 !important; }
+.grow.m-oppose .split > span:first-child { background: var(--oppose); }
 .tile__name { display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .tile__pct { font-size: 26px; font-weight: 800; }
 .tile__sub { font-size: 14px; color: var(--text-2); }
@@ -365,6 +400,7 @@ button { cursor: pointer; }
   <!-- MAP: static SVG stand-in for deck.gl -->
   <div class="map" id="map" data-state="empty" data-proposal="none" role="img" aria-label="3D map of Detroit with every building, council districts and the proposal"></div>
   <div class="map-key panel" id="mapKey" aria-label="Map key">
+    <button type="button" class="key-min" id="keyMin" aria-expanded="true" aria-label="Hide the key" title="Hide the key"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4l-4 4 4 4"/></svg></button>
     <button type="button" class="toggle" id="roadsToggle" aria-pressed="true"><span class="knob"></span>Roads</button>
     <span class="key-roads"><span><i style="background:#4ADE80;border-radius:2px"></i>Light</span><span><i style="background:#FACC15;border-radius:2px"></i>Busy</span><span><i style="background:#F87171;border-radius:2px"></i>Heavy</span></span>
     <span class="key-res"><span><i style="background:var(--support)"></i>Supports</span><span><i style="background:#94A3B8"></i>Neutral</span><span><i style="background:var(--oppose)"></i>Opposes</span></span>
@@ -422,12 +458,12 @@ button { cursor: pointer; }
             <div><b class="num" style="color:var(--oppose)" id="ovO">30%</b><span>oppose</span></div>
           </div>
           <div class="split" id="ovBar" style="height:14px;border-radius:7px" role="img" aria-label="45% support, 25% neutral, 30% oppose"><span style="width:45%"></span><span style="width:25%"></span><span style="width:30%"></span></div>
-          <p style="margin:10px 0 0" class="muted" id="ovLean">Leaning yes. No majority either way.</p>
+          <p class="lean" id="ovLean">Leaning yes</p>
         </div>
       </section>
       <section data-hide-district>
         <h3>By district</h3>
-        <div class="tiles" id="tiles"></div>
+        <div class="drows" id="tiles"></div>
       </section>
       <section data-show="results" id="worries" data-hide-district>
         <h3>Top worries</h3>
@@ -436,10 +472,10 @@ button { cursor: pointer; }
         <div class="worry"><div class="worry__row"><span>Safety if one falls</span><b class="num">18%</b></div><div class="meter"><span style="width:36%"></span></div></div>
       </section>
       <section data-show="results" data-hide-district>
-        <div class="note note--ok" id="trafficNote"><svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg><div><b>Traffic: no problem.</b> Takes delivery vans off the road. No main street gets jammed.</div></div>
+        <div class="fact-line" id="trafficNote"><b>Traffic: no problem.</b></div>
       </section>
-      <section>
-        <div class="note"><svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7.5v3.5M8 5v.3"/></svg><div id="accuracyNote"><b>A forecast, not a poll.</b> Simulated residents built from census data for these districts. The accuracy check against the Detroit survey hasn't been run yet.</div></div>
+      <section data-hide-district class="hide-compare">
+        <details class="fineprint" id="accuracyNote"><summary>Forecast, not a poll</summary><p>Simulated residents built from census data. Accuracy check not run yet.</p></details>
       </section>
     </div>
     <div class="results__foot">
@@ -741,6 +777,27 @@ var mapView = (function () {
   }
   function kick() { if (!animating && ready && map.getZoom() >= PEOPLE_ZOOM) { animating = true; requestAnimationFrame(animate); } }
   var memo = {};
+  // traffic is shown only on main-road pieces near the line between the picked From and To
+  var route = null, ROUTE_M = 450;
+  function xy(c, lat0) { return [c[0] * 111320 * Math.cos(lat0 * Math.PI / 180), c[1] * 110540]; }
+  function dPS(p, a, b) { var dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy, t = L ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L)) : 0;
+    return Math.hypot(a[0] + t * dx - p[0], a[1] + t * dy - p[1]); }
+  function cross(a, b, c, d) { var o = function (p, q, r) { return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]); };
+    return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0; }
+  function dSS(a, b, c, d) { return cross(a, b, c, d) ? 0 : Math.min(dPS(a, c, d), dPS(b, c, d), dPS(c, a, b), dPS(d, a, b)); }
+  function nearRoute(features) {
+    if (!route) return features;
+    var lat0 = (route[0][1] + route[1][1]) / 2, A = xy(route[0], lat0), B = xy(route[1], lat0), out = [];
+    features.forEach(function (f) {
+      var g = f.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.coordinates, keep = [];
+      lines.forEach(function (ln) { var cur = null;
+        for (var i = 1; i < ln.length; i++) {
+          if (dSS(xy(ln[i - 1], lat0), xy(ln[i], lat0), A, B) <= ROUTE_M) { if (!cur) { cur = [ln[i - 1]]; keep.push(cur); } cur.push(ln[i]); }
+          else cur = null; } });
+      if (keep.length) out.push({ type: 'Feature', properties: f.properties, geometry: { type: 'MultiLineString', coordinates: keep } });
+    });
+    return out;
+  }
   function cached(name, key, fn) { if (memo[name] && memo[name].key === key) return memo[name].v; var v = fn(); memo[name] = { key: key, v: v }; return v; }
 
 
@@ -790,7 +847,7 @@ var mapView = (function () {
     }));
     if (overlays) {
       if (roadsOn) layers.push(new deck.GeoJsonLayer({
-        id: 'arteries', data: cached('arteries', sel.join(','), function () { return overlays.features.filter(function (f) { return f.properties.kind === 'artery' && on(f.properties.d); }); }),
+        id: 'arteries', data: cached('arteries', sel.join(',') + '|' + JSON.stringify(route), function () { return nearRoute(overlays.features.filter(function (f) { return f.properties.kind === 'artery' && on(f.properties.d); })); }),
         stroked: true, filled: false, pickable: true, lineWidthUnits: 'pixels', lineCapRounded: true, lineJointRounded: true,
         getLineWidth: function (f) { return (f.properties.road === 'freeway' ? 6 : 4) - (st === 'results' ? 0 : 1.5); },
         getLineColor: function (f) { if (st !== 'results') return [148, 163, 184, 150]; var l = f.properties.load; return l < .5 ? [74, 222, 128, 230] : l < .75 ? [250, 204, 21, 235] : [248, 113, 113, 245]; },
@@ -881,6 +938,7 @@ var mapView = (function () {
       render();
     },
     onClick: function (fn) { clickFn = fn; },
+    setRoute: function (a, b) { route = a && b ? [a, b] : null; render(); },
     pick: function (what, cb, key) {                 // top-down view; next click on a road/intersection returns its name + point
       if (pickCb) endPick(null);
       pickPrev = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(), duration: 600 };
@@ -899,6 +957,14 @@ var mapView = (function () {
     var v = rt.getAttribute('aria-pressed') !== 'true';
     rt.setAttribute('aria-pressed', v); document.getElementById('mapKey').classList.toggle('roads-off', !v); api.setRoads(v);
   });
+  (function () {                                  // key: minimise / expand, remembered
+    var k = document.getElementById('mapKey'), b = document.getElementById('keyMin');
+    function set(min) { k.classList.toggle('is-min', min); b.setAttribute('aria-expanded', String(!min));
+      b.setAttribute('aria-label', min ? 'Show the key' : 'Hide the key'); b.title = min ? 'Show the key' : 'Hide the key';
+      try { localStorage.setItem('citysim-key-min', min ? '1' : ''); } catch (e) {} }
+    var start = false; try { start = localStorage.getItem('citysim-key-min') === '1'; } catch (e) {}
+    set(start); b.addEventListener('click', function () { set(!k.classList.contains('is-min')); });
+  })();
   return api;
 })();
 </script>
@@ -957,11 +1023,11 @@ function renderTiles(){
   var el=document.getElementById('tiles'); el.innerHTML='';
   selected().forEach(function(d){
     var x=DISTRICTS[d], has=state.asked && x.s!=null;
-    var t=document.createElement('button'); t.type='button'; t.className='tile'+(has?'':' is-pending'); t.setAttribute('aria-label','District '+d+' details');
-    t.innerHTML='<div class="tile__name"><span class="dot" style="--c:'+x.c+'"></span>District '+d+'</div>'+
-      (has?'<div class="tile__pct num">'+x.s+'%</div><div class="split"><span style="width:'+x.s+'%"></span><span style="width:'+x.n+'%"></span><span style="width:'+x.o+'%"></span></div><div class="tile__sub">Top reason: '+x.w+'</div>'
-          :'<div class="tile__sub">'+x.area+'</div><div class="tile__sub">500 residents</div>')+
-      '<div class="tile__more">See who lives here →</div>';
+    var t=document.createElement('button'); t.type='button'; t.className='drow2'; t.setAttribute('aria-label','District '+d+' details');
+    t.innerHTML='<div class="nm"><span class="dot" style="--c:'+x.c+'"></span>District '+d+'</div>'+
+      (has?'<div class="pcts"><span class="s">'+x.s+'%<small>yes</small></span><span class="o">'+x.o+'%<small>no</small></span></div>'+
+           '<div class="split"><span style="width:'+x.s+'%"></span><span style="width:'+x.n+'%"></span><span style="width:'+x.o+'%"></span></div>'
+          :'<div class="pcts" style="font-size:14px;font-weight:600;color:var(--text-3)">'+esc(x.area)+'</div>');
     t.addEventListener('click',function(){ openDistrict(d); });
     el.appendChild(t);
   });
@@ -986,11 +1052,20 @@ function districtData(d){
   if(window.CITYSIM_API && state.result) return { sample:false, groups:null, profile:null };
   return sampleDistrict(d);
 }
-function groupRows(list){
-  var by={}; (list||[]).forEach(function(g){ by[g.label]=g; });
-  return GROUP_ORDER.filter(function(l){return by[l];}).map(function(l){ var g=by[l], s=Math.round(g.support), n=g.neutral!=null?Math.round(g.neutral):null, o=g.oppose!=null?Math.round(g.oppose):null;
-    var short={'Within a quarter mile':'Within ¼ mile','A quarter mile to a mile':'¼ to 1 mile','More than a mile away':'Over 1 mile'};
-    return '<div class="grow"><span>'+esc(short[l]||l)+'</span><div class="split" role="img" aria-label="'+s+'% support"><span style="width:'+s+'%"></span>'+(n!=null?'<span style="width:'+n+'%"></span><span style="width:'+o+'%"></span>':'')+'</div><b class="num">'+s+'%</b></div>'; }).join('');
+var SHORT_G={'Within a quarter mile':'Within ¼ mile','A quarter mile to a mile':'¼ to 1 mile','More than a mile away':'Over 1 mile'};
+function groupRows(list, mode){
+  var by={}; (list||[]).forEach(function(g){ by[g.label]=g; }); mode=mode||'support';
+  return GROUP_ORDER.filter(function(l){return by[l] && by[l][mode]!=null;}).map(function(l){ var v=Math.round(by[l][mode]);
+    return '<div class="grow m-'+mode+'"><span>'+esc(SHORT_G[l]||l)+'</span><div class="split" role="img" aria-label="'+v+'% '+mode+'"><span style="width:'+v+'%"></span></div><b class="num">'+v+'%</b></div>'; }).join('');
+}
+function hasOppose(list){ return (list||[]).some(function(g){ return g.oppose!=null; }); }
+var groupMode='support';
+function gToggle(canOppose){
+  return '<div class="gtoggle" role="group" aria-label="Show support or oppose"><button type="button" data-m="support" aria-pressed="'+(groupMode==='support')+'">Support</button>'+
+    '<button type="button" data-m="oppose" aria-pressed="'+(groupMode==='oppose')+'"'+(canOppose?'':' disabled title="Oppose by group needs the updated backend"')+'>Oppose</button></div>';
+}
+function wireToggle(root, redraw){
+  root.querySelectorAll('.gtoggle button').forEach(function(b){ b.addEventListener('click',function(){ if(b.disabled) return; groupMode=b.dataset.m; redraw(); }); });
 }
 function openDistrict(d){
   state.openD=d; if(document.getElementById('results').classList.contains('is-compare')) closeCompare();
@@ -1002,11 +1077,12 @@ function openDistrict(d){
     h+='<section><div class="approval__nums"><div><b class="num" style="color:var(--support)">'+r(sp.support)+'%</b><span>support</span></div><div><b class="num">'+r(sp.neutral)+'%</b><span>neutral</span></div><div><b class="num" style="color:var(--oppose)">'+r(sp.oppose)+'%</b><span>oppose</span></div></div>'+
        '<div class="split" style="height:12px;border-radius:6px"><span style="width:'+sp.support+'%"></span><span style="width:'+sp.neutral+'%"></span><span style="width:'+sp.oppose+'%"></span></div>'+
        '<p class="muted" style="margin:8px 0 0">Top reason: '+esc(REASON_LABEL[D.top]||D.top||x.w)+'</p></section>';
-    var rows=groupRows(D.groups);
-    if(!rows && D.overallGroups && D.overallGroups.length) rows='<p class="muted" style="margin:0 0 8px;font-size:14px">This run reports groups for all selected districts together:</p>'+groupRows(D.overallGroups);
-    h+='<section><h3>Support by group</h3>'+(rows||'<p class="muted" style="margin:0">Not reported for this run.</p>')+'</section>';
+    var list=D.groups && D.groups.length ? D.groups : (D.overallGroups||[]), all=!(D.groups && D.groups.length);
+    if(groupMode==='oppose' && !hasOppose(list)) groupMode='support';
+    var rows=groupRows(list, groupMode);
+    h+='<section><div class="hrow"><h3>By group'+(all&&rows?' <span class="badge">All districts</span>':'')+'</h3>'+gToggle(hasOppose(list))+'</div>'+(rows||'<p class="muted" style="margin:0">Not reported for this run.</p>')+'</section>';
   } else {
-    h+='<section><p class="muted" style="margin:0">Ask a question to see how this district reacts, broken down by age, renters vs owners, cars and distance.</p></section>';
+    h+='<section><p class="muted" style="margin:0">Ask a question to see this district\'s reaction.</p></section>';
   }
   var P=D.profile;
   if(P){
@@ -1018,13 +1094,14 @@ function openDistrict(d){
        '<div class="fact"><b class="num">'+(P.residents||500)+'</b><span>simulated residents</span></div></div>'+
        '<h3 style="margin-top:14px">Age</h3>'+ages+'</section>';
   } else {
-    h+='<section><h3>Who lives here</h3><p class="muted" style="margin:0">Shown after a run: age, renters, cars and income of this district\'s residents, from census data.</p></section>';
+    h+='<section><h3>Who lives here</h3><p class="muted" style="margin:0">Shown after a run.</p></section>';
   }
   el.innerHTML=h; el.hidden=false;
   document.getElementById('results').classList.add('is-district');
   document.querySelector('.results__body').scrollTop=0;
   document.getElementById('ddBack').addEventListener('click',closeDistrict);
-  document.getElementById('ddBack').focus();
+  wireToggle(el, function(){ var st=document.querySelector('.results__body').scrollTop; openDistrict._quiet=true; openDistrict(d); openDistrict._quiet=false; document.querySelector('.results__body').scrollTop=st; });
+  if(!openDistrict._quiet) document.getElementById('ddBack').focus();
 }
 function closeDistrict(){ state.openD=null; document.getElementById('ddetail').hidden=true; document.getElementById('results').classList.remove('is-district'); }
 
@@ -1033,80 +1110,51 @@ function closeDistrict(){ state.openD=null; document.getElementById('ddetail').h
 function openCompare(){
   closeDistrict();
   var ds=selected(), r=Math.round, el=document.getElementById('compare'), anySample=false;
-  var SHORT={'Within a quarter mile':'Within ¼ mile','A quarter mile to a mile':'¼ to 1 mile','More than a mile away':'Over 1 mile'};
   var data=ds.map(function(d){ var D=districtData(d), x=DISTRICTS[d]; if(D.sample) anySample=true;
     var sp=D.split || (state.asked && x.s!=null ? {support:x.s,neutral:x.n,oppose:x.o} : null);
     var g={}; (D.groups||[]).forEach(function(q){ g[q.label]=q; });
-    return {d:d, x:x, sp:sp, top:REASON_LABEL[D.top]||D.top||x.w, g:g, P:D.profile}; });
-  var n=data.length, diffs=[];
-  var col=function(c){ return 'style="--c:'+c.x.c+'"'; };
-  var TICKS=[0,25,50,75,100];
-  // one measure = one line; dots placed on a shared scale; span line from lowest to highest
-  function dotRow(label, get, fmt, max){
-    var vals=data.map(get), have=[]; vals.forEach(function(v,i){ if(v!=null) have.push({v:v,c:data[i]}); });
-    if(!have.length) return '';
-    var top=max||Math.max.apply(null,have.map(function(h){return h.v;}))||1;
-    var lo=have.reduce(function(a,h){return h.v<a.v?h:a;}), hi=have.reduce(function(a,h){return h.v>a.v?h:a;});
-    var pos=function(v){ return Math.max(0,Math.min(100,100*v/top)); };
-    var sorted=have.slice().sort(function(a,b){return a.v-b.v;}), nudge={};
-    sorted.forEach(function(h,i){ if(i && Math.abs(pos(h.v)-pos(sorted[i-1].v))<2.5) nudge[h.c.d]=(nudge[sorted[i-1].c.d]||0)===0?-7:0; });
-    var line='<div class="line">'+TICKS.map(function(t){ return '<span class="tick" style="left:'+t+'%"></span>'; }).join('')+
-      (have.length>1?'<span class="span" style="left:'+pos(lo.v)+'%;width:'+(pos(hi.v)-pos(lo.v))+'%"></span>':'')+
-      have.map(function(h){ return '<span class="pt" title="District '+h.c.d+' · '+esc(label)+': '+fmt(h.v)+'" style="--c:'+h.c.x.c+';left:'+pos(h.v)+'%;margin-top:'+(-8+(nudge[h.c.d]||0))+'px"></span>'; }).join('')+'</div>';
-    var gap=have.length>1?hi.v-lo.v:null;
-    if(gap!=null) diffs.push({label:label, gap:gap/top, fmt:fmt, lo:lo, hi:hi});
-    var valsHtml='<div class="vals">'+data.map(function(c,i){ var v=vals[i]; return v==null?'':'<span'+(have.length>1&&v===hi.v?' class="hi"':'')+'><i '+col(c)+'></i>'+fmt(v)+'</span>'; }).join('')+'</div>';
-    return '<div class="drow"><div class="lab">'+esc(label)+'</div>'+line+'<div class="gapv">'+(gap!=null?'<b>'+fmt(gap).replace('%',' pts')+'</b>gap':'')+'</div><div></div>'+valsHtml+'<div></div></div>';
-  }
-  function axis(max, fmt){ return '<div class="axis"><i></i><div class="ax">'+TICKS.map(function(t){ return '<span style="left:'+t+'%">'+fmt(max*t/100)+'</span>'; }).join('')+'</div><i></i></div>'; }
+    return {d:d, x:x, sp:sp, g:g, P:D.profile}; });
+  var n=data.length, col=function(c){ return 'style="--c:'+c.x.c+'"'; }, pct=function(v){ return r(v)+'%'; };
   function stackRow(c, parts, side){
     return '<div class="srow"><div class="lab"><i '+col(c)+'></i>District '+c.d+'</div><div class="sbar">'+parts.map(function(p){ var v=r(p.v);
       return '<span class="'+p.cls+'" style="width:'+p.v+'%" title="District '+c.d+' · '+esc(p.name)+': '+v+'%">'+(v>=9?v+'%':'')+'</span>'; }).join('')+'</div><div class="side">'+(side||'')+'</div></div>';
   }
-  var pct=function(v){ return r(v)+'%'; };
-  var h='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2>Compare districts</h2>'+(anySample?'<span class="badge">Sample data</span>':'')+'</div>';
-  h+='<div class="who">'+data.map(function(c){ return '<span><i '+col(c)+'></i>District '+c.d+' <em>'+esc(c.x.area)+'</em></span>'; }).join('')+'</div>';
-  var body='';
+  function table(rows){                 // rows: [label, get(c), fmt, max, color(c)]
+    var body=rows.map(function(rw){
+      var vals=data.map(rw[1]); if(vals.every(function(v){return v==null;})) return '';
+      var hi=Math.max.apply(null,vals.filter(function(v){return v!=null;}));
+      return '<tr><th scope="row">'+esc(rw[0])+'</th>'+data.map(function(c,i){ var v=vals[i];
+        return '<td'+(v===hi&&n>1?' class="hi"':'')+'>'+(v==null?'–':rw[2](v)+'<span class="mb"><span style="width:'+Math.min(100,100*v/rw[3])+'%;background:'+rw[4](c)+'"></span></span>')+'</td>'; }).join('')+'</tr>'; }).join('');
+    return body ? '<table class="ptab"><thead><tr><th></th>'+data.map(function(c){ return '<th><i '+col(c)+'></i>D'+c.d+'</th>'; }).join('')+'</tr></thead><tbody>'+body+'</tbody></table>' : '';
+  }
+  var h='<div class="hrow"><h2>Compare</h2>'+(anySample?'<span class="badge">Sample data</span>':'')+'</div>';
   if(state.asked){
     var ranked=data.filter(function(c){return c.sp;}).sort(function(a,b){return b.sp.support-a.sp.support;});
-    body+='<section><h3>How they feel</h3><p>Each bar is 100% of that district\'s residents. Sorted by support.</p>'+
-      ranked.map(function(c){ return stackRow(c,[{cls:'s-sup',name:'Support',v:c.sp.support},{cls:'s-neu',name:'Neutral',v:c.sp.neutral},{cls:'s-opp',name:'Oppose',v:c.sp.oppose}],
-        r(c.sp.support)+'%<small>support · '+esc(c.top||'')+'</small>'); }).join('')+
+    h+='<section><h3>Approval</h3>'+ranked.map(function(c){ return stackRow(c,[{cls:'s-sup',name:'Support',v:c.sp.support},{cls:'s-neu',name:'Neutral',v:c.sp.neutral},{cls:'s-opp',name:'Oppose',v:c.sp.oppose}],
+        '<span class="sv">'+pct(c.sp.support)+'</span><span class="ov">'+pct(c.sp.oppose)+'</span>'); }).join('')+
       '<div class="key"><span><i style="background:var(--support)"></i>Support</span><span><i style="background:var(--neutral)"></i>Neutral</span><span><i style="background:var(--oppose)"></i>Oppose</span></div></section>';
-    var grp=GROUP_ORDER.map(function(l){ return dotRow(SHORT[l]||l, function(c){ return c.g[l]?c.g[l].support:null; }, pct, 100); }).join('');
-    if(grp) body+='<section><h3>Support by group</h3><p>Share who support, for each kind of resident. Dots far apart = districts disagree.</p>'+grp+axis(100,pct)+'</section>';
+    var any=data.some(function(c){ return Object.keys(c.g).length; }), canOpp=data.some(function(c){ return Object.keys(c.g).some(function(k){ return c.g[k].oppose!=null; }); });
+    if(groupMode==='oppose' && !canOpp) groupMode='support';
+    var m=groupMode, color=m==='oppose'?'var(--oppose)':'var(--support)';
+    var gt=any ? table(GROUP_ORDER.map(function(l){ return [SHORT_G[l]||l, function(c){ return c.g[l] && c.g[l][m]!=null ? c.g[l][m] : null; }, pct, 100, function(){ return color; }]; })) : '';
+    if(gt) h+='<section><div class="hrow"><h3>By group</h3>'+gToggle(canOpp)+'</div>'+gt+'</section>';
   }
   if(data.some(function(c){return c.P;})){
     var maxInc=Math.ceil(Math.max.apply(null,data.map(function(c){return c.P&&c.P.median_income||0;}))/10000)*10000||60000;
-    var money=function(v){ return '$'+r(v/1000)+'k'; };
-    var prow=function(label, get, fmt, max){
-      var vals=data.map(get); if(vals.every(function(v){return v==null;})) return '';
-      var hi=Math.max.apply(null,vals.filter(function(v){return v!=null;}));
-      return '<tr><th scope="row">'+label+'</th>'+data.map(function(c,i){ var v=vals[i];
-        return '<td'+(v===hi&&n>1?' class="hi"':'')+'>'+(v==null?'–':fmt(v)+'<span class="mb"><span style="width:'+Math.min(100,100*v/max)+'%;background:'+c.x.c+'"></span></span>')+'</td>'; }).join('')+'</tr>'; };
-    body+='<section><h3>Who lives here</h3><table class="ptab"><thead><tr><th></th>'+data.map(function(c){ return '<th><i '+col(c)+'></i>D'+c.d+'</th>'; }).join('')+'</tr></thead><tbody>'+
-      prow('Rent home', function(c){ return c.P?c.P.renters:null; }, pct, 100)+
-      prow('No car', function(c){ return c.P?c.P.no_car:null; }, pct, 100)+
-      prow('Median income', function(c){ return c.P&&c.P.median_income?c.P.median_income:null; }, money, maxInc)+
-      '</tbody></table>'+
+    var money=function(v){ return '$'+r(v/1000)+'k'; }, idc=function(c){ return c.x.c; };
+    h+='<section><h3>Who lives here</h3>'+table([
+        ['Rent home', function(c){ return c.P?c.P.renters:null; }, pct, 100, idc],
+        ['No car', function(c){ return c.P?c.P.no_car:null; }, pct, 100, idc],
+        ['Median income', function(c){ return c.P&&c.P.median_income?c.P.median_income:null; }, money, maxInc, idc]])+
       '<h3 style="margin-top:18px">Age mix</h3>'+
-      data.filter(function(c){return c.P&&c.P.age;}).map(function(c){ var a=c.P.age; return stackRow(c,[{cls:'a1',name:'Under 35',v:a['Under 35']},{cls:'a2',name:'35 to 64',v:a['35 to 64']},{cls:'a3',name:'65 and over',v:a['65 and over']}],
-        r(a['65 and over'])+'%<small>65 and over</small>'); }).join('')+
-      '<div class="key"><span><i style="background:#C7D2FE"></i>Under 35</span><span><i style="background:#818CF8"></i>35 to 64</span><span><i style="background:#4338CA"></i>65 and over</span></div></section>';
+      data.filter(function(c){return c.P&&c.P.age;}).map(function(c){ var a=c.P.age; return stackRow(c,[{cls:'a1',name:'Under 35',v:a['Under 35']},{cls:'a2',name:'35 to 64',v:a['35 to 64']},{cls:'a3',name:'65 and over',v:a['65 and over']}], ''); }).join('')+
+      '<div class="key"><span><i style="background:#C7D2FE"></i>Under 35</span><span><i style="background:#818CF8"></i>35 to 64</span><span><i style="background:#4338CA"></i>65+</span></div></section>';
   }
-  var big=diffs.slice().sort(function(a,b){return b.gap-a.gap;})[0], take='';
-  if(n>1 && state.asked){
-    var rk=data.filter(function(c){return c.sp;}).sort(function(a,b){return b.sp.support-a.sp.support;});
-    if(rk.length>1) take='<div class="takeaway"><b>District '+rk[0].d+'</b> is most supportive ('+r(rk[0].sp.support)+'%), <b>District '+rk[rk.length-1].d+'</b> least ('+r(rk[rk.length-1].sp.support)+'%).'+
-      (big?' Biggest disagreement: <b>'+esc(big.label)+'</b>, '+big.fmt(big.lo.v)+' in District '+big.lo.c.d+' vs '+big.fmt(big.hi.v)+' in District '+big.hi.c.d+'.':'')+'</div>';
-  } else if(n>1 && big){
-    take='<div class="takeaway">Biggest difference: <b>'+esc(big.label)+'</b>, '+big.fmt(big.lo.v)+' in District '+big.lo.c.d+' vs '+big.fmt(big.hi.v)+' in District '+big.hi.c.d+'.</div>';
-  }
-  if(!state.asked) h+='<p class="muted" style="margin:0">Ask a question to see how each district feels. For now, here is who lives in each.</p>';
-  el.innerHTML=h+body; el.hidden=false;
+  if(!state.asked) h+='<p class="muted" style="margin:0">Ask a question to compare approval.</p>';
+  el.innerHTML=h; el.hidden=false;
+  wireToggle(el, function(){ var b=document.querySelector('.results__body'), st=b.scrollTop; openCompare(); b.scrollTop=st; });
   var res=document.getElementById('results'); res.classList.add('is-compare');
-  var b=document.getElementById('compareBtn'); b.textContent='Close comparison'; b.setAttribute('aria-expanded','true');
-  document.querySelector('.results__body').scrollTop=0;
+  var bt=document.getElementById('compareBtn'); bt.textContent='Close comparison'; bt.setAttribute('aria-expanded','true');
 }
 function closeCompare(){
   document.getElementById('compare').hidden=true; document.getElementById('results').classList.remove('is-compare');
@@ -1202,7 +1250,7 @@ function openBlocks(q, spec){
   map.dataset.proposal = state.types.indexOf('add_drone_route')>-1 ? 'drone' : 'none';
   mapView.update();
   setMode(false);
-  wireQuestions(spec);
+  wireQuestions(spec); syncRoute();
 }
 function askBackend(q){
   var api=(window.CITYSIM_API||'').replace(/\/$/,'');
@@ -1219,6 +1267,19 @@ function markChanged(el,v){
     note.innerHTML='<svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7.5v3.5M8 5v.3"/></svg>'+'<span>You changed '+n+' detail'+(n>1?'s':'')+'. Ask again to see if support moves.</span>';
   } else if(note) note.remove();
 }
+// traffic is drawn only along the picked From -> To (map pick / typed coordinates, or places the backend verified)
+function coordsIn(t){ var m=String(t||'').match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*\)?\s*$/); if(!m) return null;
+  var a=+m[1], b=+m[2]; return a>41&&a<43 ? [b,a] : [a,b]; }
+function syncRoute(){
+  var pts=null;
+  (state.spec?state.spec.actions:[]).forEach(function(a){ if(pts) return;
+    var get=function(id){ var inp=body.querySelector('input[data-k="'+a.action_id+'.'+id+'"]'), c=(a.constraints||[]).filter(function(x){return x.id===id;})[0];
+      var p=inp&&coordsIn(inp.value); if(p) return p; return c && c.resolved && (!inp || inp.value.trim()===String(c.value||'').trim()) ? [c.resolved.lon,c.resolved.lat] : null; };
+    var f=get('from'), t=get('to'); if(f&&t) pts=[f,t]; });
+  if(!pts){ var ins=body.querySelectorAll('input[data-k$=".from"], input[data-k$=".to"]'), f=null, t=null;
+    ins.forEach(function(i){ var p=coordsIn(i.value); if(!p) return; if(/\.from$/.test(i.dataset.k)) f=p; else t=p; }); if(f&&t) pts=[f,t]; }
+  mapView.setRoute(pts&&pts[0], pts&&pts[1]);
+}
 // a proposal waiting on a place can run once every place field has something; the server re-checks it
 function placesReady(){
   if(!state.spec || state.spec.status!=='needs_info') return;
@@ -1230,14 +1291,14 @@ document.getElementById('pickCancel').addEventListener('click',function(){ mapVi
 document.addEventListener('keydown',function(e){ if(e.key==='Escape') mapView.cancelPick(); });
 function wireBlocks(){
   body.querySelectorAll('select').forEach(function(s){ s.addEventListener('change',function(){ markChanged(s,s.value); }); });
-  body.querySelectorAll('.block input[type=text]').forEach(function(t){ t.addEventListener('input',function(){ markChanged(t,t.value); placesReady(); }); });
+  body.querySelectorAll('.block input[type=text]').forEach(function(t){ t.addEventListener('input',function(){ markChanged(t,t.value); placesReady(); syncRoute(); }); });
   body.querySelectorAll('[data-pick]').forEach(function(p){ p.addEventListener('click',function(){
     var inp=body.querySelector('input[data-k="'+p.dataset.pick+'"]');
     if(p.getAttribute('aria-pressed')==='true'){ mapView.cancelPick(); return; }
     body.querySelectorAll('[data-pick]').forEach(function(x){ x.setAttribute('aria-pressed','false'); });
     p.setAttribute('aria-pressed','true');
     mapView.pick(p.dataset.label.toLowerCase(), function(r){ p.setAttribute('aria-pressed','false');
-      if(!r) return; inp.value=r.text; markChanged(inp,inp.value); placesReady();
+      if(!r) return; inp.value=r.text; markChanged(inp,inp.value); placesReady(); syncRoute();
       var blk=inp.closest('.block'), old=blk.querySelector('.picked'); if(old) old.remove();
       blk.insertAdjacentHTML('beforeend','<div class="muted picked" style="font-size:13px">'+(r.label?'Picked on the map':'Picked a point on the map (no road name here)')+'</div>'); }, p.dataset.pick);
   }); });
@@ -1292,9 +1353,8 @@ function showResult(res){
   document.getElementById('ovS').textContent=r(o.support)+'%'; document.getElementById('ovN').textContent=r(o.neutral)+'%'; document.getElementById('ovO').textContent=r(o.oppose)+'%';
   var bar=document.getElementById('ovBar'); bar.setAttribute('aria-label',r(o.support)+'% support, '+r(o.neutral)+'% neutral, '+r(o.oppose)+'% oppose');
   bar.children[0].style.width=o.support+'%'; bar.children[1].style.width=o.neutral+'%'; bar.children[2].style.width=o.oppose+'%';
-  var lean = o.support>50?'A majority supports this.':o.oppose>50?'A majority opposes this.':o.neutral>=50?'Most residents are neutral. Among the rest, '+(o.support>o.oppose?'more support than oppose.':o.oppose>o.support?'more oppose than support.':'support and opposition are even.'):o.support>o.oppose?'Leaning yes. No majority either way.':o.oppose>o.support?'Leaning no. No majority either way.':'Evenly split.';
-  var range = o.support_range ? ' Support range '+o.support_range[0]+'% to '+o.support_range[1]+'% (sampling spread only).' : '';
-  document.getElementById('ovLean').textContent=lean+range;
+  var lean = o.support>50?'Majority supports':o.oppose>50?'Majority opposes':o.neutral>=50?'Mostly neutral'+(o.support>o.oppose?', leaning yes':o.oppose>o.support?', leaning no':''):o.support>o.oppose?'Leaning yes':o.oppose>o.support?'Leaning no':'Evenly split';
+  document.getElementById('ovLean').textContent=lean;
   var st=res.run_stats||{};
   document.getElementById('ovBadge').textContent='Live · '+(st.valid||0).toLocaleString()+' residents';
   Object.keys(DISTRICTS).forEach(function(d){ delete DISTRICTS[d].s; delete DISTRICTS[d].n; delete DISTRICTS[d].o; delete DISTRICTS[d].w; });
@@ -1305,17 +1365,15 @@ function showResult(res){
     return '<div class="worry"><div class="worry__row"><span>'+(REASON_LABEL[x.reason]||x.reason)+'</span><b class="num">'+r(x.share)+'%</b></div><div class="meter"><span style="width:'+Math.round(100*x.share/max)+'%"></span></div></div>';
   }).join(''):'<p class="muted">No resident gave a main reason.</p>');
   var seg=(res.segments||[])[0], esc=function(t){return String(t).replace(/</g,'&lt;');}, notes=(res.engine_notes||[]).map(esc).join(' ');
-  var head = seg ? '<b>Traffic: '+esc(seg.name)+' goes from '+seg.aadt_before.toLocaleString()+' to '+seg.aadt_after.toLocaleString()+' vehicles a day'+
-        (seg.load_after?' (load '+seg.load_before+' to '+seg.load_after+')':'')+'.</b> '
-    : res.transit ? '<b>Bus service: '+res.transit.straight_line_miles+' miles in a straight line.</b> '
-    : '<b>Traffic: not calculated.</b> ';
-  document.getElementById('trafficNote').innerHTML='<div>'+head+(notes||'Residents reacted to the proposal as described.')+
-    (st.dropped?' '+st.dropped+' of '+st.residents+' residents gave no valid answer.':'')+(res.stopped?' The run stopped early: '+String(res.stopped[0]).replace(/</g,'&lt;'):'')+'</div>';
+  var head = seg ? '<b>'+esc(seg.name)+': '+seg.aadt_before.toLocaleString()+' → '+seg.aadt_after.toLocaleString()+' cars/day</b>'
+    : res.transit ? '<b>Bus route: '+res.transit.straight_line_miles+' mi</b>'
+    : '<b>Traffic: not calculated</b>';
+  var more=(notes?notes+' ':'')+(st.dropped?st.dropped+' of '+st.residents+' residents gave no valid answer. ':'')+(res.stopped?'The run stopped early: '+esc(res.stopped[0]):'');
+  document.getElementById('trafficNote').innerHTML=head+(more?'<details><summary>Details</summary><p>'+more+'</p></details>':'');
   var cal=res.calibration;
-  document.getElementById('accuracyNote').innerHTML='<b>A forecast, not a poll.</b> Simulated residents built from census data for these districts. '+
-    (cal && cal.measured ? 'Accuracy check: on '+cal.checks.length+' questions from the Detroit resident survey, these residents were off by '+cal.avg_error_pts+' points on average ('+
-      cal.checks.map(function(c){return String(c.label).replace(/</g,'&lt;')+': real '+c.real+'%, simulated '+c.simulated+'%';}).join('; ')+').'
-     : "The accuracy check against the Detroit survey hasn't been run for this model.");
+  document.getElementById('accuracyNote').innerHTML=(cal && cal.measured
+    ? '<summary>Forecast, not a poll · ±'+Math.round(cal.avg_error_pts)+' pts vs Detroit survey</summary><p>'+cal.checks.map(function(c){return esc(c.label)+': real '+c.real+'%, simulated '+c.simulated+'%';}).join('<br>')+'</p>'
+    : '<summary>Forecast, not a poll</summary><p>Simulated residents built from census data. Accuracy check not run yet.</p>');
   PEOPLE=(res.quotes||[]).map(function(q){ return {who:(q.who||'').split(', ').slice(0,2).join(', '), where:'District '+q.district, q:q.text,
     feel:q.stance==='support'?'Supports':q.stance==='oppose'?'Opposes':'Neutral', w:REASON_LABEL[q.reason]||q.reason, z:'Not calculated'}; });
   if(!PEOPLE.length) PEOPLE=[{who:'No quotes in this run',where:'',q:'',feel:'',w:'',z:''}];
@@ -1331,7 +1389,7 @@ function runLive(btn){
     .then(function(r){ return r.json().then(function(j){ if(!r.ok){ var e=new Error(j.error||r.status); e.body=j; throw e; } return j.run_id; }); })
     .then(function(id){ var tries=0; (function poll(){
       fetch(api+'/runs/'+id).then(function(r){return r.json();}).then(function(run){
-        if(run.stage==='done' && run.result){ state.spec=spec; showResult(run.result); finishRun(btn); }
+        if(run.stage==='done' && run.result){ state.spec=spec; showResult(run.result); finishRun(btn); syncRoute(); }
         else if(++tries>90) fail('the run did not finish in time');
         else setTimeout(poll,2000);
       }).catch(function(e){ fail(e.message); }); })(); })

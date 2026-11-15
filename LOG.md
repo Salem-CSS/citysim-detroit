@@ -79,6 +79,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 **Decisions:** Sorting batches by distance does not fix the problem; it was worse than random batches. Asking one at a time is the only method tested where batch-mates cannot matter. Measured cost for 200 residents: $0.022 and 8 s batched (8 calls, 4 at once) against $0.041 and 49 s one at a time (200 calls, 8 at once), so about 1.85 times the cost. Not switched on: needs Partner's go-ahead because it raises cost and run time.
 **Blocked / needs:** One at a time, residents within 1 mile split by vehicles as expected: no vehicle 24 support / 0 neutral / 0 oppose; one vehicle 13 / 20 / 4; two or more 5 / 17 / 8. In random batches the same residents were 24/0/0, 31/6/0 and 23/5/2. So every run made so far overstates support near a site. Even one at a time, 5% to 12% of individual answers differ between two askings; the totals moved by at most 2.5 points on 200 residents. P2 (run-to-run spread on a full run) is still to be measured.
 **Next:** If approved: switch resident batches to one resident per call with temperature 0, check throttling and time on a 2,000-resident run, then P2.
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: results panel + compare revamp, traffic only along From→To, collapsible key
+- Traffic colours are drawn only on main-road pieces within ~450 m of the line between the picked From and To (map pick, typed coordinates, or backend-verified places). No route → unchanged.
+- Public approval: short headline ("Mostly neutral, leaning yes"), By district as big rows (support % / oppose % + bar), engine note is one bold line with Details, forecast note is a one-line expandable.
+- District card: Support / Oppose toggle for By group (Oppose disabled until the backend sends per-group oppose — Ammar's redeploy).
+- Compare: no descriptions or forecast text; Approval bars, By group table with Support/Oppose toggle, Who lives here table, Age mix.
+- Map key can be minimised (remembered).
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: grey roads back, sample drone corridor removed, pins clear on submit
 - Restored the grey 'all-roads' layer and road-name lookup from it (reverts the previous entry's removal).
 - Removed the blue sample drone route + noise band (and the Newlab hub marker): it showed for every drone question regardless of the user's own From/To.
