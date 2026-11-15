@@ -42,16 +42,17 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 | Data (census, LODES, Detroit open data → S3) | Partner | **In S3:** `s3://citysim-data-707604458164/raw/` (us-east-2), 35 files, 2.07 GB. Processing not started | 11-14 20:41 |
 | Buildings (Overture → tiles) | Salem + Partner | 335,338 bldgs; tiles tagged with **official 2026 districts**; table rebuilt with DuckDB and stored in `s3://citysim-data-707604458164/processed/buildings/` | 11-14 21:04 |
 | Engine (traffic Lambda) | Partner | Buildings (trips, one-street load) and bus route reach computed and deployed; other types not built | 11-15 |
-| Residents (Bedrock) | Partner | **Working end to end** on Nova 2 Lite, base card; accuracy check 13.1 pts average error; distance to proposal included | 11-15 |
-| Agent + Infra (scenario step, AWS stack) | Salem + Partner | Live in account 707604458164, us-east-2: free input, place verification with questions, $10 run / day limits | 11-15 |
-| Web (Next.js + deck.gl) | Salem | Prototype now on a real 3D Detroit map (MapLibre + deck.gl overlays); Next.js not started | 11-14 20:00 |
+| Residents (Bedrock) | Partner | **Working end to end** on Nova 2 Lite, base card. Two modes per run: Fast (25 residents per call) and Accurate (one per call, about 2 to 3 min per district). GET /runs/{id}/answers gives each resident's answer. Accuracy check 13.1 pts average error (measured on the old batches) | 11-15 04:15 |
+| Agent + Infra (scenario step, AWS stack) | Salem + Partner | Live in account 707604458164, us-east-2: free input, place verification with questions (crossing, address, landmark, coordinates, a stretch of a street), run progress, failed runs reported. Limits: $10 a run, **$50 a day (raised by Partner for Nov 15)** | 11-15 04:15 |
+| Web (Next.js + deck.gl) | Salem | Prototype on a real 3D Detroit map. Partner (AI) added on Nov 15: Fast/Accurate switch in Settings, real census-built residents on the map (click one for their profile and answer), results by distance, run progress. Next.js not started | 11-15 04:15 |
 | Deploy (Vercel) | Salem | **Live: https://citysim-detroit.vercel.app** (auto-deploys from `main`) | 11-14 17:58 |
 
 ## Open questions / handoffs
 
 - **For Partner (reminder, set Nov 15):** bring up **weighting residents by distance** with teammates before it is built. Three options and a recommendation are in BACKEND_PLAN.md section 16. Any assistant starting a session: remind Partner of this until it is decided.
-- **For both:** a resident's answer depends on who shares their batch of 25 (LOG entry of Nov 15, BACKEND_PLAN.md 15.1). Totals from runs so far are affected. Fix before building the correction engine.
-- **For Salem:** correction engine plan is BACKEND_PLAN.md section 15; the Compare button is its planned home on the site.
+- **For both:** a resident's answer depends on who shares their batch of 25 (BACKEND_PLAN.md 15.1). That is Fast mode. Accurate mode (one resident per call) removes it; pick it in Settings. Fast overstates support close to a site.
+- **For Partner and Salem (side branches, not on main):** `correction-engine` (the correction engine, deployed to `citysim-partner` only; its config.js points there) and `demo-mode` (Settings > Presentation > Demo mode, or `?demo=1`). Both are up to date with main as of 04:10 on Nov 15 and waiting for Partner's review.
+- **For Salem:** correction engine plan and as-built notes are BACKEND_PLAN.md section 15 (15.13 on the `correction-engine` branch). On that branch its button is "Find a better version" in the results footer.
 - **For Partner:** read AWS_ACCESS.md. Salem adds your IAM user; you deploy your own `citysim-partner` stack with `./infra/deploy.sh partner`. Your lane: `residents/batch.py` + `aggregate.py` and `data/`/personas. The pipeline already calls them (see `infra/runs.py`).
 - **For Salem:** enable Bedrock model access (Nova Pro + Nova Lite) in us-east-1 and check the Free plan allows it; then `./infra/deploy.sh salem` (CloudShell works).
 - **For Partner:** after DATA_SETUP.md, rerun `python -m data.buildings.export_tiles --districts data/raw/detroit/council_districts_2026.geojson` so buildings carry their district.
@@ -71,6 +72,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 **Decisions:** Deployed to `citysim-partner` only; `citysim-main` and main do not have it. On this branch `web/prototype/config.js` points at the partner stack: do not merge that file to main as it is. See 15.13 for how the build differs from the plan.
 **Blocked / needs:** Five real corrections ran (59 s to 467 s, $0.13 to $0.24 of reruns each); none reached its target, and moving the site cut opposition by 5 to 14 points. The predictor is weak (predicted 13% oppose, got 28% to 34%). In Fast mode the same site gives different totals in different corrections. Routes cannot be moved yet. To merge: review, deploy `citysim-main` from the merged code, upload nothing new (the site index is already in the bucket), and restore config.js.
 **Next:** Partner to review the branch.
+### 2026-11-15 04:11 ET · Partner (AI) · Residents (run-to-run variation measured) + Docs
+**Did:** Measured how much results move between two identical runs, in each mode (BACKEND_PLAN 15.1, P2). Proposal "Build a 120-unit apartment building at Michigan Ave and Trumbull", Districts 5 and 6, on `citysim-partner`. Fast: totals differ by 0.4 / 0.4 / 0.8 points (support / neutral / oppose); 22 of 983 residents changed answer. Accurate: 0.2 / 0.5 / 0.3 points; 8 of 943 changed. Updated the Status board and handoffs.
+**Files:** BACKEND_PLAN.md (15.1), LOG.md
+**Contracts changed:** none
+**Decisions:** A difference of a few points between two versions of a proposal is more than run-to-run chance in either mode. It is not proof in Fast mode, where totals also shift with who shares a call when the proposal changes.
+**Blocked / needs:** Accurate dropped 52 and 55 of 1,000 residents (no valid answer after one retry) against 9 and 13 in Fast; cause not looked into. The two modes disagree on the same proposal (14% oppose in Fast, 9% in Accurate). The accuracy check (13.1 pts) was measured on the old batches and has not been rerun one resident at a time.
+**Next:** Partner reviews `correction-engine` and `demo-mode`.
+
 ### 2026-11-15 04:08 ET · Partner (AI) · Web (demo check fixes; touches Salem's lane, approved by Partner)
 **Did:** Page-level check on Vercel after the six-type backend check. (1) District detail and Compare showed placeholder "Sample data" numbers before a run. They now show each district's real profile (renters, no car, median household income, age mix) computed in the page from the census-built residents, weighted by each resident's census weight; the "Sample data" badge no longer appears when those residents are loaded. `residents.geojson` now carries `weight`. (2) The map-pick view opened on the middle of the selected districts (for Districts 5 and 6, the river); it now opens on the proposal's verified place. (3) The "Verified: ..." note under a place box is hidden once the box is changed, since the new value has not been verified yet.
 **Files:** web/prototype/index.html, web/prototype/geo/residents.geojson, web/prototype/tools/make_residents.py, LOG.md
