@@ -678,6 +678,51 @@ Known weaknesses:
 - **The repeat understates variation in Fast mode** (0.1 to 1.1 pts), since two identical runs are nearly identical.
 - Only one district-sized Accurate correction has been run.
 
+### 15.14 What residents ask for, the follow-up question, and sites with few neighbours (Nov 15, branch `correction-engine`)
+
+Added after the first night's corrections showed that moving a site wins over most original opponents while new opponents appear near the new site, and that changing hours changed nothing.
+
+**What was added**
+
+- Each opponent's own seven answers are saved (`corr#<id>#asked`), and every rerun reports what the residents who asked for each change did afterwards (`attempts[].asked_then`).
+- After each rerun a follow-up question goes to up to 60 residents who asked for the change that was made and still oppose, and up to 60 who did not oppose before and do now, nearest to the site first (60 is a choice). `POST /corrections` takes `follow_up`: both, change, stance, none. `GET /corrections/{id}?answers=1` returns every resident's answers.
+- Candidate sites: Land Bank lots at least as large as the median lot in the pool, fewest adults living within a mile first (2020 census blocks). Before, the largest lots came first.
+- The engine now also tries the levers residents did not name, after the ones they did (order: location, size, hours).
+- The page has "See a saved example", which opens `web/prototype/corrections/example.json`: the second correction below, as run.
+
+**The two wordings, asked of the same residents**
+
+| | "change" (short) | "stance" (descriptive) |
+| --- | --- | --- |
+| Asks | Why do you oppose it as it now stands (one sentence); what one change would make you more supportive | Explain your overall position in two or three sentences; would you object anywhere in the city or only near your home; is any version acceptable |
+| Concert venue, Accurate, after the hours change (67 residents) | 74 characters on average, 23 distinct sentences; all 67 again chose "limited hours", the change that had just been made | 272 characters, 62 distinct; 66 of 67 "only near my home"; 60 of 67 say some version is acceptable |
+| Strip club, Fast, after a move (101 residents) | 56 characters, 37 distinct; all 41 who had asked for a move chose "different location" again | 152 characters, 95 distinct; 85 of 101 "only near my home"; 101 of 101 say no version is acceptable |
+
+The descriptive wording is the one to keep. The short one repeats the answer already given and adds nothing. In Fast mode the option answers come out the same for whole groups (60 of 60, 39 of 39), which is the shared-call effect of 15.1; read follow-up answers from Accurate runs only.
+
+**Concert venue, 5,000 seats, Michigan Ave and Trumbull, District 6, Accurate (correction `corr-6f361de981`, 1,295 s, reruns $0.68)**
+
+| Version | Support / neutral / oppose | Of the 184 opponents asked (all said "limited hours") |
+| --- | --- | --- |
+| Original | 3.6 / 60.7 / 35.7 | |
+| 1. Start time moved to the afternoon | 6.5 / 60.6 / 32.9 | 163 still oppose, 20 neutral, 1 supports |
+| 2. Moved to the Land Bank lot at 2601 S Fort (4,662 adults within a mile, against 9,760) | 4.9 / 78.4 / 16.7 | 18 still oppose, 166 neutral |
+| 3. And 4,000 seats | 4.1 / 81.6 / 14.3 | 16 still oppose |
+| 4. And 2,500 seats | 5.9 / 80.2 / 14.0 | 15 still oppose |
+| 5. And 1,000 seats | 4.6 / 81.9 / 13.5 | 14 still oppose |
+
+Run-to-run variation on the unchanged proposal: 0.2 points. The predictor expected 14.7% oppose at the new site; the run gave 16.7%.
+
+What it shows: every opponent asked for limited hours, the hours change moved almost nobody, and their explanations name distance ("only 600 feet from my home"). Moving the site halved opposition. The target (more support than oppose) was not reached: residents who stop opposing become neutral, not supporters. About 55 to 60 residents near the new site oppose it, and 53 of 60 say no version is acceptable to them.
+
+**Limits found**
+
+- "Limited hours" has no matching setting: an event has a start time and no end time, so the hours lever cannot offer earlier finishes.
+- The proposal's `what` text is never edited, so a smaller version reads "5000 seat concert venue ... (seats: 2500 seats)". Residents see both numbers.
+- Only one other site was tried before the search for sites ended; the remaining reruns went to size.
+- A strip club correction in Fast mode (`corr-a0d8578394`) found no better version: 34.6% oppose before, 35.5% and 34.7% after two moves.
+- While an Accurate correction runs it uses the account's whole 200 model calls a minute, and runs on the live stack slow down (a Fast run took 98 s against 20 s).
+
 ## 16. Parked feature: weighting residents by distance (raised Nov 15, not decided)
 
 **The idea (Partner).** People close to a proposal should count for more in the result than people far from it. Raised after a bus route came back 81% neutral because the typical resident asked lived 5 miles away.
