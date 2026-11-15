@@ -42,7 +42,7 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 | Data (census, LODES, Detroit open data → S3) | Partner | **In S3:** `s3://citysim-data-707604458164/raw/` (us-east-2), 35 files, 2.07 GB. Processing not started | 11-14 20:41 |
 | Buildings (Overture → tiles) | Salem + Partner | 335,338 bldgs; tiles tagged with **official 2026 districts**; table rebuilt with DuckDB and stored in `s3://citysim-data-707604458164/processed/buildings/` | 11-14 21:04 |
 | Engine (traffic Lambda) | — | Load, trips, impact lines work; 6 actions are stubs taking v2 `values` | 11-14 19:05 |
-| Residents (Bedrock) | — | v2 framework: prompt + checks + tests done (stance/reason/quote sample); batching stubbed | 11-14 19:05 |
+| Residents (Bedrock) | Partner | **Working end to end**: 3,500 personas, batch + totals deployed in us-east-2 on Nova 2 Lite; not calibrated | 11-14 22:15 |
 | Agent + Infra (AWS stack) | Salem | `infra/` SAM stack written (not deployed yet). `POST /scenario` works in tests (Bedrock → validated v2 spec); run pipeline wired with stubs | 11-14 20:35 |
 | Web (Next.js + deck.gl) | Salem | Prototype now on a real 3D Detroit map (MapLibre + deck.gl overlays); Next.js not started | 11-14 20:00 |
 | Deploy (Vercel) | Salem | **Live: https://citysim-detroit.vercel.app** (auto-deploys from `main`) | 11-14 17:58 |
@@ -60,6 +60,19 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 ---
 
 ## Entries
+
+### 2026-11-14 22:15 ET · Partner (AI) · Residents + Infra
+**Did:** Residents now answer. `residents/batch.py` asks 25 residents per Bedrock call behind the spending limit, checks every answer, asks invalid ones once more, then drops and counts them. `residents/aggregate.py` builds the run result (census-weighted overall split with bootstrap range, per district, reasons, groups by tenure / age / vehicles, quotes, per block, run stats). Wired into `infra/runs.py`; deployed to `citysim-partner` and `citysim-main` (us-east-2) with `ResidentModelId=us.amazon.nova-2-lite-v1:0`. Real runs on `citysim-partner`: strip club, District 6: 500 residents, 37 calls, 13 s, $0.06, 0 dropped, 12.3% support / 25.4% neutral / 62.3% oppose. 120-unit apartment building, Districts 5 and 6: 1,000 residents, 88 calls, 20 s, $0.13, 8 dropped, 18.0 / 25.8 / 56.1.
+**Files:** residents/batch.py, residents/aggregate.py, residents/prompt.py, residents/tests/test_batch_aggregate.py (new), infra/runs.py, data/personas/build.py (also writes `district_{n}.json`), LOG.md
+**Contracts changed:** none. The result validates against `run_result.schema.json`. Extra fields beyond it: `engine_status`, `stopped` (when the spending limit ends a run early), `run_stats.model_cost_usd`. `GET /runs/{id}` now returns `result` with real numbers (it is stored as text, so numbers are no longer strings).
+**Decisions:**
+- **Quotes are a second call.** In the first 500-resident trial every resident marked "quote: yes" answered support and nobody else did: the marker was steering the stance. Stances are now asked with no mention of quotes (`SYSTEM_STANCE`), then the sampled residents are asked for a sentence given the stance they already gave (`SYSTEM_QUOTES`, `build_quotes`). `prompt.build(..., quotes=True)` and `SYSTEM` are unchanged for other callers.
+- **No engine result means no impact line.** With "Personal impact: not calculated" 24 of 25 residents answered neutral. `build(personas, spec, None)` now leaves the line out and tells the model no impact figures exist.
+- **Resident line** adds the Tier 1 census facts (`census_details`); `PERSONA_CARD=base` turns them off for the calibration comparison.
+- **Haiku 5.5 is not available in this AWS account** ("not available for this account"), so residents run on Nova 2 Lite.
+- Answers go to the runs table (`resp#<run_id>#<batch>`), not through Step Functions, whose payload limit a 2,000-resident run would exceed.
+**Blocked / needs:** Not calibrated: nothing yet shows these splits match real Detroiters, and one model call answers 25 residents at once, so answers within a batch may be more alike than real neighbors. Reasons are limited to the fixed list (a strip club draws mostly "noise"). Salem: the prototype's run button is still the mock; it needs `POST /runs` with the spec, then `GET /runs/{id}` until `stage` is `done`.
+**Next:** engine for `add_building`, then bus; place resolver (11.2); calibration.
 
 ### 2026-11-14 21:49 ET · Partner (AI) · Data (personas) + Residents
 **Did:** Built the residents: `data/personas/build.py` writes 500 per district (3,500 total) to `data/processed/personas/district_{n}.parquet`, uploaded to `s3://citysim-data-707604458164/personas/`. Every row is one real anonymous PUMS 2020-2024 record; all 3,500 pass `contracts/persona.schema.json`. Household weights were fitted per district to income, tenure x vehicles and tenure x household size; renter and zero-car household shares match ACS to three decimals in every district. Tier 1 fields from BACKEND_PLAN.md 7.1 are included as extra columns (race, Hispanic origin, education, employment, disability, difficulty walking, born abroad, veteran, poverty ratio, building type, housing cost share of income, someone 65+ at home, home language, internet, SNAP). Also: the quote share is now a deploy setting, and Amazon Location place search was tested.

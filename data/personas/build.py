@@ -272,6 +272,7 @@ def main() -> None:
             "snap": s.FS == 1,
         })
         out.to_parquet(OUT / f"district_{d}.parquet", index=False)
+        (OUT / f"district_{d}.json").write_text(out.to_json(orient="records"))    # read by residents/batch.py in Lambda
         wsum = out.weight.sum()
         summary["districts"][d] = {
             "personas": int(len(out)), "distinct_census_households": int(out.pums_serialno.nunique()),

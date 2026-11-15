@@ -50,14 +50,18 @@ def start_run(event, context=None):
     _table().put_item(Item={"run_id": run_id, "spec_id": spec["spec_id"], "spec_version": spec["version"],
                             "status": "running", "stage": "engine", "created": int(time.time())})
     boto3.client("stepfunctions").start_execution(stateMachineArn=os.environ["STATE_MACHINE_ARN"], name=run_id,
-                                                  input=json.dumps({"run_id": run_id, "spec": spec}))
+                                                  input=json.dumps({"run_id": run_id, "spec": spec, "started": int(time.time())}))
     return _resp(202, {"run_id": run_id})
 
 
 def get_run(event, context=None):
     run_id = (event.get("pathParameters") or {}).get("id")
     item = _table().get_item(Key={"run_id": run_id}).get("Item")
-    return _resp(200, item) if item else _resp(404, {"error": "no such run"})
+    if not item or str(run_id).startswith(("spend#", "resp#")):
+        return _resp(404, {"error": "no such run"})
+    if "result_json" in item:                       # stored as text so numbers stay numbers
+        item["result"] = json.loads(item.pop("result_json"))
+    return _resp(200, item)
 
 
 # ---------- state machine steps ----------
@@ -75,25 +79,38 @@ def plan_batches(event, context=None):
     """Split the personas for the chosen districts into 25-resident batches (ids only; residents load from S3)."""
     per = int(os.environ.get("PERSONAS_PER_DISTRICT", "500"))
     ids = [f"d{d}-{i:04d}" for d in event["spec"].get("districts", []) for i in range(per)]
-    batches = [{"run_id": event["run_id"], "spec_id": event["spec"]["spec_id"], "persona_ids": ids[i:i + BATCH]}
-               for i in range(0, len(ids), BATCH)]
+    spec = {"spec_id": event["spec"]["spec_id"], "summary": event["spec"]["summary"]}
+    computed = event.get("engine_status") == "ok"
+    lines = (event.get("impacts") or {}).get("lines") or {}
+    batches = [{"run_id": event["run_id"], "batch": n, "spec": spec, "persona_ids": ids[i:i + BATCH],
+                "impacts_computed": computed, "impact_lines": {p: lines[p] for p in ids[i:i + BATCH] if p in lines}}
+               for n, i in enumerate(range(0, len(ids), BATCH))]
     return {**event, "batches": batches}
 
 
 def resident_batch(event, context=None):
     from residents import batch
-    try:
-        return {"responses": batch.main(event), "status": "ok"}
-    except NotImplementedError as e:
-        return {"responses": [], "status": f"not_implemented: {e}"}
+    return batch.main(event)        # answers go to the runs table; only counts come back
 
 
 def aggregate_step(event, context=None):
     from residents import aggregate
-    responses = [r for b in event.get("batch_results", []) for r in b.get("responses", [])]
-    try:
-        result, status = aggregate.main(responses, event["spec"]), "done"
-    except NotImplementedError as e:
-        result, status = {"note": "aggregate not implemented yet", "responses": len(responses)}, f"done_stub: {e}"
-    _update(event["run_id"], status=status, stage="done", result=result, finished=int(time.time()))
-    return {"run_id": event["run_id"], "status": status}
+    run_id, results, table = event["run_id"], event.get("batch_results", []), _table()
+    rows = []
+    for n in range(len(results)):
+        item = table.get_item(Key={"run_id": f"resp#{run_id}#{n}"}, ConsistentRead=True).get("Item")
+        rows += json.loads(item["rows"]) if item else []
+    stats = {"residents": sum(b.get("asked", 0) for b in results), "retried": sum(b.get("retried", 0) for b in results),
+             "bedrock_calls": sum(b.get("calls", 0) for b in results),
+             "quotes_requested": sum(b.get("quotes_requested", 0) for b in results),
+             "seconds": int(time.time()) - int(event.get("started", time.time()))}
+    result = aggregate.main(rows, event["spec"], stats)
+    stopped = sorted({b["status"] for b in results if str(b.get("status", "")).startswith("stopped")})
+    result.update(run_id=run_id, status="done", engine_status=event.get("engine_status"),
+                  created_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    if stopped:
+        result["stopped"] = stopped                 # for example the spending limit was reached mid-run
+    spend = table.get_item(Key={"run_id": f"spend#{run_id}"}, ConsistentRead=True).get("Item") or {}
+    result["run_stats"]["model_cost_usd"] = round(int(spend.get("micro_usd", 0)) / 1e6, 4)
+    _update(run_id, status="done", stage="done", result_json=json.dumps(result), finished=int(time.time()))
+    return {"run_id": run_id, "status": "done"}
