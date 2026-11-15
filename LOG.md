@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: earthy light map
+- Light theme now swaps the basemap to CARTO Voyager (no labels) and recolours it: blue water, green parks/grass/woods, warm beige land; buildings use a warm tan height ramp; road overlay and outside-district tint use light warm colours. Dark theme unchanged. Our sources/layers (buildings, outside tint, roads) are carried across the style swap (setStyle transformStyle) and repainted.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: rezoning by two corners
 - Rezoning blocks show "First corner" (the spec's Where) and a frontend-only "Opposite corner" pin field (not sent to the backend). With both: the local street-grid angle is measured from nearby road segments, the other two corners are placed on that grid, and each edge is traced along the streets (shortest road path; a straight edge if the path detours >1.6×). The edge draws, then the area fills with the zone colour and the label sits in the middle. One corner only → the 180 m circle as before.
 - Files: web/prototype/index.html only.
