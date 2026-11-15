@@ -1115,6 +1115,7 @@ var mapView = (function () {
       return 1300 + (b ? DRAW + DRIVE : RISE + 300);
     },
     clearBuild: function () { build = null; render(); },
+    _roadPath: function (a, b) { return roadPath(a, b); },
     pick: function (what, cb, key, near) {           // top-down view; next click on a road/intersection returns its name + point. near = [lon, lat] to look at
       if (pickCb) endPick(null);
       pickPrev = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(), duration: 600 };
