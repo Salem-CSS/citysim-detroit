@@ -65,6 +65,11 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 13:08 ET · Salem (AI) · main: road change follows the street as one line
+
+- `web/prototype/index.html`: street pieces from the map tiles are merged into one ordered line (`mergeAlong`), so the road change draws as a single stroke along the real street instead of several fragments or a straight fallback. Michigan Ave preset ends moved onto the actual street (lat 42.3314). Quick start now waits for street tiles to load (polls up to ~4 s) so it never falls back to a straight line.
+- Checked for `@salem` mentions in repo files, commits, issues, PRs and comments: none found.
+
 ### 2026-11-15 12:58 ET · Salem (AI) · main: road-change and drone lines no longer flicker
 
 - `web/prototype/index.html`: road-change lines (glow, main line, green bike lane) now float 2-4 m above the street instead of sitting at ground level, where they z-fought the basemap roads and showed as orange/red/green stripes. Drone ground-shadow line raised and drawn on top; flight arc starts 3 m up.

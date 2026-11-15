@@ -1072,6 +1072,17 @@ var mapView = (function () {
     }); } catch (e) {} });
     return out.filter(function (l) { return l.length > 1; });
   }
+  // join street pieces into one ordered line: project every point onto the street's axis, sort, drop near-duplicates
+  function mergeAlong(lines, ends) {
+    var pts = []; lines.forEach(function (l) { pts = pts.concat(l); }); if (pts.length < 2) return pts;
+    var c = pts[0], kx = 111320 * Math.cos(c[1] * Math.PI / 180), ky = 110540, ux, uy;
+    if (ends) { ux = (ends[1][0] - ends[0][0]) * kx; uy = (ends[1][1] - ends[0][1]) * ky; }
+    else { var far = pts[0], best = 0; pts.forEach(function (q) { var d = Math.hypot((q[0] - c[0]) * kx, (q[1] - c[1]) * ky); if (d > best) { best = d; far = q; } }); ux = (far[0] - c[0]) * kx; uy = (far[1] - c[1]) * ky; }
+    var L = Math.hypot(ux, uy) || 1; ux /= L; uy /= L;
+    pts = pts.map(function (q) { return { q: q, s: (q[0] - c[0]) * kx * ux + (q[1] - c[1]) * ky * uy }; }).sort(function (x, y) { return x.s - y.s; });
+    var out = [pts[0].q], last = pts[0].s; pts.forEach(function (o) { if (o.s - last > 4) { out.push(o.q); last = o.s; } });
+    return out;
+  }
   function along(path, f) {                   // point + heading at fraction f of the path's length, and the path up to it
     if (!path._len) { path._cum = [0]; for (var i = 1; i < path.length; i++) path._cum.push(path._cum[i - 1] + Math.hypot((path[i][0] - path[i - 1][0]) * Math.cos(path[0][1] * Math.PI / 180), path[i][1] - path[i - 1][1])); path._len = path._cum[path._cum.length - 1] || 1e-9; }
     var d = f * path._len, i = 1; while (i < path.length - 1 && path._cum[i] < d) i++;
@@ -1539,6 +1550,7 @@ var mapView = (function () {
         if (kind === 'road') { var ls = [];
           var span = opts.ends ? Math.hypot((opts.ends[1][0] - opts.ends[0][0]) * 111320 * Math.cos(a[1] * Math.PI / 180), (opts.ends[1][1] - opts.ends[0][1]) * 110540) / 2 + 30 : 320;
           if (opts.street) { try { ls = streetNear(a, opts.street, span); } catch (e) {} }                 // trace the named street itself
+          if (ls.length > 1) ls = [mergeAlong(ls, opts.ends)];                                       // tile pieces -> one continuous line, so it draws as one stroke
           if (!ls.length && opts.ends) { var rp = null; try { rp = roadPath(opts.ends[0], opts.ends[1]); } catch (e) {} ls = [rp || opts.ends]; }
           if (!ls.length) ls = [[[a[0] - .002, a[1]], [a[0] + .002, a[1]]]];
           opts.lines = ls; }
@@ -1557,7 +1569,7 @@ var mapView = (function () {
         dropMarker(kind, markerPoint(kind, B, opts));
         B.ready = true; B.t0 = performance.now(); };
       map.once('moveend', function () { map.once('idle', go); setTimeout(go, 2200); });   // wait for the framed view's street tiles (idle), with a cap
-      setTimeout(function () { if (!map.isMoving()) go(); }, 900);                           // camera didn't move (already framed): start now
+      (function poll(n) { setTimeout(function () { if (build !== B || B.ready) return; if (!map.isMoving() && map.areTilesLoaded()) go(); else if (n < 10) poll(n + 1); }, n ? 300 : 900); })(0);                           // camera didn't move (already framed): start now
       setTimeout(go, 4000);
       requestAnimationFrame(buildLoop);
       return 1300 + (kind === 'building' ? 2100 : kind === 'road' ? 2600 : kind === 'event' ? 3600 : kind === 'rezone' ? (b ? 2700 : 1900) : b ? DRAW + DRIVE : RISE + 300);
@@ -1964,7 +1976,7 @@ var PRESET_LL={ michigan_14th:[-83.0789,42.3306], bagley_16th:[-83.0806,42.3262]
 function presetOf(a,id){ var el=body.querySelector('[data-k="'+a.action_id+'.'+id+'"]'), c=(a.constraints||[]).filter(function(x){return x.id===id;})[0]; if(!c) return null;
   var v=c.value; if(el){ var lab=el.tagName==='SELECT'?el.value:(el.querySelector('[aria-pressed="true"]')||{}).textContent; var m=(c.options||[]).filter(function(o){return o.label===lab;})[0]; if(m) v=m.value; }
   return PRESET_LL[v]||null; }
-var PRESET_ROAD={ michigan_trumbull_14th:{name:'Michigan Avenue',ends:[[-83.0679,42.3318],[-83.0789,42.3306]]}, vernor_w:{name:'West Vernor Highway',ends:[[-83.0790,42.3255],[-83.0990,42.3190]]}, trumbull:{name:'Trumbull Avenue',ends:[[-83.0676,42.3318],[-83.0705,42.3440]]} };
+var PRESET_ROAD={ michigan_trumbull_14th:{name:'Michigan Avenue',ends:[[-83.0679,42.33141],[-83.0788,42.33135]]}, vernor_w:{name:'West Vernor Highway',ends:[[-83.0790,42.3255],[-83.0990,42.3190]]}, trumbull:{name:'Trumbull Avenue',ends:[[-83.0676,42.3318],[-83.0705,42.3440]]} };
 var ZONE_COL={ R3:[74,222,128], R5:[250,204,21], B4:[167,139,250], SD2:[45,212,191] };
 function presetVal(a,id){ var c=(a.constraints||[]).filter(function(x){return x.id===id;})[0]; if(!c) return null; var el=body.querySelector('[data-k="'+a.action_id+'.'+id+'"]'), v=c.value;
   if(el){ var lab=el.tagName==='SELECT'?el.value:(el.querySelector('[aria-pressed="true"]')||{}).textContent; var m=(c.options||[]).filter(function(o){return o.label===lab;})[0]; if(m) v=m.value; } return v; }
