@@ -699,7 +699,7 @@ var mapView = (function () {
         hub = new maplibregl.Marker({ element: hm, anchor: 'bottom', offset: [0, -10] }).setLngLat(h.geometry.coordinates).addTo(map);
         step(2); step(3);
         ready = true; api.setSelected(sel, true); kick();
-        map.once('idle', function () { setTimeout(hideLoader, 250); });
+        setTimeout(hideLoader, 700);                  // our layers are on; don't wait for the slow basemap to finish
         var at = document.querySelector('.maplibregl-ctrl-attrib'); if (at) at.classList.remove('maplibregl-compact-show');
       }).catch(function (u) { console.error('map data missing:', u); hideLoader(); });
   });
