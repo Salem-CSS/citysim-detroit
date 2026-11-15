@@ -571,20 +571,23 @@ var mapView = (function () {
   var STYLE = q.get('style') === 'none'
     ? { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0B1220' } }] }
     : 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
-  var STYLES = { dark: STYLE, light: q.get('style') === 'none' ? STYLE : 'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json' };
+  var STYLES = { dark: STYLE, light: q.get('style') === 'none' ? STYLE : 'https://basemaps.cartocdn.com/gl/voyager-nolabels-gl-style/style.json' };   // light: earthy land, green parks, blue water
   var theme = (function () { try { return localStorage.getItem('citysim-theme') || 'dark'; } catch (e) { return 'dark'; } })();
-  // the map stays dark in both themes; the setting only changes the panels
+  // dark theme: dark map. light theme: earthy map (voyager) with warm buildings and lighter road/tint colours
   var PAD_OPEN = { left: 392, right: 432, top: 110, bottom: 100 }, PAD_CLOSED = { left: 40, right: 432, top: 110, bottom: 100 };
   var RAMPS = {
     dark: ['interpolate', ['linear'], ['get', 'h'], 0, '#58647A', 8, '#6E7D94', 15, '#7DA0D7', 40, '#A096EB', 120, '#EBE1FF'],
-    light: ['interpolate', ['linear'], ['get', 'h'], 0, '#C9D2DF', 8, '#B3BFD1', 15, '#93A8CB', 40, '#7F8FC6', 120, '#5B67A8'] };
-  var OFF = { dark: '#1E293B', light: '#E9EDF3' };
-  var RAMP = RAMPS.dark;
+    light: ['interpolate', ['linear'], ['get', 'h'], 0, '#E8DFCF', 8, '#DCCFB9', 15, '#CDB99A', 40, '#B79E7C', 120, '#8F7556'] };
+  var THEME_PAINT = {
+    dark:  { dim: '#05080F', dimOp: 0.5, road: ['#A5B4CB', '#8C9BB3', '#6B7A92'] },
+    light: { dim: '#F4EFE6', dimOp: 0.55, road: ['#B6A68C', '#C2B49C', '#CFC4B1'] } };
+  var OFF = { dark: '#1E293B', light: '#EFE9DE' };
+  var RAMP = RAMPS[theme] || RAMPS.dark;
   var STANCE = { s: [56, 189, 248], n: [148, 163, 184], o: [249, 115, 22], x: [100, 116, 139], idle: [248, 250, 252] };
   var roadsOn = true, sel = [], districts = null, overlays = null, residents = [], labels = {}, hub = null, clickFn = null, padded = null, ready = false;
 
   var map = new maplibregl.Map({
-    container: el, style: STYLE, center: [-83.09, 42.36], zoom: 11, pitch: 50, bearing: -12,
+    container: el, style: STYLES[theme] || STYLE, center: [-83.09, 42.36], zoom: 11, pitch: 50, bearing: -12,
     maxPitch: 70, minZoom: 10, maxBounds: [[-83.6, 42.1], [-82.6, 42.6]], attributionControl: false
   });
   var overlay = new deck.MapboxOverlay({ interleaved: true, layers: [], getTooltip: function (i) {
@@ -668,13 +671,13 @@ var mapView = (function () {
     var mask = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[-84.5, 41.6], [-81.5, 41.6], [-81.5, 43.2], [-84.5, 43.2], [-84.5, 41.6]]].concat(holes) } };
     if (map.getSource('outside')) map.getSource('outside').setData(mask);
     else { map.addSource('outside', { type: 'geojson', data: mask });
-           map.addLayer({ id: 'outside-dim', type: 'fill', source: 'outside', paint: { 'fill-color': '#05080F', 'fill-opacity': 0.5 } }, map.getLayer('buildings') ? 'buildings' : undefined); }
+           map.addLayer({ id: 'outside-dim', type: 'fill', source: 'outside', paint: { 'fill-color': THEME_PAINT[theme].dim, 'fill-opacity': THEME_PAINT[theme].dimOp } }, map.getLayer('buildings') ? 'buildings' : undefined); }
     try {
     if (!map.getLayer('all-roads')) {
       map.addLayer({ id: 'all-roads', type: 'line', source: src, 'source-layer': layer, filter: filter,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-          'line-color': ['match', kind, ['highway', 'motorway', 'trunk'], '#A5B4CB', ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], '#8C9BB3', '#6B7A92'],
+          'line-color': ['match', kind, ['highway', 'motorway', 'trunk'], THEME_PAINT[theme].road[0], ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], THEME_PAINT[theme].road[1], THEME_PAINT[theme].road[2]],
           'line-opacity': ['match', kind, ['highway', 'motorway', 'trunk', 'major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 0.75, 0.55],
           'line-width': ['interpolate', ['linear'], ['zoom'], 10, ['match', kind, ['highway', 'motorway', 'trunk'], 1.6, ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 1, 0.4],
                                                               16, ['match', kind, ['highway', 'motorway', 'trunk'], 6, ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 4, 2.2]]
@@ -685,7 +688,7 @@ var mapView = (function () {
   }
   function paintBuildings() {
     if (!map.getLayer('buildings') || !sel.length) return;
-    map.setPaintProperty('buildings', 'fill-extrusion-color', ['match', ['get', 'd'], sel, RAMPS.dark, OFF.dark]);
+    map.setPaintProperty('buildings', 'fill-extrusion-color', ['match', ['get', 'd'], sel, RAMPS[theme] || RAMPS.dark, OFF[theme] || OFF.dark]);
   }
 
 
@@ -1364,7 +1367,23 @@ var mapView = (function () {
     },
     cancelPick: function () { endPick(null); },
     clearPins: function () { Object.keys(pins).forEach(function (k) { pins[k].remove(); }); pins = {}; },
-    setTheme: function (t) { theme = t; },          // panels only; the map keeps its dark look
+    setTheme: function (t) {                    // swap the basemap, carry our own sources/layers across, recolour them
+      if (t === theme || !STYLES[t]) { theme = t; return; }
+      theme = t;
+      var KEEP_S = ['bldg', 'outside'], KEEP_L = ['buildings', 'outside-dim', 'all-roads'];
+      map.setStyle(STYLES[t], { diff: false, transformStyle: function (prev, next) {
+        if (!prev) return next;
+        var src = Object.assign({}, next.sources), lay = next.layers.slice(), roadSrc = Object.keys(next.sources).filter(function (k) { return next.sources[k].type === 'vector'; })[0];
+        KEEP_S.forEach(function (k) { if (prev.sources[k]) src[k] = prev.sources[k]; });
+        prev.layers.forEach(function (l) { if (KEEP_L.indexOf(l.id) > -1 && l.id !== 'all-roads') lay.push(l); });   // all-roads is re-made for the new basemap's road layer
+        return Object.assign({}, next, { sources: src, layers: lay });
+      } });
+      map.once('style.load', function () {
+        if (map.getLayer('outside-dim')) { map.setPaintProperty('outside-dim', 'fill-color', THEME_PAINT[t].dim); map.setPaintProperty('outside-dim', 'fill-opacity', THEME_PAINT[t].dimOp); }
+        try { if (map.getLayer('outside-dim') && map.getLayer('buildings')) map.moveLayer('outside-dim', 'buildings'); } catch (e) {}
+        paintBuildings(); paintAllRoads(); render();
+      });
+    },
     setRoads: function (v) { roadsOn = v; paintAllRoads(); render(); }
   };
   var rt = document.getElementById('roadsToggle');
