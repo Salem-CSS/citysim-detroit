@@ -4,7 +4,7 @@
   "parent_spec_id": null,
   "status": "confirmed",
   "prompt": "What if we expand the Newlab drone route to 200 flights a day over Corktown?",
-  "summary": "Proposal: Drone delivery route (takes off from: Newlab rooftop, flights a day: 200 flights, flying height: 200 ft, flying hours: 7 AM to 9 PM, delivery vans it replaces: 1 in 5) in Districts 4, 5, 6, 7.",
+  "summary": "Proposal: an expanded Newlab drone delivery route (takes off from: Newlab rooftop, flights a day: 200 flights) in Districts 4, 5, 6, 7.",
   "districts": [
     4,
     5,
@@ -19,6 +19,22 @@
       "type": "add_drone_route",
       "title": "Drone delivery route",
       "constraints": [
+        {
+          "id": "what",
+          "label": "What",
+          "type": "text",
+          "show": "panel",
+          "value": "an expanded Newlab drone delivery route",
+          "source": "from_question"
+        },
+        {
+          "id": "where",
+          "label": "Where",
+          "type": "text",
+          "show": "panel",
+          "value": "",
+          "source": "assumed"
+        },
         {
           "id": "hub",
           "label": "Takes off from",

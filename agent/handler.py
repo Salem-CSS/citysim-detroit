@@ -13,6 +13,7 @@ How it stays honest
 from __future__ import annotations
 
 import json
+import re
 import os
 import uuid
 from pathlib import Path
@@ -31,6 +32,9 @@ def catalog() -> str:
     for t, a in TEMPLATES.items():
         lines.append(f"- {t} ({a['title']}):")
         for c in a["constraints"]:
+            if c["type"] == "text":
+                lines.append(f"    {c['id']} - {c['label']} (short text). {c.get('note', '')}")
+                continue
             if c["type"] not in ("number", "select"):
                 continue
             if c.get("options"):
@@ -75,6 +79,10 @@ def clean_values(action_type: str, raw: dict) -> tuple[dict, list[str]]:
                 out[k] = allowed[[str(a) for a in allowed].index(str(v))]
             else:
                 notes.append(f"{c['label']}: '{v}' isn't an option, kept the default")
+        elif c["type"] == "text":
+            text = " ".join(str(v).split())[:120]
+            if text:
+                out[k] = text
         elif c["type"] == "number":
             try:
                 x = float(v)
@@ -89,6 +97,34 @@ def clean_values(action_type: str, raw: dict) -> tuple[dict, list[str]]:
     return out, notes
 
 
+def _number_in(value, question: str) -> bool:
+    """True if the number appears in the question as digits (1,200 and 1200 both count)."""
+    found = set()
+    for x in re.findall(r"[0-9][0-9,]*[.]?[0-9]*", question):
+        try:
+            found.add(float(x.replace(",", "")))
+        except ValueError:
+            pass
+    try:
+        return float(value) in found
+    except (TypeError, ValueError):
+        return False
+
+
+def _option_in(constraint: dict, question: str) -> bool:
+    """True if the chosen option is named in the question: its number, or a word of its label (4+ letters)."""
+    value = constraint["value"]
+    label = next((o["label"] for o in constraint.get("options", []) if o["value"] == value), str(value))
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return _number_in(value, question)
+    q = question.lower()
+    numbers = re.findall(r"[0-9]+", label)
+    if numbers:                                   # "7 AM to 9 PM": every number in the label must be in the question
+        return all(_number_in(n, question) for n in numbers)
+    words = [w for w in re.findall(r"[a-z]{4,}", label.lower()) if w not in ("with", "from", "that", "none")]
+    return any(w in q or w.rstrip("s") in q for w in words)
+
+
 def build_spec(tool_input: dict, question: str, districts: list[int], parent: dict | None) -> dict:
     actions, notes = [], []
     for a in tool_input.get("actions", []):
@@ -99,6 +135,16 @@ def build_spec(tool_input: dict, question: str, districts: list[int], parent: di
         vals, n = clean_values(t, a.get("values", {}))
         notes += n
         act = new_action(t, vals)
+        raw = a.get("values") or {}
+        for c in act["constraints"]:     # a value that is not in the question was not stated by the user
+            if parent or c["source"] != "from_question" or c["type"] not in ("number", "select"):
+                continue                 # (follow-ups are checked against the earlier spec, not the short follow-up text)
+            given = raw.get(c["id"])
+            given = given["value"] if isinstance(given, dict) and "value" in given else given
+            stated = _number_in(given, question) if c["type"] == "number" else _option_in(c, question)
+            if not stated:
+                c["source"] = "assumed"
+                c["note"] = "Not stated in the question; filled in by the assistant."
         if parent:                       # follow-up: values the user gave this time are 'edited'
             for c in act["constraints"]:
                 if c["source"] == "from_question":
@@ -130,7 +176,8 @@ def ask_model(question: str, parent: dict | None, client=None) -> dict:
         client,
         modelId=MODEL_ID,
         system=[{"text": SYSTEM + "\n\nActions and their fields (use these ids and option values exactly):\n" + catalog()
-                 + "\n\nCall submit_actions exactly once. Fill only values the user stated or clearly implied; the rest get defaults."}],
+                 + "\n\nCall submit_actions exactly once. Fill only values the user stated or clearly implied; the rest get defaults."
+                 + " Always fill `what` and `where` for every action. `what` is the thing the user proposed, in their own terms and kept specific (for example 'a strip club', 'a 24-hour gas station', 'a new bus route'), as a short neutral noun phrase. Never generalise it to a broader category. `where` is the place the user named (street, cross streets, landmark, from-to); leave it out if they named none. If the specific use or place has no matching option in a select field, leave that field out: do not pick the nearest option and do not list the use under `unsupported`. `unsupported` is only for parts of the question that none of the action types can represent."}],
         messages=[{"role": "user", "content": [{"text": user}]}],
         toolConfig={"tools": [tool_spec()], "toolChoice": {"tool": {"name": "submit_actions"}}},
         inferenceConfig={"temperature": 0, "maxTokens": 1500},

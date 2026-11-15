@@ -23,6 +23,22 @@
       "icon": "drone",
       "constraints": [
         {
+          "id": "what",
+          "label": "What",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "What the user asked for, in their own terms. Residents read this."
+        },
+        {
+          "id": "where",
+          "label": "Where",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "The place the user named (address, cross streets, landmark). Residents read this."
+        },
+        {
           "id": "hub",
           "label": "Takes off from",
           "type": "select",
@@ -129,6 +145,22 @@
       "title": "New building",
       "icon": "building",
       "constraints": [
+        {
+          "id": "what",
+          "label": "What",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "What the user asked for, in their own terms. Residents read this."
+        },
+        {
+          "id": "where",
+          "label": "Where",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "The place the user named (address, cross streets, landmark). Residents read this."
+        },
         {
           "id": "site",
           "label": "Site",
@@ -237,6 +269,22 @@
       "icon": "road",
       "constraints": [
         {
+          "id": "what",
+          "label": "What",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "What the user asked for, in their own terms. Residents read this."
+        },
+        {
+          "id": "where",
+          "label": "Where",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "The place the user named (address, cross streets, landmark). Residents read this."
+        },
+        {
           "id": "street",
           "label": "Street",
           "type": "select",
@@ -317,6 +365,22 @@
       "icon": "bus",
       "constraints": [
         {
+          "id": "what",
+          "label": "What",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "What the user asked for, in their own terms. Residents read this."
+        },
+        {
+          "id": "where",
+          "label": "Where",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "The place the user named (address, cross streets, landmark). Residents read this."
+        },
+        {
           "id": "route",
           "label": "Bus route",
           "type": "select",
@@ -355,6 +419,22 @@
       "icon": "zone",
       "constraints": [
         {
+          "id": "what",
+          "label": "What",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "What the user asked for, in their own terms. Residents read this."
+        },
+        {
+          "id": "where",
+          "label": "Where",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "The place the user named (address, cross streets, landmark). Residents read this."
+        },
+        {
           "id": "parcels",
           "label": "Parcels",
           "type": "parcels",
@@ -392,6 +472,22 @@
       "title": "Event venue",
       "icon": "stadium",
       "constraints": [
+        {
+          "id": "what",
+          "label": "What",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "What the user asked for, in their own terms. Residents read this."
+        },
+        {
+          "id": "where",
+          "label": "Where",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "The place the user named (address, cross streets, landmark). Residents read this."
+        },
         {
           "id": "site",
           "label": "Site",

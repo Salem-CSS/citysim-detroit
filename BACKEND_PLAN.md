@@ -374,6 +374,21 @@ Fixed alongside it: the resident description uses the same census fields in the 
 - **Missing inputs:** where section 8.2 lists a required input the user did not give, the agent asks for it on the confirmation card rather than filling a default. Assumptions with a citation may be pre-filled and are listed.
 - The agent writes no traffic or sentiment numbers. "Test a fix" suggestions are prompt text only.
 
+### 11.1 Free input: residents read what the user asked for (decided Nov 14)
+
+The user can type any proposal, for any kind of building, route or change, placed anywhere inside the selected districts. The scenario step sorts it into an action type, but it must not replace what the user said with a preset. Residents are asked about the proposal as the user stated it: a strip club is put to them as a strip club, not as a generic building.
+
+| Rule | How | Status |
+| --- | --- | --- |
+| The user's own terms reach residents | Every action carries two text constraints, `what` and `where`, filled from the question. `summary_line` leads with them. | Built Nov 14 |
+| No nearest-preset substitution | If a use or place has no matching option in a select field, the field is left at its default and marked `assumed`; the use is not listed under `unsupported`. | Built Nov 14 (prompt rule) |
+| Assumed values are not read to residents | The summary lists only settings with source `from_question` or `edited`. | Built Nov 14 |
+| Numbers the user did not give are labelled | A number that does not appear in the question is marked `assumed` with a note, whatever the model says. | Built Nov 14 |
+| Any location inside the selected districts | Geocode `where` (Amazon Location Service), check the point is inside a selected district, and give the engine that point in place of the three preset sites. A place outside the selected districts is reported back, not moved. | Not built |
+| Traffic for any use | Trips are computed only for uses with a published rate in `ite_rates.csv`. For other uses the engine returns "no published trip rate" and residents are still asked, with distance to the site as their impact line. | Not built |
+| Reasons fit any use | The fixed reason list (traffic, noise, safety, privacy, rent, jobs, access, none) has nothing for objections to the kind of venue. Propose adding one reason for it; needs both lanes to agree because the website reads the list. | Open |
+| The website shows `what` and `where` | Text constraints are in the spec but the prototype panel renders only number and select blocks. | Open (web lane) |
+
 ## 12. Contract changes to propose
 
 Not applied. Each needs the frontend lane's agreement and a fixture update.

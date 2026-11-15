@@ -8,6 +8,7 @@ Output
 - Put anything no action covers in `unsupported` (the UI shows "not supported yet").
 
 Rules
+- **Keep the user's own proposal.** Every action has `what` (the thing proposed, in the user's terms, specific: "a strip club", not "a building") and `where` (the place they named). Never replace a specific use or place with the nearest preset. The summary residents read leads with `what` and `where`.
 - Never state traffic counts, trip numbers, support percentages or poll results. The engines compute those.
 - A land use with no ITE code: pick the nearest, set `confidence: "low"`, add a `note` on that constraint.
 - Follow-ups ("make it 4 stories", "also cut a lane on Michigan") edit the current spec: change values (`source: "edited"`), add actions, bump `version`, set `parent_spec_id`.

@@ -39,16 +39,32 @@ def label_of(constraint: dict) -> str:
     unit = constraint.get("unit")
     return f"{v} {unit}" if unit and v is not None else str(v)
 
+PLACE_IDS = {"site", "hub", "street", "route"}          # constraints that name a preset place
+PLACE_WORDS = {"from", "between", "on", "at", "near", "along", "above", "over", "in", "by", "across", "next", "behind"}
+
+
 def summary_line(spec: dict) -> str:
-    """Neutral one-sentence summary rebuilt from constraint values. Residents are asked about this, not the raw prompt."""
+    """Neutral one-sentence summary. Residents are asked about this, not the raw prompt.
+
+    It leads with what the user asked for and where, in the user's own terms (the `what` and `where`
+    text constraints), then lists only the settings the user stated or edited. Defaults the agent
+    assumed are engine inputs; they are not read to residents as if the user had proposed them."""
     parts = []
     for a in spec["actions"]:
-        shown = [c for c in a["constraints"] if c.get("show", "panel") == "panel"]
-        details = ", ".join(f"{c['label'].lower()}: {label_of(c)}" for c in shown)
-        parts.append(f"{a['title']} ({details})")
+        by_id = {c["id"]: c for c in a["constraints"]}
+        what = str((by_id.get("what") or {}).get("value") or "").strip()
+        where = str((by_id.get("where") or {}).get("value") or "").strip()
+        joined = where if where.lower().split(" ")[0] in PLACE_WORDS else f"at {where}"
+        head = (what or a["title"]) + (f" {joined}" if where else "")
+        skip = {"what", "where"} | (PLACE_IDS if where else set())   # the user's own place replaces a preset place
+        stated = [c for c in a["constraints"] if c["id"] not in skip and c.get("show", "panel") == "panel"
+                  and c.get("source") in ("from_question", "edited") and c.get("type") in ("number", "select")]
+        details = ", ".join(f"{c['label'].lower()}: {label_of(c)}" for c in stated)
+        parts.append(head + (f" ({details})" if details else ""))
     d = spec.get("districts", [])
-    where = f" in District{'s' if len(d) > 1 else ''} {', '.join(map(str, d))}" if d else ""
-    return ("Proposal: " + "; plus ".join(parts) + where + ".")[:240]
+    where_d = f" in District{'s' if len(d) > 1 else ''} {', '.join(map(str, d))}" if d else ""
+    body = "Proposal: " + "; plus ".join(parts)
+    return body[:240 - len(where_d) - 1] + where_d + "."
 
 def apply_edit(spec: dict, action_id: str, constraint_id: str, value) -> dict:
     """User edited a block: set value, mark source='edited'. Caller bumps version on Ask again."""
