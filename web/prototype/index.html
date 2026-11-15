@@ -511,9 +511,14 @@ var mapView = (function () {
     if (!layer) { map.once('idle', paintAllRoads); return; }
     var area = { type: 'FeatureCollection', features: districts.features.filter(function (f) { return on(f.properties.n); }) };
     var kind = ['coalesce', ['get', 'kind'], ['get', 'class']];
-    var filter = ['all', ['==', ['geometry-type'], 'LineString'],
-      ['match', kind, ['highway', 'motorway', 'trunk', 'major_road', 'primary', 'secondary', 'tertiary', 'medium_road', 'minor_road', 'minor', 'residential', 'service', 'living_street'], true, false],
-      ['within', area]];
+    var filter = ['match', kind, ['highway', 'motorway', 'trunk', 'major_road', 'primary', 'secondary', 'tertiary', 'medium_road', 'minor_road', 'minor', 'residential', 'service', 'living_street'], true, false];
+    // spotlight: everything outside the selected districts gets a dark tint (roads, basemap), so their streets stand out
+    var holes = [];
+    area.features.forEach(function (f) { var g = f.geometry, polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates; polys.forEach(function (pc) { holes.push(pc[0].slice().reverse()); }); });
+    var mask = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[-84.5, 41.6], [-81.5, 41.6], [-81.5, 43.2], [-84.5, 43.2], [-84.5, 41.6]]].concat(holes) } };
+    if (map.getSource('outside')) map.getSource('outside').setData(mask);
+    else { map.addSource('outside', { type: 'geojson', data: mask });
+           map.addLayer({ id: 'outside-dim', type: 'fill', source: 'outside', paint: { 'fill-color': '#05080F', 'fill-opacity': 0.5 } }, map.getLayer('buildings') ? 'buildings' : undefined); }
     try {
     if (!map.getLayer('all-roads')) {
       map.addLayer({ id: 'all-roads', type: 'line', source: src, 'source-layer': layer, filter: filter,
@@ -523,7 +528,7 @@ var mapView = (function () {
           'line-opacity': ['match', kind, ['highway', 'motorway', 'trunk', 'major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 0.75, 0.55],
           'line-width': ['interpolate', ['linear'], ['zoom'], 10, ['match', kind, ['highway', 'motorway', 'trunk'], 1.6, ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 1, 0.4],
                                                               16, ['match', kind, ['highway', 'motorway', 'trunk'], 6, ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 4, 2.2]]
-        } }, map.getLayer('buildings') ? 'buildings' : undefined);
+        } }, map.getLayer('outside-dim') ? 'outside-dim' : map.getLayer('buildings') ? 'buildings' : undefined);
     } else map.setFilter('all-roads', filter);
     map.setLayoutProperty('all-roads', 'visibility', roadsOn ? 'visible' : 'none');
     } catch (e) { map.once('idle', paintAllRoads); }
