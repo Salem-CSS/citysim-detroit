@@ -151,7 +151,11 @@ def choose_levers(diag: dict, spec: dict) -> tuple[list[str], str | None]:
         order += ["size", "hours"]
     if "location" in order and not diag["opposition_is_local"]:
         order = [l for l in order if l != "location"] + ["location"]      # still tried, but last
-    levers = [l for l in dict.fromkeys(order) if can[l]]
+    asked_for = [l for l in dict.fromkeys(order) if can[l]]
+    # Then every other change this kind of proposal allows. Residents who ask for one change and get it often still
+    # oppose (Nov 15 tests: 167 of 190 after "limited hours"), so the levers they did not name are tried as well.
+    levers = asked_for + [l for l in ("location", "size", "hours") if can[l] and l not in asked_for]
+    diag["levers_asked_for"] = asked_for
     diag["asked_for_but_not_tried"] = not_tried(said, can, sum(said.values()))
     if not levers:
         return [], "no lever is available for this kind of proposal" + (" (residents asked for community benefits, which the engine cannot model)" if said.get("community benefits") else "")

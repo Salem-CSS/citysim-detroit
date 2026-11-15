@@ -80,14 +80,14 @@ def test_opposition_that_does_not_depend_on_distance_is_not_local():
 def test_levers_follow_what_opponents_asked_for():
     rows = [answer(p, HERE) for p in people()]
     said = lambda *pairs: [{"persona_id": "x", "one_change": k, "reaction": "r"} for k, n in pairs for _ in range(n)]
-    assert core.choose_levers(core.diagnose(rows, said(("smaller", 9), ("different location", 3))), spec())[0] == ["size", "location"]
-    assert core.choose_levers(core.diagnose(rows, said(("different location", 9), ("limited hours", 3))), spec())[0] == ["location", "hours"]
+    assert core.choose_levers(core.diagnose(rows, said(("smaller", 9), ("different location", 3))), spec())[0] == ["size", "location", "hours"]
+    assert core.choose_levers(core.diagnose(rows, said(("different location", 9), ("limited hours", 3))), spec())[0] == ["location", "hours", "size"]
     assert core.choose_levers(core.diagnose(rows, None), spec())[0] == ["location", "size", "hours"]
     d = core.diagnose(rows, said(("community benefits", 6), ("different location", 4)))
-    assert core.choose_levers(d, spec())[0] == ["location"] and d["asked_for_but_not_tried"][0].startswith("community benefits (60.0% of opponents asked)")
+    assert core.choose_levers(d, spec())[0] == ["location", "size", "hours"] and d["levers_asked_for"] == ["location"] and d["asked_for_but_not_tried"][0].startswith("community benefits (60.0% of opponents asked)")
     no_hours = spec(); no_hours["actions"][0]["type"] = "add_building"
     d = core.diagnose(rows, said(("limited hours", 7), ("different location", 3)))
-    assert core.choose_levers(d, no_hours)[0] == ["location"] and "no hours setting" in d["asked_for_but_not_tried"][0]
+    assert core.choose_levers(d, no_hours)[0] == ["location", "size"] and "no hours setting" in d["asked_for_but_not_tried"][0]
     flat = [{**r, "stance": "oppose" if i % 2 else "support"} for i, r in enumerate(rows)]
     levers, why = core.choose_levers(core.diagnose(flat, said(("nothing", 9), ("smaller", 1))), spec())
     assert levers == [] and "not fixable" in why
@@ -243,7 +243,9 @@ def test_loop_never_exceeds_five_reruns(world, monkeypatch):
 def test_loop_stops_early_when_no_site_is_predicted_to_do_better(world):
     nobody_supports(world)
     out = drive(world, said("different location"), target="majority")
-    assert out["stop_reason"] == "no remaining candidate is predicted to beat the best so far" and 1 <= len(out["attempts"]) < 5
+    levers = [x["lever"] for x in out["attempts"]]
+    assert 1 <= levers.count("location") < 5 and len(levers) <= 5          # the site search ends early ...
+    assert levers[levers.count("location"):] and "location" not in levers[levers.count("location"):]      # ... and the other levers get their turn
 
 
 def test_loop_tries_size_when_opponents_ask_for_smaller(world):
