@@ -969,13 +969,14 @@ var mapView = (function () {
     answerCounts: function () { var c = { support: 0, neutral: 0, oppose: 0 }; residents.forEach(function (r) { if (r.stance) c[r.stance]++; }); return c; },
     find: function (fn) { return residents.filter(function (r) { return on(r.d) && fn(r); }); },
     setRoute: function (a, b) { route = a && b ? [a, b] : null; render(); },
-    pick: function (what, cb, key) {                 // top-down view; next click on a road/intersection returns its name + point
+    pick: function (what, cb, key, near) {           // top-down view; next click on a road/intersection returns its name + point. near = [lon, lat] to look at
       if (pickCb) endPick(null);
       pickPrev = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(), duration: 600 };
       pickCb = cb; pickKey = key || what; el.classList.add('is-picking');
       if (map.getLayer('all-roads')) map.setLayoutProperty('all-roads', 'visibility', 'visible');
       document.getElementById('pickWhat').textContent = what; document.getElementById('pickBar').hidden = false;
-      map.easeTo({ pitch: 0, bearing: 0, zoom: Math.max(map.getZoom(), 15), duration: 700 });
+      var view = { pitch: 0, bearing: 0, zoom: Math.max(map.getZoom(), 15), duration: 700 }; if (near) view.center = near;
+      map.easeTo(view);
     },
     cancelPick: function () { endPick(null); },
     clearPins: function () { Object.keys(pins).forEach(function (k) { pins[k].remove(); }); pins = {}; },
@@ -1343,10 +1344,13 @@ function wireBlocks(){
     if(p.getAttribute('aria-pressed')==='true'){ mapView.cancelPick(); return; }
     body.querySelectorAll('[data-pick]').forEach(function(x){ x.setAttribute('aria-pressed','false'); });
     p.setAttribute('aria-pressed','true');
+    var near=null, ids=p.dataset.pick.split('.');       // open the pick view on this field's verified place, or another verified place of the proposal
+    (state.spec?state.spec.actions:[]).forEach(function(a){ (a.constraints||[]).forEach(function(c){ if(!c.resolved) return;
+      if(a.action_id===ids[0] && c.id===ids[1]) near=[c.resolved.lon,c.resolved.lat]; else if(!near) near=[c.resolved.lon,c.resolved.lat]; }); });
     mapView.pick(p.dataset.label.toLowerCase(), function(r){ p.setAttribute('aria-pressed','false');
       if(!r) return; inp.value=r.text; markChanged(inp,inp.value); placesReady(); syncRoute();
       var blk=inp.closest('.block'), old=blk.querySelector('.picked'); if(old) old.remove();
-      blk.insertAdjacentHTML('beforeend','<div class="muted picked" style="font-size:13px">'+(r.label?'Picked on the map':'Picked a point on the map (no road name here)')+'</div>'); }, p.dataset.pick);
+      blk.insertAdjacentHTML('beforeend','<div class="muted picked" style="font-size:13px">'+(r.label?'Picked on the map':'Picked a point on the map (no road name here)')+'</div>'); }, p.dataset.pick, near);
   }); });
   body.querySelectorAll('.seg').forEach(function(g){ g.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
     g.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed', x===b?'true':'false');}); markChanged(g,b.textContent); }); });
