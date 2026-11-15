@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 21:39 ET · Partner (AI) · Web + Docs
+**Did:** (1) The prototype panel now shows the spec's `what` and `where` text constraints as editable text blocks (Partner asked for this one web change and nothing else). Checked locally against the live backend: a strip club question shows What = "a strip club", Where = "Trumbull Ave near Michigan Ave". (2) Wrote the plan for verifying places and asking the user for missing ones: BACKEND_PLAN.md section 11.2. Plan only, nothing built.
+**Files:** web/prototype/index.html (one CSS rule; `blockHTML`, `specToLib`, `wireBlocks`, and the run handler's baseline line), BACKEND_PLAN.md, LOG.md
+**Contracts changed:** none. Section 11.2 proposes: `status: "needs_info"`, `questions[]`, `from` / `to` text constraints on route actions, and a `resolved` place on a constraint. Not applied.
+**Decisions:** Places are verified against map data, never guessed: cross streets and addresses from the city road layer and parcels, landmarks from Amazon Location Service (not yet verified or priced). A route needs a verified start and end; if a place is missing or not found, the scenario step asks the user and a run is refused until it is answered. Quick test on the road layer: Michigan and Trumbull meet; Woodward and 5th exist but do not meet.
+**Blocked / needs:** Salem: text edits in the panel are local only, like the other blocks (the run button is still the mock). When 11.2 is built the web side needs to show the questions and a marker.
+**Next:** personas, `residents/batch.py`, `residents/aggregate.py`.
+
 ### 2026-11-14 21:32 ET · Partner (AI) · Agent (contracts)
 **Did:** Free input. Residents are now asked about what the user actually typed, not the nearest preset. Before: "What if a strip club opens on Trumbull Ave near Michigan Ave?" became "New building (site: Parking lot on Trumbull, apartments: 0 homes, floors: 3, ground floor: Shops, ...)". Now: "Proposal: a strip club at Trumbull Ave near Michigan Ave in District 6." Also added Claude Haiku 5.5 to the price file. Deployed to `citysim-partner` and `citysim-main` (us-east-2).
 **Files:** contracts/actions.json, contracts/spec.py, fixtures/scenario_spec.drone.json, agent/handler.py, agent/system_prompt.md, agent/tests/test_free_input.py (new), shared/bedrock_prices.json, BACKEND_PLAN.md (new section 11.1), LOG.md

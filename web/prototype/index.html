@@ -138,6 +138,7 @@ button { cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--text); color: #0F172A; font-weight: 700; }
 .block select { height: var(--tap); padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--panel-line); background: rgba(0,0,0,0.15); font-size: 16px; }
 .block select option { color: #0F172A; }
+.block input[type=text] { height: var(--tap); padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--panel-line); background: rgba(0,0,0,0.15); font-size: 16px; color: inherit; width: 100%; box-sizing: border-box; }
 .changed-note { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: var(--r-sm); background: rgba(253,230,138,0.12); border: 1px solid rgba(253,230,138,0.35); }
 .changed-note .icon { color: var(--warn); }
 .blocks__foot { display: flex; gap: 8px; padding: 14px 16px 16px; border-top: 1px solid var(--panel-line); }
@@ -504,6 +505,7 @@ function blockHTML(a,b){
   if(b.fromQ){ var m=state.question.match(b.fromQ); if(m) v = b.qValue || (b.type==='stepper'? +m[1] : v); }
   state.defaults[a+'.'+b.id]=v;
   if(b.type==='select') ctl='<select aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'">'+b.options.map(function(o){return '<option'+(o===v?' selected':'')+'>'+o+'</option>';}).join('')+'</select>';
+  if(b.type==='text') ctl='<input type="text" maxlength="120" aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'" placeholder="Not given" value="'+String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'">';
   if(b.type==='seg') ctl='<div class="seg" role="group" aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'">'+b.options.map(function(o){return '<button type="button" aria-pressed="'+(o===v)+'">'+o+'</button>';}).join('')+'</div>';
   if(b.type==='stepper') ctl='<div class="stepper" data-k="'+a+'.'+b.id+'" data-step="'+b.step+'" data-min="'+b.min+'"><button type="button" aria-label="Less">'+'<svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10"/></svg>'+'</button><output class="num" data-v="'+v+'">'+v+' <small>'+b.unit+'</small></output><button type="button" aria-label="More">'+'<svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>'+'</button></div>';
   return '<div class="block" data-k="'+a+'.'+b.id+'"><div class="block__head"><span>'+b.label+'</span>'+(b.assumed&&!(b.fromQ&&state.question.match(b.fromQ))?'<span class="tag">assumed</span>':'')+'</div>'+ctl+'</div>';
@@ -512,8 +514,9 @@ function blockHTML(a,b){
 function specToLib(spec){
   var lib={};
   spec.actions.forEach(function(a){
-    lib[a.action_id]={ type:a.type, title:a.title, icon:a.type==='add_drone_route'?'drone':'spark', blocks:a.constraints.filter(function(c){return (c.show||'panel')==='panel' && (c.type==='number'||c.type==='select');}).map(function(c){
+    lib[a.action_id]={ type:a.type, title:a.title, icon:a.type==='add_drone_route'?'drone':'spark', blocks:a.constraints.filter(function(c){return (c.show||'panel')==='panel' && (c.type==='number'||c.type==='select'||c.type==='text');}).map(function(c){
       var b={id:c.id, label:c.label, assumed:c.source==='assumed', unit:c.unit||''};
+      if(c.type==='text'){ b.type='text'; b.value=c.value||''; b.assumed=false; return b; }
       if(c.options){ b.type = c.ui==='segmented' ? 'seg' : 'select'; b.options=c.options.map(function(o){return o.label;});
         var m=c.options.filter(function(o){return String(o.value)===String(c.value);})[0]; b.value = m?m.label:b.options[0]; }
       else { b.type='stepper'; b.value=c.value; b.step=c.step||1; b.min=c.min||0; }
@@ -556,6 +559,7 @@ function markChanged(el,v){
 }
 function wireBlocks(){
   body.querySelectorAll('select').forEach(function(s){ s.addEventListener('change',function(){ markChanged(s,s.value); }); });
+  body.querySelectorAll('.block input[type=text]').forEach(function(t){ t.addEventListener('input',function(){ markChanged(t,t.value); }); });
   body.querySelectorAll('.seg').forEach(function(g){ g.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
     g.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed', x===b?'true':'false');}); markChanged(g,b.textContent); }); });
   body.querySelectorAll('.stepper').forEach(function(s){ var out=s.querySelector('output'), unit=out.querySelector('small').outerHTML;
@@ -592,7 +596,7 @@ document.getElementById('runBtn').addEventListener('click',function(){
     body.querySelectorAll('.block').forEach(function(x){x.classList.remove('is-changed');});
     var note=document.getElementById('changedNote'); if(note) note.remove();
     body.querySelectorAll('[data-k]').forEach(function(el){
-      if(el.tagName==='SELECT') state.defaults[el.dataset.k]=el.value;
+      if(el.tagName==='SELECT' || el.tagName==='INPUT') state.defaults[el.dataset.k]=el.value;
       else if(el.classList.contains('seg')) state.defaults[el.dataset.k]=el.querySelector('[aria-pressed="true"]').textContent;
       else if(el.classList.contains('stepper')) state.defaults[el.dataset.k]=el.querySelector('output').dataset.v;
     });

@@ -384,10 +384,48 @@ The user can type any proposal, for any kind of building, route or change, place
 | No nearest-preset substitution | If a use or place has no matching option in a select field, the field is left at its default and marked `assumed`; the use is not listed under `unsupported`. | Built Nov 14 (prompt rule) |
 | Assumed values are not read to residents | The summary lists only settings with source `from_question` or `edited`. | Built Nov 14 |
 | Numbers the user did not give are labelled | A number that does not appear in the question is marked `assumed` with a note, whatever the model says. | Built Nov 14 |
-| Any location inside the selected districts | Geocode `where` (Amazon Location Service), check the point is inside a selected district, and give the engine that point in place of the three preset sites. A place outside the selected districts is reported back, not moved. | Not built |
+| Any location inside the selected districts | Verify `where` against map data, check the point is inside a selected district, and give the engine that point in place of the three preset sites. See 11.2. | Planned (11.2) |
 | Traffic for any use | Trips are computed only for uses with a published rate in `ite_rates.csv`. For other uses the engine returns "no published trip rate" and residents are still asked, with distance to the site as their impact line. | Not built |
 | Reasons fit any use | The fixed reason list (traffic, noise, safety, privacy, rent, jobs, access, none) has nothing for objections to the kind of venue. Propose adding one reason for it; needs both lanes to agree because the website reads the list. | Open |
-| The website shows `what` and `where` | Text constraints are in the spec but the prototype panel renders only number and select blocks. | Open (web lane) |
+| The website shows `what` and `where` | The prototype panel shows them as editable text blocks. | Built Nov 14 |
+
+### 11.2 Place resolver: verify where, and ask when it is missing (planned Nov 14, not built)
+
+Goal: a place the user types is checked against real map data before anything runs. A route needs a verified start and a verified end. If a place is missing or cannot be verified, the scenario step asks the user for it; it never guesses and never falls back to a preset.
+
+**What each action type needs before it can run**
+
+| Action | Places required |
+| --- | --- |
+| `add_drone_route`, `change_transit` (new route) | start point and end point |
+| `add_building`, `add_event_surge` | one point |
+| `modify_road` | a street, plus the two cross streets that bound the stretch |
+| `rezone` | an address, block or named area |
+
+**How a place is verified** (first method that matches wins; each result records the method, the matched name, the point and its council district)
+
+| The user typed | Checked against | Evidence it works |
+| --- | --- | --- |
+| Two streets ("Michigan and Trumbull") | City road layer (`raw/detroit/roads.geojson`, 38,117 segments, 2,729 street names, field `NAME`): both names must exist and their lines must meet. | Tested Nov 14: Michigan and Trumbull meet at (-83.06695, 42.33142); Bagley and 16th meet; Woodward and 5th both exist but do not meet; Woodward and Cass do not meet (they run parallel). |
+| A street address ("2001 Michigan Ave") | Address ranges on the same road layer (`FRADDR`, `TOADDR`), then the parcel file's `address` column (377,940 parcels) for an exact match. | Fields confirmed present; lookup not yet tested. |
+| A neighborhood ("Corktown") | Neighborhood layer (205 areas, `nhood_name`). Gives an area, not a point, so it is enough for a rezoning but not for a route end. | Layer downloaded. |
+| A landmark or business ("the Hilton", "Renaissance Center", "Newlab roof") | Not in any city file. Amazon Location Service place search, limited to Detroit's bounding box. | The service answers in us-east-2 in this account (list call only). Search quality and price are **not verified**; price must be sourced and added to the spending limit before use. |
+
+**Rules**
+
+1. The scenario model only splits the text into parts (kind of place, street names, from and to). It does not decide whether a place exists; the lookup does.
+2. Every verified point is tested against the official council district polygons. A point outside the selected districts is reported to the user with the district it is in. It is not moved.
+3. If a required place is missing, or a typed place is not found, or two streets do not meet, the spec comes back with `status: "needs_info"` and a list of plain questions, for example: "Woodward and 5th don't cross. Which did you mean?" with up to three real alternatives taken from the map (streets that do cross Woodward with a similar name). `POST /runs` refuses a spec in this state.
+4. Verified points go to the engine and to each resident's impact line ("about 400 ft from your home"), and to the website as a marker or a line.
+
+**Build**
+
+| Piece | What it does |
+| --- | --- |
+| `data/places/build_index.py` | From the road layer: a table of every pair of streets that meet, with the point and its district; a table of address ranges per street. From parcels: address to point. Written to `processed/places/` in the bucket. Precomputing keeps map libraries out of the Lambda. |
+| `shared/places.py` | `resolve(text, districts)` returns a verified point or the reason it failed, plus alternatives. |
+| `agent/handler.py` | Calls `resolve` for `where`, or for `from` and `to` on routes; sets `needs_info` and the questions. |
+| Contracts | `scenario_spec`: add `needs_info` to `status`, add `questions[]`; route actions get `from` and `to` text constraints; each resolved place is stored on its constraint (`resolved: {name, method, lon, lat, district}`). Needs the web lane, which must show the questions and the marker. |
 
 ## 12. Contract changes to propose
 
