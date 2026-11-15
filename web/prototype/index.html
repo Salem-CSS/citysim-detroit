@@ -224,6 +224,14 @@ button { cursor: pointer; }
 .app:has(.results.is-compare) .askbar, .app:has(.results.is-compare) .map-key { display: none; }   /* reading mode: close to ask again */
 .results.is-compare [data-hide-district] { display: none !important; }
 .cmp[hidden] { display: none; }
+.corr h3 { margin: 0 0 8px; } .corr p { margin: 0 0 6px; line-height: 1.5; }
+.corr .try { padding: 12px 14px; border-radius: var(--r-sm); background: var(--raised); display: flex; flex-direction: column; gap: 8px; }
+.corr .try.is-best { outline: 2px solid var(--support); }
+.corr .try__head { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; }
+.corr .try small, .corr .muted { color: var(--text-2); font-size: 13px; }
+.corr table { width: 100%; border-collapse: collapse; font-size: 14px; } .corr th, .corr td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--panel-line); }
+.corr th { color: var(--text-2); font-weight: 600; } .corr td.num, .corr th.num { text-align: right; }
+.results__foot { display: flex; gap: 8px; } .results__foot .btn { flex: 1; }
 .cmp { display: flex; flex-direction: column; gap: 22px; }
 .cmp .who { display: flex; flex-wrap: wrap; gap: 8px; }
 .cmp .who span { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--raised); font-size: 14px; font-weight: 600; }
@@ -452,6 +460,7 @@ button { cursor: pointer; }
     <div class="results__body">
       <section class="ddetail" id="ddetail" hidden aria-live="polite"></section>
       <section class="cmp" id="compare" hidden aria-live="polite"></section>
+      <section class="cmp corr" id="correction" hidden aria-live="polite"></section>
       <section data-hide-district>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2>Public approval</h2><span class="badge" data-show="results" id="ovBadge">Sample data</span></div>
         <div data-show="empty" class="results__empty" style="margin-top:12px" id="emptyMsg">Ask a question in the bar below to see what residents think. Example: "What if we expand the Newlab drone route to 200 flights a day?"</div>
@@ -485,6 +494,7 @@ button { cursor: pointer; }
     </div>
     <div class="results__foot">
       <button type="button" class="btn btn--outline" id="compareBtn" aria-expanded="false">Compare districts</button>
+      <button type="button" class="btn btn--outline" id="correctBtn" aria-expanded="false" hidden>Find a better version</button>
 
     </div>
   </aside>
@@ -1138,7 +1148,7 @@ function closeDistrict(){ state.openD=null; document.getElementById('ddetail').h
 
 // ---------- compare: every selected district side by side ----------
 function openCompare(){
-  closeDistrict();
+  closeDistrict(); if(!document.getElementById('correction').hidden) corrClose();
   var ds=selected(), r=Math.round, el=document.getElementById('compare'), anySample=false;
   var data=ds.map(function(d){ var D=districtData(d), x=DISTRICTS[d]; if(D.sample) anySample=true;
     var sp=D.split || (state.asked && x.s!=null ? {support:x.s,neutral:x.n,oppose:x.o} : null);
@@ -1193,6 +1203,88 @@ function closeCompare(){
 document.getElementById('compareBtn').addEventListener('click',function(){
   if(document.getElementById('results').classList.contains('is-compare')) closeCompare(); else openCompare();
 });
+
+// ---------- Correction engine: why residents said no, and real changed versions tried against the same residents ----------
+var corr={ id:null, timer:null, pins:[] };
+var TARGETS=[['more_support_than_oppose','More yes than no'],['majority','Over half say yes'],['two_thirds','Two thirds say yes']];
+function corrOpen(){
+  closeDistrict(); if(document.getElementById('results').classList.contains('is-compare')) closeCompare();
+  var el=document.getElementById('correction'); el.hidden=false; document.getElementById('results').classList.add('is-compare');
+  var b=document.getElementById('correctBtn'); b.textContent='Close'; b.setAttribute('aria-expanded','true');
+  document.querySelector('.results__body').scrollTop=0;
+  if(!corr.id || corr.run!==state.runId) corrIntro();
+}
+function corrClose(){
+  document.getElementById('correction').hidden=true; document.getElementById('results').classList.remove('is-compare');
+  var b=document.getElementById('correctBtn'); b.textContent='Find a better version'; b.setAttribute('aria-expanded','false');
+}
+function corrIntro(){
+  var o=state.result.overall, r=Math.round;
+  document.getElementById('correction').innerHTML='<div><h2>Find a better version</h2><p class="muted">Now: '+r(o.support)+'% support, '+r(o.neutral)+'% neutral, '+r(o.oppose)+'% oppose.</p></div>'+
+    '<section><p>This works out why residents said no, then tries real changed versions of your proposal on the same residents: other sites from the city\'s Land Bank lots, a smaller size, or other hours. At most 5 reruns.</p>'+
+    '<h3>Stop when</h3><div class="seg" role="group" aria-label="Target" id="corrTarget">'+TARGETS.map(function(t,i){ return '<button type="button" data-t="'+t[0]+'" aria-pressed="'+(i===0)+'">'+t[1]+'</button>'; }).join('')+'</div></section>'+
+    '<button type="button" class="btn btn--go" id="corrStart">Start</button><p class="muted" id="corrMsg"></p>';
+  document.getElementById('corrTarget').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
+    this.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); }); });
+  document.getElementById('corrStart').addEventListener('click',function(){
+    var api=(window.CITYSIM_API||'').replace(/\/$/,''), t=document.querySelector('#corrTarget [aria-pressed="true"]').dataset.t, btn=this;
+    btn.disabled=true; btn.textContent='Starting…';
+    fetch(api+'/corrections',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({run_id:state.runId, target:t})})
+      .then(function(r){ return r.json(); }).then(function(j){
+        if(!j.correction_id){ btn.disabled=false; btn.textContent='Start'; document.getElementById('corrMsg').textContent='Could not start: '+(j.error||j.message||'the backend refused'); return; }
+        corr.id=j.correction_id; corr.run=state.runId; corrPoll(api); })
+      .catch(function(e){ btn.disabled=false; btn.textContent='Start'; document.getElementById('corrMsg').textContent='Could not start: '+e.message; });
+  });
+}
+function corrPoll(api){
+  clearTimeout(corr.timer); var id=corr.id;
+  fetch(api+'/corrections/'+id).then(function(r){ return r.json(); }).then(function(st){
+    if(corr.id!==id) return;
+    if(st.status==='done'){ corrReport(st); return; }
+    var btn=document.getElementById('corrStart'); if(btn) btn.textContent=(st.stage||'working').replace(/^./,function(c){return c.toUpperCase();})+'…';
+    if(st.diagnosis && !document.getElementById('corrWhy')){ var d=document.createElement('section'); d.id='corrWhy'; d.innerHTML=corrWhy(st); document.getElementById('correction').appendChild(d); }
+    corr.timer=setTimeout(function(){ corrPoll(api); }, 4000);
+  }).catch(function(){ corr.timer=setTimeout(function(){ corrPoll(api); }, 6000); });
+}
+function corrBar(sp){ var r=Math.round;
+  return '<div class="split" style="height:10px;border-radius:5px" role="img" aria-label="'+r(sp.support)+'% support, '+r(sp.neutral)+'% neutral, '+r(sp.oppose)+'% oppose"><span style="width:'+sp.support+'%"></span><span style="width:'+sp.neutral+'%"></span><span style="width:'+sp.oppose+'%"></span></div>'+
+    '<small>'+r(sp.support)+'% support · '+r(sp.neutral)+'% neutral · '+r(sp.oppose)+'% oppose</small>'; }
+function corrWhy(st){ var d=st.diagnosis, a=d.opponents_asked;
+  return '<h3>Why they said no</h3>'+d.sentences.slice(1).map(function(x){ return '<p>'+esc(x)+'</p>'; }).join('')+
+    (a?'<h3 style="margin-top:14px">What opponents say would change their mind</h3>'+a.one_change.map(function(c){
+      return '<div class="worry"><div class="worry__row"><span>'+esc(c.change.replace(/^./,function(x){return x.toUpperCase();}))+'</span><b class="num">'+Math.round(c.share)+'%</b></div><div class="meter"><span style="width:'+c.share+'%"></span></div></div>'; }).join('')+
+      '<p class="muted">'+a.asked+' opponents asked, nearest to the site first.</p>':'')+
+    ((d.asked_for_but_not_tried||[]).length?'<p class="muted">Not tried: '+d.asked_for_but_not_tried.map(esc).join('; ')+'.</p>':''); }
+function corrReport(st){
+  var el=document.getElementById('correction'), r=Math.round, best=st.best||{}, has=st.original&&st.attempts;
+  var near=function(w){ return w?'<td class="num">'+w.adults_within_quarter_mile.toLocaleString()+'</td><td class="num">'+w.adults_within_1_mile.toLocaleString()+'</td><td class="num">'+(w.renters_pct==null?'–':r(w.renters_pct)+'%')+'</td><td class="num">'+(w.no_car_pct==null?'–':r(w.no_car_pct)+'%')+'</td><td class="num">'+(w.age_65_plus_pct==null?'–':r(w.age_65_plus_pct)+'%')+'</td>':'<td colspan="5" class="muted">not a single site</td>'; };
+  var h='<div><h2>'+(best.rerun?'Best version found':'No better version found')+'</h2><p class="muted">Stopped: '+esc(st.stop_reason||'')+'. Target: '+esc(st.target_text||'')+'.</p></div>';
+  if(has){
+    if(best.rerun) h+='<section class="try is-best"><div class="try__head"><span>'+esc(best.proposal||best.label)+'</span></div>'+corrBar(best.split)+'</section>';
+    h+='<section>'+corrWhy(st)+'</section>';
+    h+='<section><h3>What was tried</h3><div style="display:flex;flex-direction:column;gap:8px">'+
+      '<div class="try"><div class="try__head"><span>Your proposal</span></div>'+corrBar(st.original.split)+'</div>'+
+      st.attempts.map(function(a){ return '<div class="try'+(best.rerun===a.rerun?' is-best':'')+'"><div class="try__head"><span>'+a.rerun+'. '+esc(a.label)+'</span><span class="num">'+(a.change_vs_original>0?'+':'')+a.change_vs_original+' pts</span></div>'+corrBar(a.split)+
+        (a.predicted?'<small>Predicted before the rerun: '+r(a.predicted.support)+'% support, '+r(a.predicted.oppose)+'% oppose.</small>':'')+
+        '<small>'+(a.meets_target?'Reaches the target.':a.beats_best_beyond_spread?'Better than what came before by more than run-to-run variation.':'Not better than what came before.')+'</small></div>'; }).join('')+
+      '</div>'+(st.spread_pts!=null?'<p class="muted" style="margin-top:8px">Run-to-run variation measured on your unchanged proposal: '+st.spread_pts+' pts. '+esc(st.spread_note||'')+'</p>':'')+'</section>';
+    var sites=[['Your site', st.original.who_lives_near]].concat(st.attempts.filter(function(a){return a.lever==='location';}).map(function(a){ return [a.rerun+'. '+((a.site||{}).name||''), a.who_lives_near]; }));
+    if(sites.length>1 || sites[0][1]) h+='<section><h3>Who lives near each site</h3><table><thead><tr><th>Site</th><th class="num">Adults within ¼ mi</th><th class="num">Within 1 mi</th><th class="num">Renters</th><th class="num">No car</th><th class="num">65+</th></tr></thead><tbody>'+
+      sites.map(function(x){ return '<tr><td>'+esc(x[0])+'</td>'+near(x[1])+'</tr>'; }).join('')+'</tbody></table>'+
+      '<p class="muted" style="margin-top:8px">Moving a proposal changes who lives next to it. Fewer objections can simply mean fewer neighbours, or neighbours less likely to object.</p></section>';
+    if(st.site_rule) h+='<p class="muted">'+esc(st.site_rule.rule)+'</p>';
+    h+='<section><h3>Limits</h3>'+(st.limits||[]).map(function(x){ return '<p class="muted">'+esc(x)+'</p>'; }).join('')+'</section>';
+  }
+  el.innerHTML=h; corrPins(st);
+}
+function corrPins(st){
+  corr.pins.forEach(function(m){ m.remove(); }); corr.pins=[];
+  (st.attempts||[]).forEach(function(a){ if(!a.site || a.site.lon==null) return;
+    var d=document.createElement('div'); d.textContent=a.rerun; d.title=a.label;
+    d.style.cssText='width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 13px system-ui;color:#0F172A;background:'+((st.best||{}).rerun===a.rerun?'#38BDF8':'#F8FAFC')+';border:2px solid #0F172A';
+    corr.pins.push(new maplibregl.Marker({element:d}).setLngLat([a.site.lon,a.site.lat]).addTo(mapView.map)); });
+}
+document.getElementById('correctBtn').addEventListener('click',function(){ if(document.getElementById('correction').hidden) corrOpen(); else corrClose(); });
 
 // ---------- settings: light / dark, and how residents are asked ----------
 function runSpeed(){ var m=window.CITYSIM_SPEED; if(!m){ try{ m=localStorage.getItem('citysim-speed'); }catch(e){} }
@@ -1365,6 +1457,7 @@ function setMode(asked){
 document.getElementById('askForm').addEventListener('submit',function(e){
   mapView.cancelPick(); mapView.clearPins();
   e.preventDefault(); var i=document.getElementById('ask'), q=i.value.trim(); if(!q) return;
+  corrReset(false);
   state.asked=false; app.classList.remove('has-results'); document.getElementById('rcard').hidden=true; map.dataset.state='idle';
   i.value=''; i.placeholder='Ask a follow-up, like: What if flights only run after 8 AM?'; renderTiles();
   if(window.CITYSIM_API){
@@ -1456,7 +1549,10 @@ function runLive(btn){
     .catch(function(e){ fail(e.message, e.body); });
 }
 // each resident's own answer -> the figure on the map and the person card
+function corrReset(show){ clearTimeout(corr.timer); corr.id=null; corr.pins.forEach(function(m){ m.remove(); }); corr.pins=[];
+  if(!document.getElementById('correction').hidden) corrClose(); document.getElementById('correctBtn').hidden=!show; }
 function loadAnswers(api,id){
+  corrReset(true);
   fetch(api+'/runs/'+id+'/answers').then(function(r){ return r.json(); }).then(function(j){
     if(state.runId!==id || !j.answers) return; mapView.setAnswers(j.answers); }).catch(function(){});
 }

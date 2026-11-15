@@ -257,3 +257,9 @@ def test_loop_does_nothing_when_residents_already_agree(world):
     world["table"].items["resp#run-0#0"] = {"rows": json.dumps([{**answer(p, HERE), "stance": "support"} for p in world["people"]])}
     out = drive(world, None)
     assert out["stop_reason"] == "no correction needed: the target is already met" and len(world["started"]) == 1
+
+
+def test_report_matches_the_contract(world):
+    from contracts.validate import validate
+    assert validate("correction_result", drive(world, said("different location"))) == []
+    assert validate("correction_result", json.load(open("fixtures/correction_result.busgarage.json", encoding="utf-8"))) == []

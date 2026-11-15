@@ -1,0 +1,334 @@
+{
+  "correction_id": "corr-e1982c40dd",
+  "status": "done",
+  "stage": "done",
+  "target": "majority",
+  "target_text": "more than half of residents support",
+  "original_run_id": "run-330fab5b57",
+  "mode": "fast",
+  "max_reruns": 5,
+  "reruns_used": 1,
+  "attempts": [
+    {
+      "rerun": 1,
+      "run_id": "run-91ff93a75b",
+      "lever": "location",
+      "label": "Move it to the Land Bank lot at 2960 Poplar, between Lawton St and Maybury Grand St, Core City (District 6)",
+      "proposal": "Proposal: a bus garage at 2960 Poplar, between Lawton St and Maybury Grand St in Districts 5, 6.",
+      "split": {
+        "support": 10.0,
+        "neutral": 69.7,
+        "oppose": 20.3,
+        "n": 1000
+      },
+      "score": 10.0,
+      "change_vs_original": 3.1,
+      "bands": [
+        {
+          "label": "A quarter mile to a mile",
+          "support": 7.1,
+          "neutral": 2.3,
+          "oppose": 90.6,
+          "n": 43
+        },
+        {
+          "label": "1 to 3 miles",
+          "support": 11.4,
+          "neutral": 60.9,
+          "oppose": 27.7,
+          "n": 592
+        },
+        {
+          "label": "More than 3 miles",
+          "support": 7.9,
+          "neutral": 91.5,
+          "oppose": 0.5,
+          "n": 365
+        }
+      ],
+      "predicted": {
+        "support": 9.2,
+        "neutral": 60.4,
+        "oppose": 30.3,
+        "opposed_within_quarter_mile": 0.0
+      },
+      "predicted_score": 9.2,
+      "who_lives_near": {
+        "adults_within_quarter_mile": 177,
+        "adults_within_1_mile": 6168,
+        "simulated_residents_within_1_mile": 43,
+        "renters_pct": 57.3,
+        "no_car_pct": 15.1,
+        "age_65_plus_pct": 23.5
+      },
+      "site": {
+        "name": "2960 Poplar, between Lawton St and Maybury Grand St",
+        "neighborhood": "Core City",
+        "district": 6,
+        "zoning": "B4",
+        "lot_sqft": 18560,
+        "lon": -83.09222,
+        "lat": 42.34158
+      },
+      "beats_best_beyond_spread": true,
+      "meets_target": false,
+      "cost_usd": 0.1518,
+      "seconds": 19
+    }
+  ],
+  "created": 1794731839,
+  "updated": 1794731906,
+  "proposal": "Proposal: a bus garage at Michigan Ave and Trumbull in Districts 5, 6.",
+  "diagnosis": {
+    "overall": {
+      "support": 6.9,
+      "neutral": 70.4,
+      "oppose": 22.7,
+      "n": 1000
+    },
+    "target": "majority",
+    "target_text": "more than half of residents support",
+    "target_met": false,
+    "has_place": true,
+    "bands": [
+      {
+        "label": "Within a quarter mile",
+        "support": 0.0,
+        "neutral": 0.0,
+        "oppose": 100.0,
+        "n": 6
+      },
+      {
+        "label": "A quarter mile to a mile",
+        "support": 3.5,
+        "neutral": 5.9,
+        "oppose": 90.6,
+        "n": 55
+      },
+      {
+        "label": "1 to 3 miles",
+        "support": 11.8,
+        "neutral": 45.9,
+        "oppose": 42.3,
+        "n": 414
+      },
+      {
+        "label": "More than 3 miles",
+        "support": 3.5,
+        "neutral": 96.2,
+        "oppose": 0.4,
+        "n": 525
+      }
+    ],
+    "within_1_mile": {
+      "support": 3.2,
+      "neutral": 5.3,
+      "oppose": 91.6,
+      "n": 61
+    },
+    "beyond_1_mile": {
+      "support": 7.1,
+      "neutral": 74.2,
+      "oppose": 18.7,
+      "n": 939
+    },
+    "opposition_is_local": true,
+    "groups": [
+      {
+        "label": "Renters",
+        "support": 9.4,
+        "neutral": 69.2,
+        "oppose": 21.3,
+        "n": 525,
+        "oppose_elsewhere": 24.3,
+        "stands_out": false
+      },
+      {
+        "label": "Homeowners",
+        "support": 4.0,
+        "neutral": 71.7,
+        "oppose": 24.3,
+        "n": 475,
+        "oppose_elsewhere": 21.3,
+        "stands_out": false
+      },
+      {
+        "label": "Under 35",
+        "support": 6.9,
+        "neutral": 74.9,
+        "oppose": 18.2,
+        "n": 336,
+        "oppose_elsewhere": 25.3,
+        "stands_out": false
+      },
+      {
+        "label": "35 to 64",
+        "support": 5.7,
+        "neutral": 69.6,
+        "oppose": 24.8,
+        "n": 480,
+        "oppose_elsewhere": 21.1,
+        "stands_out": false
+      },
+      {
+        "label": "65 and over",
+        "support": 9.7,
+        "neutral": 63.7,
+        "oppose": 26.6,
+        "n": 184,
+        "oppose_elsewhere": 21.8,
+        "stands_out": false
+      },
+      {
+        "label": "No car",
+        "support": 21.2,
+        "neutral": 64.0,
+        "oppose": 14.9,
+        "n": 203,
+        "oppose_elsewhere": 24.8,
+        "stands_out": false
+      },
+      {
+        "label": "Has a car",
+        "support": 3.2,
+        "neutral": 72.1,
+        "oppose": 24.8,
+        "n": 797,
+        "oppose_elsewhere": 14.9,
+        "stands_out": true
+      }
+    ],
+    "opponent_reasons": [
+      {
+        "reason": "noise",
+        "share": 98.5
+      },
+      {
+        "reason": "traffic",
+        "share": 1.5
+      }
+    ],
+    "opponents_asked": {
+      "asked": 200,
+      "one_change": [
+        {
+          "change": "different location",
+          "count": 200,
+          "share": 100.0
+        }
+      ],
+      "sentences": [
+        "The noise will disturb my peace and quiet.",
+        "I can't have noise disturbing my family at home.",
+        "The constant noise will make my life miserable.",
+        "Noise from the garage will disrupt our home.",
+        "I can't have noise affecting my daily peace.",
+        "The noise will be a constant disturbance."
+      ]
+    },
+    "sentences": [
+      "6.9% support, 70.4% neutral and 22.7% oppose (1,000 residents).",
+      "Within a mile of the site 91.6% oppose (61 residents); farther away 18.7% oppose (939). Opposition is concentrated near the site, so where it goes matters.",
+      "Groups that oppose more than everyone else: has a car (24.8% against 14.9%).",
+      "The main reason opponents give is noise (98.5% of opponents).",
+      "Asked what one change would make them more supportive, 100.0% of 200 opponents said \"different location\"."
+    ],
+    "asked_for_but_not_tried": []
+  },
+  "original": {
+    "run_id": "run-330fab5b57",
+    "split": {
+      "support": 6.9,
+      "neutral": 70.4,
+      "oppose": 22.7,
+      "n": 1000
+    },
+    "score": 6.9,
+    "bands": [
+      {
+        "label": "Within a quarter mile",
+        "support": 0.0,
+        "neutral": 0.0,
+        "oppose": 100.0,
+        "n": 6
+      },
+      {
+        "label": "A quarter mile to a mile",
+        "support": 3.5,
+        "neutral": 5.9,
+        "oppose": 90.6,
+        "n": 55
+      },
+      {
+        "label": "1 to 3 miles",
+        "support": 11.8,
+        "neutral": 45.9,
+        "oppose": 42.3,
+        "n": 414
+      },
+      {
+        "label": "More than 3 miles",
+        "support": 3.5,
+        "neutral": 96.2,
+        "oppose": 0.4,
+        "n": 525
+      }
+    ],
+    "who_lives_near": {
+      "adults_within_quarter_mile": 881,
+      "adults_within_1_mile": 9760,
+      "simulated_residents_within_1_mile": 61,
+      "renters_pct": 46.0,
+      "no_car_pct": 12.4,
+      "age_65_plus_pct": 26.3
+    }
+  },
+  "levers": [
+    "location"
+  ],
+  "lever_at": 1,
+  "site_rule": {
+    "original_zoning": "B4",
+    "nearest_parcel_m": 39,
+    "lots_in_pool": 297,
+    "rule": "Land Bank lots in the selected districts in zoning district B4, at least 0.5 miles apart and from the original site, largest first. Same zoning district as your site; whether the use is permitted there was not checked."
+  },
+  "lever": "location",
+  "repeat": {
+    "run_id": "run-d49b07f997",
+    "split": {
+      "support": 8.0,
+      "neutral": 66.2,
+      "oppose": 25.8,
+      "n": 1000
+    },
+    "score": 8.0
+  },
+  "spread_pts": 1.1,
+  "spread_note": "The unchanged proposal was run twice. The two runs differ by this many points on the target measure; a changed version only counts as better if it beats the best so far by more than that. In Fast mode two identical runs give nearly identical answers, so this understates how much a result can move when the proposal changes; use Accurate mode for a firmer comparison.",
+  "predictor": {
+    "cells": "distance band x vehicles",
+    "answers_used": 3000,
+    "min_answers_per_cell": 5
+  },
+  "stop_reason": "no remaining candidate is predicted to beat the best so far",
+  "best": {
+    "label": "Move it to the Land Bank lot at 2960 Poplar, between Lawton St and Maybury Grand St, Core City (District 6)",
+    "score": 10.0,
+    "split": {
+      "support": 10.0,
+      "neutral": 69.7,
+      "oppose": 20.3,
+      "n": 1000
+    },
+    "rerun": 1,
+    "proposal": "Proposal: a bus garage at 2960 Poplar, between Lawton St and Maybury Grand St in Districts 5, 6."
+  },
+  "limits": [
+    "Best of 1 version tried, not the best possible.",
+    "A forecast from simulated residents, not a poll.",
+    "Candidate sites share the original site's zoning district; whether the use is permitted there was not checked.",
+    "Moving a proposal changes who lives near it: compare 'who lives near' for each site before choosing one."
+  ],
+  "candidates_left": []
+}

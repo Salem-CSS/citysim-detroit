@@ -1,0 +1,567 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "correction_result",
+  "description": "GET /corrections/{id}. Progress and report of one correction (BACKEND_PLAN.md section 15). Written by correction/loop.py; read by web/. While status is 'running' only some parts exist.",
+  "type": "object",
+  "required": [
+    "correction_id",
+    "status",
+    "target",
+    "original_run_id",
+    "max_reruns",
+    "reruns_used",
+    "attempts"
+  ],
+  "properties": {
+    "correction_id": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "running",
+        "done"
+      ]
+    },
+    "stage": {
+      "type": "string",
+      "description": "plain words: diagnosing, measuring run-to-run variation, rerun k of at most 5, done"
+    },
+    "target": {
+      "enum": [
+        "more_support_than_oppose",
+        "majority",
+        "two_thirds"
+      ]
+    },
+    "target_text": {
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "fast",
+        "accurate"
+      ],
+      "description": "same as the original run; every rerun uses it"
+    },
+    "original_run_id": {
+      "type": "string"
+    },
+    "proposal": {
+      "type": "string",
+      "description": "the original proposal sentence residents read"
+    },
+    "max_reruns": {
+      "type": "integer",
+      "const": 5
+    },
+    "reruns_used": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "stop_reason": {
+      "type": "string"
+    },
+    "diagnosis": {
+      "type": "object",
+      "properties": {
+        "overall": {
+          "type": "object",
+          "required": [
+            "support",
+            "neutral",
+            "oppose"
+          ],
+          "properties": {
+            "support": {
+              "type": "number"
+            },
+            "neutral": {
+              "type": "number"
+            },
+            "oppose": {
+              "type": "number"
+            },
+            "n": {
+              "type": "integer"
+            }
+          }
+        },
+        "target_met": {
+          "type": "boolean"
+        },
+        "has_place": {
+          "type": "boolean"
+        },
+        "bands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "support",
+              "neutral",
+              "oppose",
+              "n"
+            ]
+          }
+        },
+        "within_1_mile": {
+          "type": "object",
+          "required": [
+            "support",
+            "neutral",
+            "oppose"
+          ],
+          "properties": {
+            "support": {
+              "type": "number"
+            },
+            "neutral": {
+              "type": "number"
+            },
+            "oppose": {
+              "type": "number"
+            },
+            "n": {
+              "type": "integer"
+            }
+          }
+        },
+        "beyond_1_mile": {
+          "type": "object",
+          "required": [
+            "support",
+            "neutral",
+            "oppose"
+          ],
+          "properties": {
+            "support": {
+              "type": "number"
+            },
+            "neutral": {
+              "type": "number"
+            },
+            "oppose": {
+              "type": "number"
+            },
+            "n": {
+              "type": "integer"
+            }
+          }
+        },
+        "opposition_is_local": {
+          "type": "boolean",
+          "description": "oppose share within a mile is higher than beyond it by more than sampling explains (two-proportion test, 95%)"
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "oppose",
+              "oppose_elsewhere",
+              "stands_out"
+            ]
+          }
+        },
+        "opponent_reasons": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "reason",
+              "share"
+            ]
+          }
+        },
+        "opponents_asked": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "asked": {
+              "type": "integer"
+            },
+            "one_change": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "change",
+                  "count",
+                  "share"
+                ],
+                "properties": {
+                  "change": {
+                    "enum": [
+                      "smaller",
+                      "different location",
+                      "limited hours",
+                      "community benefits",
+                      "nothing"
+                    ]
+                  }
+                }
+              }
+            },
+            "sentences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "asked_for_but_not_tried": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sentences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "built from the tables by template, not written by a model"
+        }
+      }
+    },
+    "levers": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "location",
+          "size",
+          "hours"
+        ]
+      }
+    },
+    "original": {
+      "type": "object",
+      "properties": {
+        "run_id": {
+          "type": "string"
+        },
+        "split": {
+          "type": "object",
+          "required": [
+            "support",
+            "neutral",
+            "oppose"
+          ],
+          "properties": {
+            "support": {
+              "type": "number"
+            },
+            "neutral": {
+              "type": "number"
+            },
+            "oppose": {
+              "type": "number"
+            },
+            "n": {
+              "type": "integer"
+            }
+          }
+        },
+        "score": {
+          "type": "number"
+        },
+        "bands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "support",
+              "neutral",
+              "oppose",
+              "n"
+            ]
+          }
+        },
+        "who_lives_near": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Who lives near a site. Adults from 2020 census blocks; shares from the simulated residents within a mile (null when none).",
+          "properties": {
+            "adults_within_quarter_mile": {
+              "type": "integer"
+            },
+            "adults_within_1_mile": {
+              "type": "integer"
+            },
+            "simulated_residents_within_1_mile": {
+              "type": "integer"
+            },
+            "renters_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "no_car_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "age_65_plus_pct": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "repeat": {
+      "type": "object",
+      "description": "the unchanged proposal run a second time",
+      "properties": {
+        "run_id": {
+          "type": "string"
+        },
+        "split": {
+          "type": "object",
+          "required": [
+            "support",
+            "neutral",
+            "oppose"
+          ],
+          "properties": {
+            "support": {
+              "type": "number"
+            },
+            "neutral": {
+              "type": "number"
+            },
+            "oppose": {
+              "type": "number"
+            },
+            "n": {
+              "type": "integer"
+            }
+          }
+        },
+        "score": {
+          "type": "number"
+        }
+      }
+    },
+    "spread_pts": {
+      "type": "number",
+      "description": "difference between the original and its repeat on the target measure, in points"
+    },
+    "spread_note": {
+      "type": "string"
+    },
+    "site_rule": {
+      "type": "object",
+      "properties": {
+        "original_zoning": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nearest_parcel_m": {
+          "type": "number"
+        },
+        "lots_in_pool": {
+          "type": "integer"
+        },
+        "rule": {
+          "type": "string"
+        }
+      }
+    },
+    "predictor": {
+      "type": "object"
+    },
+    "attempts": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": [
+          "rerun",
+          "run_id",
+          "lever",
+          "label",
+          "proposal",
+          "split",
+          "score",
+          "change_vs_original",
+          "beats_best_beyond_spread",
+          "meets_target"
+        ],
+        "properties": {
+          "rerun": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "lever": {
+            "enum": [
+              "location",
+              "size",
+              "hours"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "proposal": {
+            "type": "string"
+          },
+          "split": {
+            "type": "object",
+            "required": [
+              "support",
+              "neutral",
+              "oppose"
+            ],
+            "properties": {
+              "support": {
+                "type": "number"
+              },
+              "neutral": {
+                "type": "number"
+              },
+              "oppose": {
+                "type": "number"
+              },
+              "n": {
+                "type": "integer"
+              }
+            }
+          },
+          "score": {
+            "type": "number"
+          },
+          "change_vs_original": {
+            "type": "number"
+          },
+          "bands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "label",
+                "support",
+                "neutral",
+                "oppose",
+                "n"
+              ]
+            }
+          },
+          "predicted": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "predicted_score": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "who_lives_near": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Who lives near a site. Adults from 2020 census blocks; shares from the simulated residents within a mile (null when none).",
+            "properties": {
+              "adults_within_quarter_mile": {
+                "type": "integer"
+              },
+              "adults_within_1_mile": {
+                "type": "integer"
+              },
+              "simulated_residents_within_1_mile": {
+                "type": "integer"
+              },
+              "renters_pct": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "no_car_pct": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "age_65_plus_pct": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          },
+          "site": {
+            "type": "object"
+          },
+          "beats_best_beyond_spread": {
+            "type": "boolean"
+          },
+          "meets_target": {
+            "type": "boolean"
+          },
+          "cost_usd": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "seconds": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "best": {
+      "type": "object",
+      "required": [
+        "label",
+        "score",
+        "split",
+        "rerun"
+      ],
+      "description": "rerun 0 = the original proposal"
+    },
+    "candidates_left": {
+      "type": "array"
+    },
+    "limits": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "created": {
+      "type": "integer"
+    },
+    "updated": {
+      "type": "integer"
+    }
+  }
+}
