@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · main: redeploy after Vercel Pro upgrade
+- Vercel was rate-limiting deploys (free plan). Salem upgraded the project to Pro; this commit triggers a fresh production deploy of main (all frontend work through the person-card cleanup).
+- Files: LOG.md only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: person card title + stats
 - Title is now sex and age ("Female, 19"). Stat strip: Income · Cars · Home (Owns/Rents). Commute (how they get to work) moved into "More about them" next to commute time; Sex no longer repeated there.
 - Files: web/prototype/index.html only.
