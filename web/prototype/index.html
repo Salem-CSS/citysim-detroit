@@ -856,14 +856,51 @@ var mapView = (function () {
   // ---------- "added to the world" animation (illustration only; never feeds a number) ----------
   var build = null;                        // { kind:'transit', a:[lon,lat], b:[lon,lat]|null, t0 }
   var DRAW = 1400, RISE = 800, DRIVE = 3000, POLE = 45, SIGN = 14;
+  // shortest drivable path between two points over the basemap's own road lines (no outside service)
+  var ROAD_W = { highway: 1.6, motorway: 1.6, trunk: 1.2, major_road: 1, primary: 1, secondary: 1, medium_road: 1.05, tertiary: 1.05, minor_road: 1.35, minor: 1.35, residential: 1.35, service: 2.5, living_street: 2 };
+  function roadPath(a, b) {
+    var src = basemapSource(); if (!src) return null;
+    var feats = [];
+    ['roads', 'transportation'].forEach(function (sl) { try { feats = feats.concat(map.querySourceFeatures(src, { sourceLayer: sl })); } catch (e) {} });
+    var lat0 = (a[1] + b[1]) / 2, kx = 111320 * Math.cos(lat0 * Math.PI / 180), ky = 110540, G = 4;   // nodes snapped to a 4 m grid (joins tile seams)
+    var nodes = {}, pos = {}, adj = {};
+    function id(c) { var k = Math.round(c[0] * kx / G) + ':' + Math.round(c[1] * ky / G); if (!pos[k]) { pos[k] = c; adj[k] = []; } return k; }
+    feats.forEach(function (f) {
+      var p = f.properties || {}, w = ROAD_W[p.kind || p.class]; if (!w || p.kind_detail === 'service' && w > 2) return;
+      if (p.is_tunnel || p.brunnel === 'tunnel') w *= 1.2;
+      var g = f.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+      lines.forEach(function (ln) { for (var i = 1; i < ln.length; i++) {
+        var u = id(ln[i - 1]), v = id(ln[i]); if (u === v) continue;
+        var d = Math.hypot((ln[i][0] - ln[i - 1][0]) * kx, (ln[i][1] - ln[i - 1][1]) * ky) * w;
+        adj[u].push([v, d]); adj[v].push([u, d]); } });
+    });
+    function nearest(c) { var best = null, bd = 250; for (var k in pos) { var q = pos[k], d = Math.hypot((q[0] - c[0]) * kx, (q[1] - c[1]) * ky); if (d < bd && adj[k].length) { bd = d; best = k; } } return best; }
+    var s = nearest(a), t = nearest(b); if (!s || !t) return null;
+    var dist = {}, prev = {}, heap = [[0, s]]; dist[s] = 0;                       // Dijkstra, binary heap
+    function push(x) { heap.push(x); var i = heap.length - 1; while (i) { var j = (i - 1) >> 1; if (heap[j][0] <= heap[i][0]) break; var tmp = heap[i]; heap[i] = heap[j]; heap[j] = tmp; i = j; } }
+    function pop() { var top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; var i = 0; for (;;) { var l = 2 * i + 1, r = l + 1, m = i;
+      if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; var tmp = heap[i]; heap[i] = heap[m]; heap[m] = tmp; i = m; } } return top; }
+    while (heap.length) { var cur = pop(), u = cur[1]; if (cur[0] > dist[u]) continue; if (u === t) break;
+      adj[u].forEach(function (e) { var nd = cur[0] + e[1]; if (dist[e[0]] == null || nd < dist[e[0]]) { dist[e[0]] = nd; prev[e[0]] = u; push([nd, e[0]]); } }); }
+    if (dist[t] == null) return null;
+    var path = [], k = t; while (k) { path.push(pos[k]); k = prev[k]; } path.reverse();
+    return [a].concat(path, [b]);
+  }
+  function along(path, f) {                   // point + heading at fraction f of the path's length, and the path up to it
+    if (!path._len) { path._cum = [0]; for (var i = 1; i < path.length; i++) path._cum.push(path._cum[i - 1] + Math.hypot((path[i][0] - path[i - 1][0]) * Math.cos(path[0][1] * Math.PI / 180), path[i][1] - path[i - 1][1])); path._len = path._cum[path._cum.length - 1] || 1e-9; }
+    var d = f * path._len, i = 1; while (i < path.length - 1 && path._cum[i] < d) i++;
+    var a = path[i - 1], b = path[i], seg = (path._cum[i] - path._cum[i - 1]) || 1e-9, t = Math.max(0, Math.min(1, (d - path._cum[i - 1]) / seg));
+    var p = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    return { p: p, head: path.slice(0, i).concat([p]), ang: Math.atan2(b[1] - a[1], (b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180)) * 180 / Math.PI };
+  }
   function lerp(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
   function ease(t) { t = Math.max(0, Math.min(1, t)); return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
   function buildLayers() {
-    if (!build) return [];
-    var t = performance.now() - build.t0, L = [], a = build.a, b = build.b || build.a, route = !!build.b;
-    var pd = route ? ease(t / DRAW) : 1;                                         // 1. the route draws itself
-    var head = lerp(a, b, pd);
-    if (route) L.push(new deck.PathLayer({ id: 'b-route', data: [{ p: [a, head] }], getPath: function (d) { return d.p; },
+    if (!build || !build.ready) return [];
+    var t = performance.now() - build.t0, L = [], a = build.a, b = build.b || build.a, route = !!build.b, path = build.path || [a, b];
+    var pd = route ? ease(t / DRAW) : 1;                                         // 1. the route draws itself along the streets
+    var head = along(path, pd).head;
+    if (route) L.push(new deck.PathLayer({ id: 'b-route', data: [{ p: head }], getPath: function (d) { return d.p; },
       widthUnits: 'pixels', getWidth: 8, getColor: [56, 189, 248, 245], capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
     var stops = route ? [{ p: a, s: 0 }, { p: b, s: DRAW * 0.85 }] : [{ p: a, s: 0 }];  // 2. stop poles rise, ripple out
     L.push(new deck.ScatterplotLayer({ id: 'b-ripple', data: stops, getPosition: function (d) { return d.p; }, stroked: true, filled: false,
@@ -878,7 +915,7 @@ var mapView = (function () {
       getElevation: function (d) { return (t - d.s) > RISE * 0.6 ? SIGN * ease((t - d.s - RISE * 0.6) / 300) : 0; }, getFillColor: [37, 99, 235, 255],
       updateTriggers: { getPosition: t, getElevation: t } }));
     if (route && t > DRAW) {                                                     // 3. a bus drives the route once
-      var k = ease((t - DRAW) / DRIVE), pos = lerp(a, b, k), ang = Math.atan2(b[1] - a[1], (b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180)) * 180 / Math.PI;
+      var k = ease((t - DRAW) / DRIVE), at = along(path, Math.min(k, 0.999)), pos = at.p, ang = at.ang;
       L.push(new deck.SimpleMeshLayer({ id: 'b-bus', data: [pos], mesh: BUS, getPosition: function (p) { return [p[0], p[1], 0]; },
         getOrientation: [0, -ang, 0], sizeScale: 1, getColor: [250, 204, 21], material: { ambient: .6, diffuse: .6 }, updateTriggers: { getPosition: k } }));
     }
@@ -891,7 +928,7 @@ var mapView = (function () {
     q(v[4],v[5],v[6],v[7],[0,0,1]); q(v[0],v[1],v[5],v[4],[0,-1,0]); q(v[2],v[3],v[7],v[6],[0,1,0]); q(v[1],v[2],v[6],v[5],[1,0,0]); q(v[3],v[0],v[4],v[7],[-1,0,0]);
     return { attributes: { positions: { value: new Float32Array(P), size: 3 }, normals: { value: new Float32Array(N), size: 3 } } };
   })();
-  function buildLoop() { if (!build) return; render(); if (performance.now() - build.t0 < DRAW + DRIVE + 400) requestAnimationFrame(buildLoop); }
+  function buildLoop() { if (!build) return; render(); if (!build.ready || performance.now() - build.t0 < DRAW + DRIVE + 400) requestAnimationFrame(buildLoop); }
   function cached(name, key, fn) { if (memo[name] && memo[name].key === key) return memo[name].v; var v = fn(); memo[name] = { key: key, v: v }; return v; }
 
 
@@ -1064,15 +1101,18 @@ var mapView = (function () {
     find: function (fn) { return residents.filter(function (r) { return on(r.d) && fn(r); }); },
     setRoute: function (a, b) { route = a && b ? [a, b] : null; render(); },
     playBuild: function (kind, a, b) {        // returns ms until the animation's main beat is done
-      build = { kind: kind, a: a, b: b || null, t0: performance.now() + 700 };
+      var B = build = { kind: kind, a: a, b: b || null, t0: 0, ready: false, path: null };
       var pts = b ? [a, b] : [a], lo = [Math.min.apply(null, pts.map(function (p) { return p[0]; })), Math.min.apply(null, pts.map(function (p) { return p[1]; }))],
           hi = [Math.max.apply(null, pts.map(function (p) { return p[0]; })), Math.max.apply(null, pts.map(function (p) { return p[1]; }))];
       var left = document.getElementById('app').classList.contains('has-blocks') ? 400 : 60;
       var pad = { top: 140, bottom: 140, left: left, right: 460 };
       var cam = map.cameraForBounds([lo, hi], { padding: pad, maxZoom: 16 }) || {};
       map.easeTo({ center: cam.center || a, zoom: Math.min((cam.zoom || 16) - 0.4, 16), pitch: 50, bearing: map.getBearing(), duration: 700 });
+      var go = function () { if (build !== B || B.ready) return; if (b) { try { B.path = roadPath(a, b); } catch (e) { B.path = null; } } B.ready = true; B.t0 = performance.now(); };
+      map.once('moveend', function () { map.once('idle', go); setTimeout(go, 900); });   // street tiles for the framed view are loaded by then
+      setTimeout(go, 2000);
       requestAnimationFrame(buildLoop);
-      return 700 + (b ? DRAW + DRIVE : RISE + 300);
+      return 1300 + (b ? DRAW + DRIVE : RISE + 300);
     },
     clearBuild: function () { build = null; render(); },
     pick: function (what, cb, key, near) {           // top-down view; next click on a road/intersection returns its name + point. near = [lon, lat] to look at
