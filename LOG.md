@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 00:12 ET · Partner (AI) · Residents (setting)
+**Did:** At Partner's request, redeployed `citysim-main` with `QuoteShare=0.5` (half of residents write a sentence; it was 0.1) and reran the bus route Hilton Garden Inn → Renaissance Center across Districts 4-7: 2,000 residents, 995 sentences, 162 calls, 46 s, $0.31, 0 dropped. 18.3% support / 80.6% neutral / 1.2% oppose.
+**Files:** none (deploy parameter), LOG.md
+**Contracts changed:** none
+**Decisions:** `citysim-partner` is still at 0.1. Deploy `citysim-main` with `QuoteShare=0.5` from now on, or the next deploy resets it to the default.
+**Blocked / needs:** Why 80% neutral: the route is 0.4 miles long downtown and the median resident in those four districts lives 5.3 miles from it; only 91 of 2,000 live within a mile. Support by distance: within 1/4 mile 100% (10 residents), 1/4 to 1 mile 84% (81), 1 to 3 miles 35% (339), 3 to 6 miles 13% (749), over 6 miles 8% (821). Neutral sentences are mostly "no strong opinion either way". The site shows only the city-wide total, not this by-distance view.
+**Next:** correction engine; show results by distance on the site.
+
 ### 2026-11-14 23:46 ET · Partner (AI) · Web (live test)
 **Did:** Tested the live Vercel site (citysim-detroit.vercel.app) against `citysim-main` with real clicks and typing. (1) "Build a 400 unit apartment building at Michigan Ave and 14th St": place verified, 1,999 of 2,000 residents answered in about 40 s, 9% support / 83% neutral / 8% oppose, traffic sentence showed Michigan Ave 8,347 → 9,972 vehicles a day, accuracy sentence showed 13.1 points. (2) "I want a bus route from the Hilton hotel to the Renaissance Center" typed while the first proposal was open: replaced it, asked which Hilton with three buttons, run button disabled; clicking "Hilton Garden Inn" verified both ends. (3) Running it: 2,000 residents, 19% / 77% / 4%, 1,966 adults within a quarter mile of the line. No console errors. Then fixed three wording problems the test showed.
 **Files:** web/prototype/index.html, LOG.md
