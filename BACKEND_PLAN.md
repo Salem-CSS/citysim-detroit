@@ -286,9 +286,9 @@ Run on a laptop. Output goes to `s3://$DATA_BUCKET/processed/` and `personas/`.
 - **Range:** bootstrap resample of personas within district, 200 draws, 5th–95th percentile. This is sampling spread only, not model error; label it so.
 - **Cache key:** spec hash + persona id + impact lines.
 
-### 9.1 Resident questionnaire (all seven agreed Nov 14)
+### 9.1 Correction-engine questionnaire (seven questions agreed Nov 14; parked)
 
-One fixed set, identical wording and answer options for every resident on every proposal. All seven are in `residents/prompt.py` (`PROMPT_VERSION = q7-2026-11-14`). Questions 3–6 each add a field to `run_result`; that schema change is still waiting on the frontend lane.
+Decided Nov 14: there are two engines. The first engine, built first, asks each resident only for a stance (support, neutral or oppose) and one reason; those questions are on `main` in `residents/prompt.py` and `contracts/resident_response.schema.json`. The seven questions below are kept for the second engine, the correction engine, which reads why residents opposed a request (by answer, by who they are and by where they live) and proposes a changed request with better support. They are stored in `residents/correction_questions.py` (`PROMPT_VERSION = q7-2026-11-14`) and no schema carries them yet.
 
 | # | Question | Answer options | Feeds |
 | --- | --- | --- | --- |
