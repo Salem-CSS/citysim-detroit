@@ -70,6 +70,14 @@ select option { background: #0D1426; color: #F8FAFC; }
 .btn.settings-btn { height: auto; min-width: 56px; background: var(--panel); color: var(--text); }
 .settings { position: absolute; top: 92px; right: 16px; z-index: 6; width: 260px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .settings[hidden] { display: none; }
+.settings .demo-q { width: 100%; height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--panel-line); background: var(--raised); color: var(--text); font: inherit; font-size: 13px; }
+.settings .toggle { align-self: flex-start; background: transparent; color: var(--text); cursor: pointer; font: inherit; }
+.demobar { position: absolute; left: 50%; top: 164px; transform: translateX(-50%); z-index: 30; max-width: min(760px, calc(100% - 32px)); display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 18px; border-radius: 16px; border: 1px solid var(--panel-line); background: var(--panel); box-shadow: 0 12px 40px rgba(0,0,0,.45); }
+.demobar[hidden] { display: none; }
+.demobar .step { flex: 0 0 auto; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.demobar .say { font-size: 17px; line-height: 1.35; font-weight: 600; }
+.demobar .btn { flex: 0 0 auto; height: 36px; min-width: 0; padding: 0 12px; }
+.demo-on .askbar input { caret-color: transparent; }
 .settings h3 { margin: 0; font-size: 16px; }
 .runscrim { display: none !important; position: absolute; inset: 0; z-index: 6; background: rgba(5,8,15,.45); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); animation: rofade .3s ease; }
 .runscrim[hidden] { display: none; }
@@ -501,6 +509,11 @@ button { cursor: pointer; }
     <h3>Resident answers</h3>
     <div class="seg" role="group" aria-label="How residents are asked"><button type="button" data-speed-set="fast" aria-pressed="true">Fast</button><button type="button" data-speed-set="accurate" aria-pressed="false">Accurate</button></div>
     <p class="credits" id="speedHint" style="font-size:12px"></p>
+    <h3>Presentation</h3>
+    <button type="button" class="toggle" id="demoToggle" aria-pressed="false"><span class="knob"></span>Demo mode</button>
+    <label class="sr-only" for="demoQ">Demo question</label>
+    <input class="demo-q" id="demoQ" type="text" maxlength="160" aria-label="Question the demo asks">
+    <p class="credits" style="font-size:12px">Runs the whole flow by itself: tours the districts, asks this question, sends it to real residents, opens a supporter, an opponent and a neutral resident, then the district data. Press Esc to stop.</p>
     <p class="credits">Map data © OpenStreetMap contributors · © CARTO · Buildings © Overture Maps Foundation (ODbL)</p>
   </div>
 
@@ -579,6 +592,11 @@ button { cursor: pointer; }
 
     </div>
   </aside>
+
+  <div class="demobar" id="demoBar" role="status" aria-live="polite" hidden>
+    <span class="step" id="demoStep"></span><span class="say" id="demoSay"></span>
+    <button type="button" class="btn btn--outline" id="demoStop">Stop</button>
+  </div>
 
   <!-- ASK BAR -->
   <form class="askbar" id="askForm">
@@ -2217,12 +2235,93 @@ mapView.onClick(function(e){
 document.getElementById('rcClose').addEventListener('click',function(){ rc.hidden=true; });
 document.addEventListener('keydown',function(e){ if(e.key==='Escape') rc.hidden=true; });
 
+// ---------- Demo mode: the page presents itself (Settings > Presentation). ?demo=1 starts it on load. ----------
+var demo=(function(){
+  var DEFAULT_Q='Build a 120-unit apartment building at Michigan Ave and Trumbull', DEMO_D=[5,6];
+  var on=false, token=0, bar=document.getElementById('demoBar'), tog=document.getElementById('demoToggle'), qIn=document.getElementById('demoQ');
+  try{ qIn.value=localStorage.getItem('citysim-demo-q')||DEFAULT_Q; }catch(e){ qIn.value=DEFAULT_Q; }
+  qIn.addEventListener('change',function(){ try{ localStorage.setItem('citysim-demo-q', qIn.value.trim()||DEFAULT_Q); }catch(e){} });
+  qIn.addEventListener('click',function(e){ e.stopPropagation(); });
+  function Stop(){ this.stop=true; }
+  function live(t){ if(!on || t!==token) throw new Stop(); }
+  function wait(ms,t){ return new Promise(function(res,rej){ var end=Date.now()+ms; (function tick(){
+    if(!on || t!==token) return rej(new Stop()); if(Date.now()>=end) return res(); setTimeout(tick, Math.min(200, end-Date.now())); })(); }); }
+  function until(fn,ms,t){ return new Promise(function(res,rej){ var end=Date.now()+ms; (function tick(){
+    if(!on || t!==token) return rej(new Stop()); var v=fn(); if(v) return res(v); if(Date.now()>=end) return res(null); setTimeout(tick,300); })(); }); }
+  var stepNo=0, STEPS=9;
+  function say(text, isStep){ if(isStep) stepNo++; document.getElementById('demoStep').textContent=stepNo?stepNo+' / '+STEPS:''; document.getElementById('demoSay').textContent=text; bar.hidden=false; }
+  function setDistricts(list){ document.querySelectorAll('.dchip').forEach(function(b){ b.disabled=false; b.setAttribute('aria-pressed', list.indexOf(+b.dataset.d)>-1?'true':'false'); }); syncPicker(); }
+  function closeAll(){ document.getElementById('pcClose').click(); document.getElementById('rcard').hidden=true;
+    if(document.getElementById('results').classList.contains('is-compare')) closeCompare(); if(state.openD) closeDistrict();
+    var pop=document.getElementById('settings'); if(!pop.hidden){ pop.hidden=true; document.getElementById('settingsBtn').setAttribute('aria-expanded','false'); } }
+  function pct(v){ return Math.round(v)+'%'; }
+  function person(stance){ var all=mapView.find(function(r){ return r.stance===stance; });
+    var best=all.filter(function(r){ return r.quote && r.dist!=null && r.dist<4000; })[0] || all.filter(function(r){ return r.quote; })[0] || all[0]; return best||null; }
+  async function type(el, text, t){ el.value=''; el.focus(); for(var i=0;i<text.length;i++){ live(t); el.value+=text[i]; await wait(28,t); } }
+
+  async function run(t){
+    var keep=selected(), q=(qIn.value.trim()||DEFAULT_Q);
+    closeAll(); stepNo=0;
+    say('CitySim Detroit: ask what if, and hear from simulated residents built from census data.', true); await wait(3800,t);
+
+    say('Seven council districts. Each has 500 simulated residents placed on real census blocks.', true);
+    for(var d=1; d<=7; d++){ setDistricts([d]); say('District '+d+' · '+(DISTRICTS[d].area||''), false); await wait(1700,t); }
+
+    setDistricts(DEMO_D); say('We pick Districts '+DEMO_D.join(' and ')+' and ask a question in plain words.', true); await wait(2600,t);
+    await type(document.getElementById('ask'), q, t); await wait(700,t);
+    document.getElementById('askForm').requestSubmit();
+    say('The question is read into a proposal, and the place is checked against the city\'s street data.', true);
+    var ready=await until(function(){ return !blocksEl.hidden && (state.spec || !window.CITYSIM_API) && !/Reading your question/.test(body.textContent); }, 45000, t);
+    if(!ready){ say('The backend did not answer. Demo stopped.', false); await wait(5000,t); return; }
+    await wait(1500,t);
+    if(state.spec && state.spec.status==='needs_info'){ say('The place could not be verified, so the page asks instead of guessing. Demo stopped: change the demo question in Settings.', false); await wait(9000,t); return; }
+    var where=body.querySelector('.block .muted'); if(where) where.scrollIntoView({block:'center', behavior:'smooth'});
+    await wait(3800,t);
+
+    var n=selected().length*500;
+    say('Now '+n.toLocaleString()+' residents are asked. Each answers support, neutral or oppose, with one reason.', true);
+    document.getElementById('runBtn').click();
+    var done=await until(function(){ return state.asked; }, (runSpeed()==='accurate'?25:4)*60*1000, t);
+    if(!done){ say('The run did not finish. Demo stopped.', false); await wait(5000,t); return; }
+    await until(function(){ var c=mapView.answerCounts(); return !window.CITYSIM_API || c.support+c.neutral+c.oppose>0; }, 15000, t);
+    var o=state.result && state.result.overall;
+    say(o ? pct(o.support)+' support, '+pct(o.neutral)+' neutral, '+pct(o.oppose)+' oppose. Every figure on the map is one resident, coloured by their answer.'
+          : 'Results are in. Every figure on the map is one resident, coloured by their answer.', true);
+    await wait(5200,t);
+    var bd=document.getElementById('byDistance'); if(bd && !bd.hidden){ bd.scrollIntoView({block:'center', behavior:'smooth'}); say('Residents close to the site answer differently from residents far away.', false); await wait(4800,t); }
+
+    say('Click any resident to see who they are and what they said.', true); await wait(2200,t);
+    var kinds=[['support','A resident who supports it'],['oppose','A resident who opposes it'],['neutral','A resident who is neutral']];
+    for(var i=0;i<kinds.length;i++){ var r=person(kinds[i][0]); if(!r) continue;
+      mapView.select(r); say(kinds[i][1]+': '+document.getElementById('pcTitle').textContent+', '+document.getElementById('pcSub').textContent+'.', false); await wait(6500,t); }
+    document.getElementById('pcClose').click();
+
+    say('Each district has its own breakdown: who lives there and how each group answered.', true);
+    setDistricts(selected()); document.querySelector('.results__body').scrollTop=0; openDistrict(selected()[selected().length-1]); await wait(6500,t);
+    closeDistrict(); openCompare(); say('Districts side by side.', false); await wait(6500,t);
+    closeCompare();
+
+    say('A forecast, not a poll: every number comes from a dataset, a cited rate or the residents\' own answers.', true); await wait(6000,t);
+  }
+  function start(){
+    if(on) return; on=true; var t=++token; tog.setAttribute('aria-pressed','true'); app.classList.add('demo-on');
+    run(t).catch(function(e){ if(!(e instanceof Stop)) { console.error(e); say('The demo hit an error and stopped.', false); } })
+      .then(function(){ if(t===token) stop(); });
+  }
+  function stop(){ on=false; token++; tog.setAttribute('aria-pressed','false'); app.classList.remove('demo-on'); bar.hidden=true; }
+  tog.addEventListener('click',function(e){ e.stopPropagation(); if(on) stop(); else { document.getElementById('settings').hidden=true; start(); } });
+  document.getElementById('demoStop').addEventListener('click',stop);
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && on) stop(); });
+  return { start:start, stop:stop, running:function(){ return on; } };
+})();
+
 (function(){                                      // ?d=4,5,6&q=... from a shared link
   var q=new URLSearchParams(location.search), d=(q.get('d')||'').split(',').map(Number).filter(function(n){return n>=1&&n<=7;}).slice(0,4);
   if(d.length) document.querySelectorAll('.dchip').forEach(function(b){ b.setAttribute('aria-pressed', d.indexOf(+b.dataset.d)>-1?'true':'false'); });
   if(q.get('q')) document.getElementById('ask').value=q.get('q');
 })();
 syncPicker();
+if(new URLSearchParams(location.search).get('demo')) (function wait(){ if(mapView.residents().length) setTimeout(demo.start, 1500); else setTimeout(wait, 500); })();
 </script>
 </body>
 </html>
