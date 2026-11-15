@@ -580,7 +580,21 @@ var mapView = (function () {
     light: ['interpolate', ['linear'], ['get', 'h'], 0, '#E8DFCF', 8, '#DCCFB9', 15, '#CDB99A', 40, '#B79E7C', 120, '#8F7556'] };
   var THEME_PAINT = {
     dark:  { dim: '#05080F', dimOp: 0.5, road: ['#A5B4CB', '#8C9BB3', '#6B7A92'] },
-    light: { dim: '#F4EFE6', dimOp: 0.55, road: ['#B6A68C', '#C2B49C', '#CFC4B1'] } };
+    light: { dim: '#F4EFE6', dimOp: 0.3, road: ['#B6A68C', '#C2B49C', '#CFC4B1'] } };
+  // light theme: stronger water and greener parks/grass than the stock basemap, so it reads earthy
+  function earthTones() {
+    if (theme !== 'light') return;
+    (map.getStyle().layers || []).forEach(function (l) {
+      var sl = l['source-layer'] || '', id = l.id;
+      try {
+        if (l.type === 'fill' && (sl === 'water' || /water/.test(id))) map.setPaintProperty(id, 'fill-color', '#9FD0EE');
+        else if (l.type === 'line' && (sl === 'water' || sl === 'waterway' || /water/.test(id))) map.setPaintProperty(id, 'line-color', '#8EC6E8');
+        else if (l.type === 'fill' && /park|wood|forest|grass|nature|cemetery|golf|pitch|garden|landcover/.test(id)) map.setPaintProperty(id, 'fill-color', /wood|forest/.test(id) ? '#A9D18E' : '#C2E0A6');
+        else if (l.type === 'background') map.setPaintProperty(id, 'background-color', '#F3EEE3');
+        else if (l.type === 'fill' && /landuse_residential|residential/.test(id)) map.setPaintProperty(id, 'fill-color', '#EFE8DA');
+      } catch (e) {}
+    });
+  }
   var OFF = { dark: '#1E293B', light: '#EFE9DE' };
   var RAMP = RAMPS[theme] || RAMPS.dark;
   var STANCE = { s: [56, 189, 248], n: [148, 163, 184], o: [249, 115, 22], x: [100, 116, 139], idle: [248, 250, 252] };
@@ -1302,7 +1316,7 @@ var mapView = (function () {
     setSelected: function (s, instant) {
       sel = s.slice();
       Object.keys(labels).forEach(function (n) { labels[n].classList.toggle('off', !on(+n)); });
-      paintBuildings(); paintAllRoads(); fit(!instant); render();
+      earthTones(); paintBuildings(); paintAllRoads(); fit(!instant); render();
     },
     update: function () {                       // call after changing data-state / data-proposal / has-blocks
       var p = padding();
@@ -1381,7 +1395,7 @@ var mapView = (function () {
       map.once('style.load', function () {
         if (map.getLayer('outside-dim')) { map.setPaintProperty('outside-dim', 'fill-color', THEME_PAINT[t].dim); map.setPaintProperty('outside-dim', 'fill-opacity', THEME_PAINT[t].dimOp); }
         try { if (map.getLayer('outside-dim') && map.getLayer('buildings')) map.moveLayer('outside-dim', 'buildings'); } catch (e) {}
-        paintBuildings(); paintAllRoads(); render();
+        earthTones(); paintBuildings(); paintAllRoads(); render();
       });
     },
     setRoads: function (v) { roadsOn = v; paintAllRoads(); render(); }
