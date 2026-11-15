@@ -64,6 +64,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 01:55 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** (1) Light mode changes the panels only; the map stays dark. (2) Comparison fully redesigned: a district key at top; "How they feel" as one 100% stacked bar per district (sorted by support, values inside segments); "Support by group" and "Who lives here" as dot plots, one shared 0–100 line per measure with one dot per district (district colour), a span line from lowest to highest, value strip under each line, gap on the right, shared axis; age mix as aligned stacked bars per district. (3) Removed the "Up to 4 districts" hover text. (4) Every road in the selected districts is drawn from the basemap's own road tiles (a MapLibre line layer clipped with `within` to the selected districts, under the buildings). Small streets appear as you zoom in. Follows the Roads toggle. The 12 corridors still get traffic colours after a run.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
 ### 2026-11-15 01:40 ET · Salem (AI) · Web (branch `salem/frontend-try`)
 **Did:** (1) Comparison "Age mix" bar shows each share inside its own segment (no misaligned numbers below), with three distinct indigo steps, kept apart from the stance colours. (2) Ask bar uses the app's panel style (it was white). (3) Settings (gear, top right) with Appearance: Dark / Light. Light theme sets the CSS variables, swaps the basemap to CARTO Positron while carrying our building layer across (`setStyle` + `transformStyle`), lightens building colours, and draws idle resident dots dark. Choice saved in localStorage and applied before first paint.
 **Files:** web/prototype/index.html, LOG.md (branch only)

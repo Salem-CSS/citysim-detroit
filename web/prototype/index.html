@@ -54,10 +54,7 @@
   --text: #0F172A; --text-2: #334155; --text-3: #64748B; --accent: #2563EB; --support: #0284C7; --neutral: #94A3B8; --oppose: #EA580C;
   --warn: #92400E; --shadow: 0 10px 28px rgba(15,23,42,0.12);
 }
-:root[data-theme="light"] .map { background: #E5EAF1; }
 :root[data-theme="light"] .tag, :root[data-theme="light"] .badge { background: #FEF3C7; }
-:root[data-theme="light"] .dlabel-m { background: rgba(255,255,255,0.94); color: #0F172A; border-color: rgba(15,23,42,0.18); }
-:root[data-theme="light"] .hub-m { background: #0F172A; color: #F8FAFC; }
 :root[data-theme="light"] .seg button[aria-pressed="true"] { background: #0F172A; color: #F8FAFC; }
 :root[data-theme="light"] .stepper output, :root[data-theme="light"] .block select { background: #fff; }
 :root[data-theme="light"] .cmp thead th { background: #fff; }
@@ -136,7 +133,7 @@ button { cursor: pointer; }
 .dchip[aria-pressed="true"] { border: 2px solid var(--c); background: rgba(255,255,255,0.1); color: var(--text); font-weight: 600; }
 .dchip[aria-pressed="true"] .dot { background: var(--c); }
 .dchip[disabled] { opacity: .75; cursor: not-allowed; }
-.dchip[disabled]:hover::after { content: 'Up to 4 districts'; }
+
 
 /* welcome */
 .welcome { position: absolute; left: 50%; top: 48%; transform: translate(-50%,-50%); z-index: 2; width: min(540px, calc(100% - 900px)); min-width: 380px; padding: 24px 28px; text-align: center; display: flex; flex-direction: column; gap: 10px; }
@@ -212,37 +209,46 @@ button { cursor: pointer; }
 .app:has(.results.is-compare) .askbar, .app:has(.results.is-compare) .map-key { display: none; }   /* reading mode: close to ask again */
 .results.is-compare [data-hide-district] { display: none !important; }
 .cmp[hidden] { display: none; }
-.cmp { display: flex; flex-direction: column; gap: 14px; }
-.cmp table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 15px; table-layout: fixed; }
-.cmp thead th { position: sticky; top: -20px; z-index: 1; background: rgb(13,20,38); padding: 10px 10px 12px; text-align: left; vertical-align: bottom;
-  font-size: 16px; font-weight: 700; color: var(--text); border-bottom: 1px solid var(--panel-line); }
-.cmp thead th .area { display: block; font-size: 13px; font-weight: 500; color: var(--text-2); margin-top: 2px; }
-.cmp thead th .dot { display: inline-block; margin-right: 6px; vertical-align: 1px; }
-.cmp th.lab, .cmp td.lab { width: 150px; }
-.cmp th.gap, .cmp td.gap { width: 64px; text-align: right; }
-.cmp td { padding: 10px; vertical-align: middle; border-bottom: 1px solid rgba(148,163,184,0.10); }
-.cmp td.lab { color: var(--text-2); font-size: 14px; }
-.cmp tr.sec td { padding: 18px 10px 6px; border-bottom: 0; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
-.cmp .v { display: flex; align-items: center; gap: 10px; }
-.cmp .v b { min-width: 48px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text-2); }
-.cmp .v.hi b { font-weight: 800; color: var(--text); }
-.cmp .v.lo b { color: var(--text-3); font-weight: 500; }
-.cmp .track { flex: 1 1 auto; height: 6px; border-radius: 3px; background: rgba(148,163,184,0.14); overflow: hidden; }
-.cmp .track span { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
-.cmp .v.hi .track span { background: #60A5FA; }
-.cmp .v.lo .track span { background: #3B5B8F; }
-.cmp .stack { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 6px; }
-.cmp .stack span { display: block; height: 100%; }
-.cmp .mix { display: flex; gap: 2px; height: 22px; border-radius: 6px; overflow: hidden; }
-.cmp .mix span { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; }
-.cmp .mix .a1 { background: #C7D2FE; color: #1E1B4B; } .cmp .mix .a2 { background: #818CF8; color: #1E1B4B; } .cmp .mix .a3 { background: #4338CA; color: #EEF2FF; }
-.cmp .big { font-size: 24px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.cmp .big.hi::after { content: " highest"; font-size: 12px; font-weight: 700; color: var(--support); vertical-align: 4px; }
-.cmp .sub3 { font-size: 13px; color: var(--text-2); margin-top: 4px; font-variant-numeric: tabular-nums; }
-.cmp .gap { color: var(--text-2); font-size: 14px; font-variant-numeric: tabular-nums; }
-.cmp .key { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--text-2); }
+.cmp { display: flex; flex-direction: column; gap: 22px; }
+.cmp .who { display: flex; flex-wrap: wrap; gap: 8px; }
+.cmp .who span { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--raised); font-size: 14px; font-weight: 600; }
+.cmp .who span em { font-style: normal; font-weight: 500; color: var(--text-2); }
+.cmp .who i, .cmp .vals i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); display: inline-block; flex: 0 0 auto; }
+.cmp section h3 { margin: 0 0 4px; font-size: 13px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
+.cmp section > p { margin: 0 0 12px; font-size: 14px; color: var(--text-2); }
+/* dot plot: one shared 0-100 line per measure, one dot per district */
+.cmp .drow { display: grid; grid-template-columns: 150px 1fr 72px; align-items: center; gap: 16px; padding: 10px 0; border-bottom: 1px solid rgba(148,163,184,0.10); }
+.cmp .drow .lab { font-size: 15px; color: var(--text); }
+.cmp .drow .gapv { text-align: right; font-size: 14px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.cmp .drow .gapv b { display: block; font-size: 16px; color: var(--text); }
+.cmp .line { position: relative; height: 28px; }
+.cmp .line::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: rgba(148,163,184,0.22); border-radius: 1px; }
+.cmp .line .tick { position: absolute; top: 6px; bottom: 6px; width: 1px; background: rgba(148,163,184,0.18); }
+.cmp .line .span { position: absolute; top: 50%; height: 4px; margin-top: -2px; background: rgba(148,163,184,0.55); border-radius: 2px; }
+.cmp .line .pt { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--c);
+  box-shadow: 0 0 0 2px var(--bg); cursor: default; }
+.cmp .line .pt:hover { transform: scale(1.25); }
+.cmp .vals { grid-column: 2 / 3; display: flex; gap: 14px; font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; margin-top: -2px; }
+.cmp .vals span { display: inline-flex; align-items: center; gap: 5px; }
+.cmp .vals i { width: 9px; height: 9px; }
+.cmp .vals .hi { color: var(--text); font-weight: 700; }
+.cmp .axis { display: grid; grid-template-columns: 150px 1fr 72px; gap: 16px; font-size: 12px; color: var(--text-3); margin-top: 6px; }
+.cmp .axis .ax { position: relative; height: 14px; }
+.cmp .axis .ax span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.cmp .axis .ax span:first-child { transform: none; } .cmp .axis .ax span:last-child { transform: translateX(-100%); }
+/* stacked rows: one bar per district, same 0-100 scale, values inside */
+.cmp .srow { display: grid; grid-template-columns: 150px 1fr 72px; align-items: center; gap: 16px; padding: 8px 0; }
+.cmp .srow .lab { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+.cmp .srow .lab i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); }
+.cmp .sbar { display: flex; gap: 2px; height: 26px; border-radius: 6px; overflow: hidden; }
+.cmp .sbar span { display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; white-space: nowrap; }
+.cmp .s-sup { background: var(--support); color: #04263A; } .cmp .s-neu { background: var(--neutral); color: #0F172A; } .cmp .s-opp { background: var(--oppose); color: #3B1405; }
+.cmp .a1 { background: #C7D2FE; color: #1E1B4B; } .cmp .a2 { background: #818CF8; color: #1E1B4B; } .cmp .a3 { background: #4338CA; color: #EEF2FF; }
+.cmp .srow .side { text-align: right; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cmp .srow .side small { display: block; font-size: 12px; font-weight: 600; color: var(--text-3); }
+.cmp .key { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--text-2); margin-top: 8px; }
 .cmp .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
-.cmp .takeaway { padding: 12px 14px; border-radius: var(--r-sm); background: var(--raised); font-size: 15px; }
+.cmp .takeaway { padding: 14px 16px; border-radius: var(--r-sm); background: var(--raised); font-size: 15px; line-height: 1.55; }
 .cmp .takeaway b { color: var(--text); }
 
 /* toast */
@@ -452,13 +458,13 @@ var mapView = (function () {
     : 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
   var STYLES = { dark: STYLE, light: q.get('style') === 'none' ? STYLE : 'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json' };
   var theme = (function () { try { return localStorage.getItem('citysim-theme') || 'dark'; } catch (e) { return 'dark'; } })();
-  if (theme === 'light') STYLE = STYLES.light;
+  // the map stays dark in both themes; the setting only changes the panels
   var PAD_OPEN = { left: 392, right: 432, top: 110, bottom: 100 }, PAD_CLOSED = { left: 40, right: 432, top: 110, bottom: 100 };
   var RAMPS = {
     dark: ['interpolate', ['linear'], ['get', 'h'], 0, '#58647A', 8, '#6E7D94', 15, '#7DA0D7', 40, '#A096EB', 120, '#EBE1FF'],
     light: ['interpolate', ['linear'], ['get', 'h'], 0, '#C9D2DF', 8, '#B3BFD1', 15, '#93A8CB', 40, '#7F8FC6', 120, '#5B67A8'] };
   var OFF = { dark: '#1E293B', light: '#E9EDF3' };
-  var RAMP = RAMPS[theme];
+  var RAMP = RAMPS.dark;
   var STANCE = { s: [56, 189, 248], n: [148, 163, 184], o: [249, 115, 22], x: [100, 116, 139], idle: [248, 250, 252] };
   var roadsOn = true, sel = [], districts = null, overlays = null, residents = [], labels = {}, hub = null, clickFn = null, padded = null, ready = false;
 
@@ -489,15 +495,40 @@ var mapView = (function () {
   function on(d) { return sel.indexOf(d) > -1; }
   function stanceOf(r) {
     var st = el.dataset.state, x = window.DISTRICTS && DISTRICTS[r.d];
-    if (st !== 'results') return theme === 'light' ? [30, 41, 59] : STANCE.idle;
+    if (st !== 'results') return STANCE.idle;
     if (r.stance) return r.stance === 'support' ? STANCE.s : r.stance === 'oppose' ? STANCE.o : STANCE.n;   // real per-resident answer
     if (!x || x.s == null) return STANCE.x;
     return r.u * 100 < x.s ? STANCE.s : r.u * 100 < x.s + x.n ? STANCE.n : STANCE.o;
   }
 
+  function roadLayerName(src) {
+    var names = {}; (map.getStyle().layers || []).forEach(function (l) { if (l.source === src && l['source-layer']) names[l['source-layer']] = 1; });
+    return names.roads ? 'roads' : names.transportation ? 'transportation' : null;
+  }
+  function paintAllRoads() {
+    if (!districts || !map.isStyleLoaded()) return;
+    var src = basemapSource(), layer = src && roadLayerName(src);
+    if (!layer) return;
+    var area = { type: 'FeatureCollection', features: districts.features.filter(function (f) { return on(f.properties.n); }) };
+    var kind = ['coalesce', ['get', 'kind'], ['get', 'class']];
+    var filter = ['all', ['==', ['geometry-type'], 'LineString'],
+      ['match', kind, ['highway', 'motorway', 'trunk', 'major_road', 'primary', 'secondary', 'tertiary', 'medium_road', 'minor_road', 'minor', 'residential', 'service', 'living_street'], true, false],
+      ['within', area]];
+    if (!map.getLayer('all-roads')) {
+      map.addLayer({ id: 'all-roads', type: 'line', source: src, 'source-layer': layer, filter: filter,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': ['match', kind, ['highway', 'motorway', 'trunk'], '#A5B4CB', ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], '#8C9BB3', '#6B7A92'],
+          'line-opacity': ['match', kind, ['highway', 'motorway', 'trunk', 'major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 0.75, 0.55],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 10, ['match', kind, ['highway', 'motorway', 'trunk'], 1.6, ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 1, 0.4],
+                                                              16, ['match', kind, ['highway', 'motorway', 'trunk'], 6, ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 4, 2.2]]
+        } }, map.getLayer('buildings') ? 'buildings' : undefined);
+    } else map.setFilter('all-roads', filter);
+    map.setLayoutProperty('all-roads', 'visibility', roadsOn ? 'visible' : 'none');
+  }
   function paintBuildings() {
     if (!map.getLayer('buildings') || !sel.length) return;
-    map.setPaintProperty('buildings', 'fill-extrusion-color', ['match', ['get', 'd'], sel, RAMPS[theme], OFF[theme]]);
+    map.setPaintProperty('buildings', 'fill-extrusion-color', ['match', ['get', 'd'], sel, RAMPS.dark, OFF.dark]);
   }
 
 
@@ -718,7 +749,7 @@ var mapView = (function () {
       layers.push(new deck.ScatterplotLayer({
         id: 'residents', data: here, getPosition: function (r) { return r.walk && r.walk.onStreet ? [r.pos[0], r.pos[1], 0] : r.p; },
         updateTriggers: { getFillColor: key, getPosition: snapRound + ':' + Math.round(walkClock) },
-        radiusUnits: 'pixels', getRadius: theme === 'light' ? 2.8 : 3.2, stroked: true, lineWidthUnits: 'pixels', getLineWidth: 1, getLineColor: theme === 'light' ? [255, 255, 255] : [15, 23, 42],
+        radiusUnits: 'pixels', getRadius: 3.2, stroked: true, lineWidthUnits: 'pixels', getLineWidth: 1, getLineColor: [15, 23, 42],
         getFillColor: stanceOf
       }));
     } else {
@@ -789,7 +820,7 @@ var mapView = (function () {
     setSelected: function (s, instant) {
       sel = s.slice();
       Object.keys(labels).forEach(function (n) { labels[n].classList.toggle('off', !on(+n)); });
-      paintBuildings(); fit(!instant); render();
+      paintBuildings(); paintAllRoads(); fit(!instant); render();
     },
     update: function () {                       // call after changing data-state / data-proposal / has-blocks
       var p = padding();
@@ -797,20 +828,8 @@ var mapView = (function () {
       render();
     },
     onClick: function (fn) { clickFn = fn; },
-    setTheme: function (t) {
-      if (t === theme) return; theme = t;
-      // swap the basemap but carry our building source/layer across; deck re-inserts its layers on the new style
-      map.setStyle(STYLES[t], { transformStyle: function (prev, next) {
-        if (!prev || !prev.sources.bldg) return next;
-        next.sources.bldg = prev.sources.bldg;
-        var b = prev.layers.filter(function (l) { return l.id === 'buildings'; })[0];
-        if (b) next.layers.push(b);
-        return next;
-      } });
-      map.once('style.load', function () { paintBuildings(); render(); });
-      paintBuildings(); render();
-    },
-    setRoads: function (v) { roadsOn = v; render(); }
+    setTheme: function (t) { theme = t; },          // panels only; the map keeps its dark look
+    setRoads: function (v) { roadsOn = v; paintAllRoads(); render(); }
   };
   var rt = document.getElementById('roadsToggle');
   rt.addEventListener('click', function () {
@@ -956,65 +975,66 @@ function openCompare(){
     var sp=D.split || (state.asked && x.s!=null ? {support:x.s,neutral:x.n,oppose:x.o} : null);
     var g={}; (D.groups||[]).forEach(function(q){ g[q.label]=q; });
     return {d:d, x:x, sp:sp, top:REASON_LABEL[D.top]||D.top||x.w, g:g, P:D.profile}; });
-  var n=data.length, gaps=[];
-  var head='<thead><tr><th class="lab"></th>'+data.map(function(c){ return '<th><span class="dot" style="--c:'+c.x.c+'"></span>District '+c.d+'<span class="area">'+esc(c.x.area)+'</span></th>'; }).join('')+
-           (n>1?'<th class="gap" title="Difference between the highest and lowest district">Gap</th>':'')+'</tr></thead>';
-  var sec=function(t){ return '<tr class="sec"><td colspan="'+(n+2)+'">'+t+'</td></tr>'; };
-  // a row of numbers with bars on a shared scale; highest bold, lowest dimmed; gap = max - min
-  function numRow(label, get, fmt, scaleMax, unit){
-    var vals=data.map(get), have=vals.filter(function(v){return v!=null;});
+  var n=data.length, diffs=[];
+  var col=function(c){ return 'style="--c:'+c.x.c+'"'; };
+  var TICKS=[0,25,50,75,100];
+  // one measure = one line; dots placed on a shared scale; span line from lowest to highest
+  function dotRow(label, get, fmt, max){
+    var vals=data.map(get), have=[]; vals.forEach(function(v,i){ if(v!=null) have.push({v:v,c:data[i]}); });
     if(!have.length) return '';
-    var mx=Math.max.apply(null,have), mn=Math.min.apply(null,have), top=scaleMax||mx||1;
-    var cells=data.map(function(c,i){ var v=vals[i];
-      if(v==null) return '<td><span class="muted">—</span></td>';
-      var cls=have.length>1 && v===mx && mx!==mn ? ' hi' : have.length>1 && v===mn && mx!==mn ? ' lo' : '';
-      return '<td title="District '+c.d+' · '+esc(label)+': '+fmt(v)+'"><div class="v'+cls+'"><b>'+fmt(v)+'</b><div class="track"><span style="width:'+Math.max(2,100*v/top)+'%"></span></div></div></td>'; }).join('');
-    var gap=have.length>1 ? mx-mn : null;
-    if(gap!=null) gaps.push({label:label, gap:gap, unit:unit, hi:data[vals.indexOf(mx)], lo:data[vals.indexOf(mn)], mx:mx, mn:mn, fmt:fmt});
-    return '<tr><td class="lab">'+esc(label)+'</td>'+cells+(n>1?'<td class="gap">'+(gap!=null?(unit==='$'?'$'+r(gap/1000)+'k':r(gap)+' pts'):'')+'</td>':'')+'</tr>';
+    var top=max||Math.max.apply(null,have.map(function(h){return h.v;}))||1;
+    var lo=have.reduce(function(a,h){return h.v<a.v?h:a;}), hi=have.reduce(function(a,h){return h.v>a.v?h:a;});
+    var pos=function(v){ return Math.max(0,Math.min(100,100*v/top)); };
+    var sorted=have.slice().sort(function(a,b){return a.v-b.v;}), nudge={};
+    sorted.forEach(function(h,i){ if(i && Math.abs(pos(h.v)-pos(sorted[i-1].v))<2.5) nudge[h.c.d]=(nudge[sorted[i-1].c.d]||0)===0?-7:0; });
+    var line='<div class="line">'+TICKS.map(function(t){ return '<span class="tick" style="left:'+t+'%"></span>'; }).join('')+
+      (have.length>1?'<span class="span" style="left:'+pos(lo.v)+'%;width:'+(pos(hi.v)-pos(lo.v))+'%"></span>':'')+
+      have.map(function(h){ return '<span class="pt" title="District '+h.c.d+' · '+esc(label)+': '+fmt(h.v)+'" style="--c:'+h.c.x.c+';left:'+pos(h.v)+'%;margin-top:'+(-8+(nudge[h.c.d]||0))+'px"></span>'; }).join('')+'</div>';
+    var gap=have.length>1?hi.v-lo.v:null;
+    if(gap!=null) diffs.push({label:label, gap:gap/top, fmt:fmt, lo:lo, hi:hi});
+    var valsHtml='<div class="vals">'+data.map(function(c,i){ var v=vals[i]; return v==null?'':'<span'+(have.length>1&&v===hi.v?' class="hi"':'')+'><i '+col(c)+'></i>'+fmt(v)+'</span>'; }).join('')+'</div>';
+    return '<div class="drow"><div class="lab">'+esc(label)+'</div>'+line+'<div class="gapv">'+(gap!=null?'<b>'+fmt(gap).replace('%',' pts')+'</b>gap':'')+'</div><div></div>'+valsHtml+'<div></div></div>';
+  }
+  function axis(max, fmt){ return '<div class="axis"><i></i><div class="ax">'+TICKS.map(function(t){ return '<span style="left:'+t+'%">'+fmt(max*t/100)+'</span>'; }).join('')+'</div><i></i></div>'; }
+  function stackRow(c, parts, side){
+    return '<div class="srow"><div class="lab"><i '+col(c)+'></i>District '+c.d+'</div><div class="sbar">'+parts.map(function(p){ var v=r(p.v);
+      return '<span class="'+p.cls+'" style="width:'+p.v+'%" title="District '+c.d+' · '+esc(p.name)+': '+v+'%">'+(v>=9?v+'%':'')+'</span>'; }).join('')+'</div><div class="side">'+(side||'')+'</div></div>';
   }
   var pct=function(v){ return r(v)+'%'; };
   var h='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2>Compare districts</h2>'+(anySample?'<span class="badge">Sample data</span>':'')+'</div>';
+  h+='<div class="who">'+data.map(function(c){ return '<span><i '+col(c)+'></i>District '+c.d+' <em>'+esc(c.x.area)+'</em></span>'; }).join('')+'</div>';
   var body='';
   if(state.asked){
-    var maxS=Math.max.apply(null,data.map(function(c){return c.sp?c.sp.support:-1;}));
-    body+=sec('How they feel');
-    body+='<tr><td class="lab">Support, neutral, oppose</td>'+data.map(function(c){ if(!c.sp) return '<td><span class="muted">—</span></td>';
-      return '<td title="District '+c.d+': '+r(c.sp.support)+'% support, '+r(c.sp.neutral)+'% neutral, '+r(c.sp.oppose)+'% oppose"><div class="big'+(c.sp.support===maxS&&n>1?' hi':'')+'">'+r(c.sp.support)+'%</div>'+
-        '<div class="stack"><span style="width:'+c.sp.support+'%;background:var(--support)"></span><span style="width:'+c.sp.neutral+'%;background:var(--neutral)"></span><span style="width:'+c.sp.oppose+'%;background:var(--oppose)"></span></div>'+
-        '<div class="sub3">'+r(c.sp.neutral)+'% neutral · '+r(c.sp.oppose)+'% oppose</div></td>'; }).join('')+
-      (n>1?'<td class="gap">'+(function(){ var v=data.filter(function(c){return c.sp;}).map(function(c){return c.sp.support;}); return v.length>1? r(Math.max.apply(null,v)-Math.min.apply(null,v))+' pts':''; })()+'</td>':'')+'</tr>';
-    body+='<tr><td class="lab">Top reason</td>'+data.map(function(c){ return '<td>'+esc(c.top||'—')+'</td>'; }).join('')+(n>1?'<td class="gap"></td>':'')+'</tr>';
-    var grp='';
-    GROUP_ORDER.forEach(function(l){ grp+=numRow(SHORT[l]||l, function(c){ return c.g[l]?c.g[l].support:null; }, pct, 100, '%'); });
-    if(grp) body+=sec('Support by group')+grp;
+    var ranked=data.filter(function(c){return c.sp;}).sort(function(a,b){return b.sp.support-a.sp.support;});
+    body+='<section><h3>How they feel</h3><p>Each bar is 100% of that district\'s residents. Sorted by support.</p>'+
+      ranked.map(function(c){ return stackRow(c,[{cls:'s-sup',name:'Support',v:c.sp.support},{cls:'s-neu',name:'Neutral',v:c.sp.neutral},{cls:'s-opp',name:'Oppose',v:c.sp.oppose}],
+        r(c.sp.support)+'%<small>support · '+esc(c.top||'')+'</small>'); }).join('')+
+      '<div class="key"><span><i style="background:var(--support)"></i>Support</span><span><i style="background:var(--neutral)"></i>Neutral</span><span><i style="background:var(--oppose)"></i>Oppose</span></div></section>';
+    var grp=GROUP_ORDER.map(function(l){ return dotRow(SHORT[l]||l, function(c){ return c.g[l]?c.g[l].support:null; }, pct, 100); }).join('');
+    if(grp) body+='<section><h3>Support by group</h3><p>Share who support, for each kind of resident. Dots far apart = districts disagree.</p>'+grp+axis(100,pct)+'</section>';
   }
   if(data.some(function(c){return c.P;})){
-    body+=sec('Who lives here');
-    body+=numRow('Rent their home', function(c){ return c.P?c.P.renters:null; }, pct, 100, '%');
-    body+=numRow('No car', function(c){ return c.P?c.P.no_car:null; }, pct, 100, '%');
-    body+=numRow('Median income', function(c){ return c.P&&c.P.median_income?c.P.median_income:null; }, function(v){ return '$'+r(v/1000)+'k'; }, null, '$');
-    var AGE=[['Under 35','a1'],['35 to 64','a2'],['65 and over','a3']];
-    body+='<tr><td class="lab">Age mix</td>'+data.map(function(c){ if(!c.P||!c.P.age) return '<td><span class="muted">—</span></td>';
-      var a=c.P.age; return '<td title="District '+c.d+': '+AGE.map(function(k){return k[0]+' '+r(a[k[0]])+'%';}).join(', ')+'"><div class="mix">'+
-        AGE.map(function(k){ var v=r(a[k[0]]); return '<span class="'+k[1]+'" style="width:'+a[k[0]]+'%">'+(v>=18?v+'%':v>=11?v:'')+'</span>'; }).join('')+'</div></td>'; }).join('')+
-      (n>1?'<td class="gap"></td>':'')+'</tr>';
+    var maxInc=Math.ceil(Math.max.apply(null,data.map(function(c){return c.P&&c.P.median_income||0;}))/10000)*10000||60000;
+    var money=function(v){ return '$'+r(v/1000)+'k'; };
+    body+='<section><h3>Who lives here</h3><p>Census-based profile of each district\'s residents.</p>'+
+      dotRow('Rent their home', function(c){ return c.P?c.P.renters:null; }, pct, 100)+
+      dotRow('Have no car', function(c){ return c.P?c.P.no_car:null; }, pct, 100)+axis(100,pct)+
+      (data.some(function(c){return c.P&&c.P.median_income;}) ? dotRow('Median household income', function(c){ return c.P&&c.P.median_income?c.P.median_income:null; }, money, maxInc)+axis(maxInc,money) : '')+
+      '<h3 style="margin-top:18px">Age mix</h3>'+
+      data.filter(function(c){return c.P&&c.P.age;}).map(function(c){ var a=c.P.age; return stackRow(c,[{cls:'a1',name:'Under 35',v:a['Under 35']},{cls:'a2',name:'35 to 64',v:a['35 to 64']},{cls:'a3',name:'65 and over',v:a['65 and over']}],
+        r(a['65 and over'])+'%<small>65 and over</small>'); }).join('')+
+      '<div class="key"><span><i style="background:#C7D2FE"></i>Under 35</span><span><i style="background:#818CF8"></i>35 to 64</span><span><i style="background:#4338CA"></i>65 and over</span></div></section>';
   }
-  var table='<table>'+head+'<tbody>'+body+'</tbody></table>';
-  var key='<div class="key">'+(state.asked?'<span><i style="background:var(--support)"></i>Support</span><span><i style="background:var(--neutral)"></i>Neutral</span><span><i style="background:var(--oppose)"></i>Oppose</span>':'')+
-    (data.some(function(c){return c.P;})?'<span><i style="background:#C7D2FE"></i>Under 35</span><span><i style="background:#818CF8"></i>35–64</span><span><i style="background:#4338CA"></i>65+</span>':'')+'<span>Bold = highest, dimmed = lowest. Gap = highest minus lowest.</span></div>';
-  // takeaway: the biggest gap among comparable % rows
-  var big=gaps.filter(function(g){return g.unit==='%';}).sort(function(a,b){return b.gap-a.gap;})[0];
-  var take='';
+  var big=diffs.slice().sort(function(a,b){return b.gap-a.gap;})[0], take='';
   if(n>1 && state.asked){
-    var withSp=data.filter(function(c){return c.sp;}).sort(function(a,b){return b.sp.support-a.sp.support;});
-    if(withSp.length>1) take='<div class="takeaway">Most supportive: <b>District '+withSp[0].d+'</b> ('+r(withSp[0].sp.support)+'%). Least: <b>District '+withSp[withSp.length-1].d+'</b> ('+r(withSp[withSp.length-1].sp.support)+'%).'+
-      (big?' Districts differ most on <b>'+esc(big.label)+'</b> support: '+big.fmt(big.mn)+' (District '+big.lo.d+') to '+big.fmt(big.mx)+' (District '+big.hi.d+').':'')+'</div>';
+    var rk=data.filter(function(c){return c.sp;}).sort(function(a,b){return b.sp.support-a.sp.support;});
+    if(rk.length>1) take='<div class="takeaway"><b>District '+rk[0].d+'</b> is most supportive ('+r(rk[0].sp.support)+'%), <b>District '+rk[rk.length-1].d+'</b> least ('+r(rk[rk.length-1].sp.support)+'%).'+
+      (big?' Biggest disagreement: <b>'+esc(big.label)+'</b>, '+big.fmt(big.lo.v)+' in District '+big.lo.c.d+' vs '+big.fmt(big.hi.v)+' in District '+big.hi.c.d+'.':'')+'</div>';
   } else if(n>1 && big){
-    take='<div class="takeaway">Biggest difference: <b>'+esc(big.label)+'</b>, from '+big.fmt(big.mn)+' in District '+big.lo.d+' to '+big.fmt(big.mx)+' in District '+big.hi.d+'.</div>';
+    take='<div class="takeaway">Biggest difference: <b>'+esc(big.label)+'</b>, '+big.fmt(big.lo.v)+' in District '+big.lo.c.d+' vs '+big.fmt(big.hi.v)+' in District '+big.hi.c.d+'.</div>';
   }
-  if(!state.asked) h+='<p class="muted" style="margin:0">Ask a question to add how each district feels. For now, here is who lives in each.</p>';
-  el.innerHTML=h+take+table+key; el.hidden=false;
+  if(!state.asked) h+='<p class="muted" style="margin:0">Ask a question to see how each district feels. For now, here is who lives in each.</p>';
+  el.innerHTML=h+take+body; el.hidden=false;
   var res=document.getElementById('results'); res.classList.add('is-compare');
   var b=document.getElementById('compareBtn'); b.textContent='Close comparison'; b.setAttribute('aria-expanded','true');
   document.querySelector('.results__body').scrollTop=0;
