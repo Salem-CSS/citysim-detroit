@@ -6,9 +6,12 @@ They see the confirmed spec's neutral `summary` and their own computed impact li
 Batched 25 residents per Bedrock call.
 """
 import hashlib
+import os
 from contracts.spec import REASONS, STANCES
 
-QUOTE_SHARE = 0.10
+# Share of residents who also give a one-sentence quote. A deploy setting (QuoteShare in infra/template.yaml):
+# 0.10 = 1 in 10, 0.5 = half, 1 = everyone. More quotes cost more output tokens per run.
+QUOTE_SHARE = min(1.0, max(0.0, float(os.environ.get("QUOTE_SHARE", "0.10"))))
 
 SYSTEM = (
     "You simulate Detroit residents reacting to a proposed change in their city. "
