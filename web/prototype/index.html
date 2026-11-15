@@ -969,7 +969,7 @@ var mapView = (function () {
     L.push(new deck.PathLayer({ id: 'd-ground', data: [{ p: arc.slice(0, n + 1).map(function (c) { return [c[0], c[1], 0]; }) }], getPath: function (d) { return d.p; },
       widthUnits: 'pixels', getWidth: 2, getColor: [148, 163, 184, 140], updateTriggers: { getPath: n } }));
     L.push(new deck.PathLayer({ id: 'd-route', data: [{ p: arc.slice(0, n + 1) }], getPath: function (d) { return d.p; },
-      widthUnits: 'pixels', getWidth: 5, getColor: [56, 189, 248, 240], capRounded: true, jointRounded: true, updateTriggers: { getPath: n } }));
+      widthUnits: 'pixels', getWidth: 7, getColor: [56, 189, 248, 245], capRounded: true, jointRounded: true, updateTriggers: { getPath: n } }));
     var ends = [{ p: a, s: 0 }, { p: b, s: DRAW * 0.85 }];
     L.push(new deck.ColumnLayer({ id: 'd-pad', data: ends, diskResolution: 24, radius: 18, extruded: true, getPosition: function (d) { return d.p; },
       getElevation: function (d) { return 1.5 * ease((t - d.s) / 400); }, getFillColor: [37, 99, 235, 255], updateTriggers: { getElevation: t } }));
@@ -993,8 +993,8 @@ var mapView = (function () {
       q(v[4],v[5],v[6],v[7],[0,0,1]); q(v[3],v[2],v[1],v[0],[0,0,-1]); q(v[0],v[1],v[5],v[4],[0,-1,0]); q(v[2],v[3],v[7],v[6],[0,1,0]); q(v[1],v[2],v[6],v[5],[1,0,0]); q(v[3],v[0],v[4],v[7],[-1,0,0]); });
     return { attributes: { positions: { value: new Float32Array(P), size: 3 }, normals: { value: new Float32Array(N), size: 3 } } };
   }
-  var DRONE = boxMesh([[0, 0, 0, 8, 8, 2.5], [0, 0, 0, 26, 2.4, 1.2], [0, 0, 0, 2.4, 26, 1.2],      // drawn ~10x real size so it reads from above
-    [12, 0, 1.2, 9, 9, 0.6], [-12, 0, 1.2, 9, 9, 0.6], [0, 12, 1.2, 9, 9, 0.6], [0, -12, 1.2, 9, 9, 0.6]]);
+  var DRONE = boxMesh([[0, 0, 0, 14, 14, 4], [0, 0, 0, 44, 4, 2], [0, 0, 0, 4, 44, 2],      // drawn ~10x real size so it reads from above
+    [20, 0, 2, 15, 15, 1], [-20, 0, 2, 15, 15, 1], [0, 20, 2, 15, 15, 1], [0, -20, 2, 15, 15, 1]]);
   var BUS = (function () {                   // 12 m x 2.6 m x 3.2 m box, long axis = x
     var x = 14, y = 3.5, z = 7, P = [], N = [];
     function q(a, b, c, d, n) { [a, b, c, a, c, d].forEach(function (v) { P.push(v[0], v[1], v[2]); N.push(n[0], n[1], n[2]); }); }
