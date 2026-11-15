@@ -65,6 +65,11 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: bus build animation
+- Pressing Ask residents on a change_transit proposal with known places plays a short animation before the run overlay: camera frames From→To, the route line draws itself, a stop (pole + blue sign) rises with a ripple at each end, a yellow bus drives the route and parks at the last stop. Only From or only Where → one stop rises. Illustration only; feeds no numbers. Cleared on the next question.
+- Run overlay waits for the animation (runOver.show delay).
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: nicer run overlay
 - While residents are being asked: the app dims behind a centred card with a 200-dot grid (coloured by district) that lights up as answers come in, the answered count, a progress bar and per-district chips. Pulses until the first answers arrive. Sample (offline) runs animate the same way.
 - Files: web/prototype/index.html only.
