@@ -152,7 +152,10 @@ Resources:
     Properties:
       FunctionName: !Sub citysim-${Stage}-get-run
       Handler: infra.runs.get_run
-      Policies: [{DynamoDBReadPolicy: {TableName: !Ref RunsTable}}]
+      Environment: {Variables: {STATE_MACHINE_ARN: !Ref RunMachine}}
+      Policies:
+        - DynamoDBReadPolicy: {TableName: !Ref RunsTable}
+        - Statement: [{Effect: Allow, Action: "states:DescribeExecution", Resource: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:execution:citysim-${Stage}-run:*"}]
       Events:
         Get: {Type: HttpApi, Properties: {ApiId: !Ref Api, Path: "/runs/{id}", Method: GET}}
 

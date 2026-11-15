@@ -1204,7 +1204,7 @@ function runSpeed(){ var m=window.CITYSIM_SPEED; if(!m){ try{ m=localStorage.get
   function close(){ pop.hidden=true; btn.setAttribute('aria-expanded','false'); }
   btn.addEventListener('click',function(e){ e.stopPropagation(); pop.hidden=!pop.hidden; btn.setAttribute('aria-expanded', String(!pop.hidden)); sync(); });
   var HINT={fast:'Fast: residents answer in groups of 25. About 45 seconds for four districts. Support close to a site reads too high.',
-            accurate:'Accurate: every resident is asked alone, so nobody is swayed by who else is in the group. About 3 minutes per district.'};
+            accurate:'Accurate: every resident is asked alone, so nobody is swayed by who else is in the group. About 2 to 3 minutes per district.'};
   function syncSpeed(){ var m=runSpeed(); pop.querySelectorAll('[data-speed-set]').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.speedSet===m); });
     document.getElementById('speedHint').textContent=HINT[m]; }
   pop.addEventListener('click',function(e){ var b=e.target.closest('[data-speed-set]'); if(!b) return; e.stopPropagation();
@@ -1447,6 +1447,7 @@ function runLive(btn){
       fetch(api+'/runs/'+id).then(function(r){return r.json();}).then(function(run){
         errs=0;
         if(run.stage==='done' && run.result){ state.spec=spec; state.runId=id; showResult(run.result); finishRun(btn); syncRoute(); loadAnswers(api,id); }
+        else if(run.status==='failed') fail(run.error||'the run failed on the server');
         else if(Date.now()-t0>limit) fail('the run did not finish in time');
         else { var a=+run.answered||0, tot=+run.total||n;
           btn.textContent = a ? 'Asked '+Math.min(a,tot).toLocaleString()+' of '+tot.toLocaleString()+' residents…' : 'Asking '+tot.toLocaleString()+' residents…';

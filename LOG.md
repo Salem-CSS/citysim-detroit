@@ -64,6 +64,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 03:42 ET · Partner (AI) · Infra + Web (failed runs no longer hang)
+**Did:** GET /runs/{id} now checks the run's Step Functions execution while the run is still marked running; if it failed, timed out or was aborted, the response has `status: "failed"` and an `error` line. The page shows "Could not run: ..." and re-enables the button instead of waiting for its time limit. Settings hint for Accurate now reads "about 2 to 3 minutes per district" (measured: 108 s for one district, 631 s for four).
+**Files:** infra/runs.py, infra/template.yaml, infra/tests/test_runs.py, web/prototype/index.html, LOG.md
+**Contracts changed:** none (GET /runs/{id} may now return `status: "failed"` with `error`)
+**Decisions:** Deployed to `citysim-main`. Checked against the run that failed at 03:11: it now returns failed.
+**Blocked / needs:** nothing
+**Next:** run-to-run variation; correction engine and demo mode stay on side branches (`correction-engine`, `demo-mode`).
+
 ### 2026-11-15 03:16 ET · Partner (AI) · Web + Infra + Residents + Contracts (speed switch, person card, Check details fix)
 **Did:** At Partner's request (approved edits to web/, contracts/, fixtures/ and a live redeploy for tonight). Merged `salem/frontend-try` (638f333, results + compare revamp) into the backend branch and main. (1) **Fast / Accurate switch** in Settings under the theme buttons: Fast = 25 residents share a model call, Accurate = one resident per call. The page sends `mode` with POST /runs; the choice is kept in the browser. (2) **Check details retry:** the Ask residents button stayed greyed out after a place failed, because it waited for every place box (Where, From and To) to be filled; a route now needs From and To, anything else needs Where. (3) **Real residents on the map:** new `web/prototype/geo/residents.geojson` (3,500 residents, 500 per district, made by `web/prototype/tools/make_residents.py` from the census-built persona files, same ids as the backend). Clicking a figure shows that resident's census profile, and after a run their own answer, reason, sentence and distance from the proposal. (4) **Results by distance** section in the results panel (within a quarter mile, a quarter mile to a mile, farther). (5) **Run progress:** the button shows "Asked 350 of 2,000 residents" while a run is going; Accurate runs are allowed 25 minutes.
 **Files:** web/prototype/index.html, web/prototype/geo/residents.geojson, web/prototype/tools/make_residents.py, infra/runs.py, infra/template.yaml, infra/tests/test_runs.py, residents/batch.py, contracts/run_answers.schema.json, contracts/run_result.schema.json, contracts/README.md, fixtures/run_answers.drone.json, LOG.md

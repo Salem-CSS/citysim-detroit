@@ -77,7 +77,27 @@ def get_run(event, context=None):
         return _resp(404, {"error": "no such run"})
     if "result_json" in item:                       # stored as text so numbers stay numbers
         item["result"] = json.loads(item.pop("result_json"))
+    elif item.get("status") == "running":
+        failed = execution_failure(run_id)
+        if failed:                                  # the run died inside Step Functions: say so instead of "running" forever
+            item.update(status="failed", stage="failed", error=failed)
     return _resp(200, item)
+
+
+def execution_failure(run_id: str, client=None) -> str | None:
+    """None while the run's execution is running or succeeded; else a short reason. Never raises."""
+    arn = os.environ.get("STATE_MACHINE_ARN", "")
+    if not arn:
+        return None
+    try:
+        import boto3
+        client = client or boto3.client("stepfunctions")
+        ex = client.describe_execution(executionArn=arn.replace(":stateMachine:", ":execution:") + ":" + run_id)
+    except Exception:
+        return None
+    if ex.get("status") in ("FAILED", "TIMED_OUT", "ABORTED"):
+        return f"the run {ex['status'].lower().replace('_', ' ')} on the server" + (f" ({ex['error']})" if ex.get("error") else "")
+    return None
 
 
 def get_answers(event, context=None):
