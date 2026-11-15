@@ -65,6 +65,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 11:54 ET · Partner (AI) · Web (correction engine panel) + pre-submission checks
+**Did:** The correction engine panel (button left of Settings) now says plainly that the feature is a work in progress, with a "Where it stands" list: what works today and what is still being worked on. Pre-submission checks on the live site and backend: seven proposal types in Fast mode (apartment building, concert venue, bus route, drone route, road closure, rezoning, strip club) all ran clean in 8 to 20 s with 981 to 1,000 of 1,000 residents answering; the demo tour ran 9 of 9 steps on the live site with no page errors.
+**Files:** web/prototype/index.html (16 lines added, 3 of my own lines reworded, all inside the `.corrx` panel code)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** Partner submits to Shipyard.
+
 ### 2026-11-15 11:34 ET · Partner (AI) · Web + Infra (on main, asked for by Partner)
 **Did:** Three additions, none of which removes or rewrites existing page code (index.html: 179 lines added, 0 deleted across the two web commits). (1) **Demo mode**: Settings > Presentation > Demo mode, or `?demo=1`. It tours the districts, types a question, sends a real run, opens a supporter, an opponent and a neutral resident, then the district detail and Compare. Esc or Stop ends it. Checked end to end (9 of 9 steps, no console errors) on top of Salem's page as of commit 1e54fe4. (2) **Correction engine preview**: a new button left of the settings icon opens the saved report of one real correction (`web/prototype/corrections/example.json`: a 5,000-seat concert venue, District 6, Accurate mode, run Nov 15). Read-only; it calls no backend. Everything it adds is under `.corrx` / `#corrx` / `#corrxBtn`. The engine itself stays on the `correction-engine` branch. (3) **Fast mode sends every group of 25 at once** (was 10 at a time): 10.5 s for two districts against about 20 s, measured on `citysim-partner`. Accurate is unchanged. The state machine's Map now reads its concurrency from `plan_batches` (`MaxConcurrencyPath`).
 **Files:** web/prototype/index.html, web/prototype/corrections/example.json, infra/runs.py, infra/template.yaml, residents/batch.py, infra/tests/test_runs.py
