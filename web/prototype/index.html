@@ -1466,8 +1466,8 @@ var mapView = (function () {
           if (fc) map.easeTo({ center: fc.center, zoom: Math.min(fc.zoom - 0.25, 16.5), pitch: map.getPitch(), bearing: map.getBearing(), duration: 500 }); }
         dropMarker(kind, markerPoint(kind, B, opts));
         B.ready = true; B.t0 = performance.now(); };
-      map.once('moveend', function () { map.once('idle', go); setTimeout(go, 900); });   // street tiles for the framed view are loaded by then
-      setTimeout(go, 2000);
+      map.once('moveend', function () { map.once('idle', go); setTimeout(go, 2200); });   // wait for the framed view's street tiles (idle), with a cap
+      setTimeout(go, 4000);
       requestAnimationFrame(buildLoop);
       return 1300 + (kind === 'building' ? 2100 : kind === 'road' ? 2600 : kind === 'event' ? 3600 : kind === 'rezone' ? (b ? 2700 : 1900) : b ? DRAW + DRIVE : RISE + 300);
     },
