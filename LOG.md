@@ -64,6 +64,11 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: no road highlight layer, no pin marker
+- Removed the 'all-roads' overlay line layer (basemap roads only again; outside-district dim stays). Map pick reads road names from the basemap road layers.
+- No orange marker after picking a place.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: pick places on the map (From / To / Where)
 - Every place field (where/from/to) has a pin button. It turns the map top-down; click an intersection or road and the field fills with the road name(s) plus exact coordinates, e.g. `Michigan Ave & Trumbull St (42.33120, -83.06710)`. Typing coordinates works too.
 - A proposal stuck on needs_info unlocks Run once every place field is filled; POST /runs re-checks it as before.

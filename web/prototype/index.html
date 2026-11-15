@@ -509,10 +509,11 @@ var mapView = (function () {
   map.on('idle', function () { if (ready && map.getZoom() >= PEOPLE_ZOOM && snapToStreets(residents.filter(function (r) { return on(r.d); }))) { snapRound++; render(); } });
   map.on('dragstart', function () { if (followed) { followHold = false; followed = null; document.getElementById('pcFollow').textContent = 'Not following. Click the person again to follow.'; } });
   document.addEventListener('visibilitychange', kick);
-  var pickCb = null, pickPrev = null, pickMarker = null;
+  var pickCb = null, pickPrev = null;
   function roadNamesAt(pt) {
     var R = 16, box = [[pt.x - R, pt.y - R], [pt.x + R, pt.y + R]], best = {};
-    var layers = ['all-roads'].filter(function (id) { return map.getLayer(id); });
+    var src = basemapSource(), layers = (map.getStyle().layers || []).filter(function (l) {
+      return l.source === src && (l['source-layer'] === 'roads' || l['source-layer'] === 'transportation' || l['source-layer'] === 'transportation_name'); }).map(function (l) { return l.id; });
     map.queryRenderedFeatures(box, layers.length ? { layers: layers } : undefined).forEach(function (f) {
       var n = f.properties && (f.properties.name || f.properties['name:en'] || f.properties.ref); if (!n || !f.geometry) return;
       var g = f.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : []; if (!lines.length) return;
@@ -527,7 +528,6 @@ var mapView = (function () {
   function endPick(done) {
     if (!pickCb) return;
     var cb = pickCb; pickCb = null; el.classList.remove('is-picking'); document.getElementById('pickBar').hidden = true;
-    if (map.getLayer('all-roads')) map.setLayoutProperty('all-roads', 'visibility', roadsOn ? 'visible' : 'none');
     if (!done && pickPrev) map.easeTo(pickPrev);
     cb(done || null);
   }
@@ -535,8 +535,6 @@ var mapView = (function () {
     if (pickCb) {
       var names = roadNamesAt(e.point), ll = e.lngLat;
       var label = names.length > 1 ? names[0] + ' & ' + names[1] : names.length ? names[0] : '';
-      if (pickMarker) pickMarker.remove();
-      pickMarker = new maplibregl.Marker({ color: '#F97316' }).setLngLat(ll).addTo(map);
       endPick({ label: label, lon: ll.lng, lat: ll.lat, text: (label ? label + ' ' : '') + '(' + ll.lat.toFixed(5) + ', ' + ll.lng.toFixed(5) + ')' });
       return;
     }
@@ -564,8 +562,6 @@ var mapView = (function () {
     var src = basemapSource(), layer = src && roadLayerName(src);
     if (!layer) { map.once('idle', paintAllRoads); return; }
     var area = { type: 'FeatureCollection', features: districts.features.filter(function (f) { return on(f.properties.n); }) };
-    var kind = ['coalesce', ['get', 'kind'], ['get', 'class']];
-    var filter = ['match', kind, ['highway', 'motorway', 'trunk', 'major_road', 'primary', 'secondary', 'tertiary', 'medium_road', 'minor_road', 'minor', 'residential', 'service', 'living_street'], true, false];
     // spotlight: everything outside the selected districts gets a dark tint (roads, basemap), so their streets stand out
     var holes = [];
     area.features.forEach(function (f) { var g = f.geometry, polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates; polys.forEach(function (pc) { holes.push(pc[0].slice().reverse()); }); });
@@ -573,19 +569,6 @@ var mapView = (function () {
     if (map.getSource('outside')) map.getSource('outside').setData(mask);
     else { map.addSource('outside', { type: 'geojson', data: mask });
            map.addLayer({ id: 'outside-dim', type: 'fill', source: 'outside', paint: { 'fill-color': '#05080F', 'fill-opacity': 0.5 } }, map.getLayer('buildings') ? 'buildings' : undefined); }
-    try {
-    if (!map.getLayer('all-roads')) {
-      map.addLayer({ id: 'all-roads', type: 'line', source: src, 'source-layer': layer, filter: filter,
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: {
-          'line-color': ['match', kind, ['highway', 'motorway', 'trunk'], '#A5B4CB', ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], '#8C9BB3', '#6B7A92'],
-          'line-opacity': ['match', kind, ['highway', 'motorway', 'trunk', 'major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 0.75, 0.55],
-          'line-width': ['interpolate', ['linear'], ['zoom'], 10, ['match', kind, ['highway', 'motorway', 'trunk'], 1.6, ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 1, 0.4],
-                                                              16, ['match', kind, ['highway', 'motorway', 'trunk'], 6, ['major_road', 'primary', 'secondary', 'tertiary', 'medium_road'], 4, 2.2]]
-        } }, map.getLayer('outside-dim') ? 'outside-dim' : map.getLayer('buildings') ? 'buildings' : undefined);
-    } else map.setFilter('all-roads', filter);
-    map.setLayoutProperty('all-roads', 'visibility', roadsOn ? 'visible' : 'none');
-    } catch (e) { map.once('idle', paintAllRoads); }
   }
   function paintBuildings() {
     if (!map.getLayer('buildings') || !sel.length) return;
@@ -892,12 +875,10 @@ var mapView = (function () {
       if (pickCb) endPick(null);
       pickPrev = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(), duration: 600 };
       pickCb = cb; el.classList.add('is-picking');
-      if (map.getLayer('all-roads')) map.setLayoutProperty('all-roads', 'visibility', 'visible');
       document.getElementById('pickWhat').textContent = what; document.getElementById('pickBar').hidden = false;
       map.easeTo({ pitch: 0, bearing: 0, zoom: Math.max(map.getZoom(), 15), duration: 700 });
     },
     cancelPick: function () { endPick(null); },
-    clearPin: function () { if (pickMarker) { pickMarker.remove(); pickMarker = null; } },
     setTheme: function (t) { theme = t; },          // panels only; the map keeps its dark look
     setRoads: function (v) { roadsOn = v; paintAllRoads(); render(); }
   };
