@@ -35,12 +35,20 @@ def persona_line(p: dict) -> str:
     return base + census_details(p)
 
 
+def context_line(p: dict) -> str | None:
+    """Facts about the area around the resident's home block (data/personas/context.py, Tier 2), as one line.
+    Used only when PERSONA_CARD is tier2 or all."""
+    if os.environ.get("PERSONA_CARD", "base") not in ("tier2", "all") or not p.get("context"):
+        return None
+    return "  Around their home: " + "; ".join(p["context"])
+
+
 def census_details(p: dict) -> str:
     """More facts from the same census record (BACKEND_PLAN.md 7.1, Tier 1). Fixed order; a fact is listed only
     when the record has it. Used only when PERSONA_CARD=tier1. The default is the base card: in the Nov 14 accuracy
     check (residents/calibration_results.json) Nova 2 Lite averaged 14.1 points of error with the base card and 19.5
     with these added, so the plan's rule (keep a tier only if error drops) leaves them off."""
-    if os.environ.get("PERSONA_CARD", "base") != "tier1" or "education" not in p:
+    if os.environ.get("PERSONA_CARD", "base") not in ("tier1", "all") or "education" not in p:
         return ""
     bits = []
     if p.get("race"):
@@ -90,6 +98,8 @@ def build_quotes(personas: list[dict], answers: dict[str, dict], spec: dict) -> 
     for p in personas:
         a = answers[p["persona_id"]]
         lines.append(f"- [{p['persona_id']}] {persona_line(p)}")
+        if context_line(p):
+            lines.append(context_line(p))
         lines.append(f"  stance: {a['stance']}; main reason: {a['reason']}")
     lines += ["", "Reply with a JSON array, one object per resident, in the same order:", '{"persona_id": "...", "quote": "..."}']
     return "\n".join(lines)
@@ -104,6 +114,8 @@ def build(personas: list[dict], spec: dict, impact_lines: dict[str, list[str]] |
     for p in personas:
         pid = p["persona_id"]
         lines.append(f"- [{pid}] {persona_line(p)}")
+        if context_line(p):
+            lines.append(context_line(p))
         if impact_lines is not None:
             lines.append("  Personal impact: " + "; ".join(impact_lines.get(pid, ["No direct change near your home"])))
         if quotes:

@@ -46,7 +46,11 @@ SYSTEM = (
 
 
 def message(personas: list[dict], statement: str) -> str:
-    lines = ["Residents:"] + [f"- [{p['persona_id']}] {prompt.persona_line(p)}" for p in personas]
+    lines = ["Residents:"]
+    for p in personas:
+        lines.append(f"- [{p['persona_id']}] {prompt.persona_line(p)}")
+        if prompt.context_line(p):
+            lines.append(prompt.context_line(p))
     lines += ["", prompt.CALIBRATION_TEMPLATE.format(statement=statement), "",
               f"Allowed stances: {', '.join(prompt.STANCES)}", f"Allowed reasons: {', '.join(prompt.REASONS)} (use 'none' only with neutral)",
               "Reply with a JSON array, one object per resident, in the same order:", '{"persona_id": "...", "stance": "...", "reason": "..."}']
@@ -98,7 +102,19 @@ def run(model: str, per_district: int, card: str, personas_dir: str, workers: in
         total = sum(weight[i] for i in answers)
         share = {s: round(100 * sum(weight[i] for i, v in answers.items() if v == s) / total, 1) for s in prompt.STANCES} if total else {}
         sim = share.get("support")
-        checks.append({"id": c["id"], "label": c["label"], "real": c["real_pct"], "source": c["source"], "statement": c["statement"],
+        if c["id"] == "safe_walking":            # direct test: do answers move with the crime count around the home?
+            crime = {p["persona_id"]: p.get("crimes_quarter_mile_2026") for p in people}
+            got = sorted((crime[i] for i in answers if crime.get(i) is not None))
+            if got:
+                lo, hi = got[len(got) // 3], got[2 * len(got) // 3]
+                def agree(keep):
+                    ids = [i for i in answers if crime.get(i) is not None and keep(crime[i])]
+                    w = sum(weight[i] for i in ids)
+                    return round(100 * sum(weight[i] for i in ids if answers[i] == "support") / w, 1) if w else None
+                c = {**c, "by_crime": {"lowest_third_blocks_agree": agree(lambda x: x <= lo), "highest_third_blocks_agree": agree(lambda x: x >= hi),
+                                       "thirds_cut_at": [lo, hi]}}
+                print("    safe walking by crime near home:", c["by_crime"])
+        checks.append({"id": c["id"], "label": c["label"], **({"by_crime": c["by_crime"]} if "by_crime" in c else {}), "real": c["real_pct"], "source": c["source"], "statement": c["statement"],
                        "simulated": sim, "error_pts": None if sim is None else round(sim - c["real_pct"], 1),
                        "neutral": share.get("neutral"), "disagree": share.get("oppose"), "answered": len(answers), "asked": len(people)})
         print(f"  {c['id']:<24} real {c['real_pct']:>3}%  simulated {sim}%  (neutral {share.get('neutral')}%, disagree {share.get('oppose')}%)  "
@@ -130,7 +146,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
     ap.add_argument("--per-district", type=int, default=200)
-    ap.add_argument("--card", choices=["base", "tier1"], default="tier1")
+    ap.add_argument("--card", choices=["base", "tier1", "tier2", "all"], default="base")
     ap.add_argument("--personas", default="data/processed/personas")
     a = ap.parse_args()
     print(f"{a.model}, card {a.card}, {a.per_district} residents per district")

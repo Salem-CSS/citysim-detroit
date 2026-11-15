@@ -77,6 +77,22 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 **Blocked / needs:** none
 **Next:** frontend edits on this branch.
 
+### 2026-11-14 23:23 ET · Partner (AI) · Data (personas) + Residents
+**Did:** Neighborhood facts (Tier 2) built for every resident and tested. `data/personas/context.py` computes, for each of the 2,656 home blocks, facts within a quarter mile or to the nearest feature: neighborhood name; crimes reported in 2026 and the most common kinds (74,094 incidents); vacant Land Bank lots (53,860); active liquor licenses (1,712); nearest park, school and bus stop with route; vehicles a day on the nearest counted street; most common 311 requests in the past 12 months (84,494); share of adults in fair or poor health in the tract (CDC PLACES 2023). Stored on every persona row as `context` lines plus numbers; uploaded to `s3://citysim-data-707604458164/personas/`. Five new downloads added to `data/download/detroit.py`.
+**Tested with the accuracy check (Nova 2 Lite, 1,400 residents):**
+
+| Card | Safe walking (real 85) | Satisfied (67) | Right direction (55) | Used transit (32) | Avg error |
+| --- | --- | --- | --- | --- | --- |
+| base (rerun) | 65.2 | 70.4 | 46.1 | 11.7 | **13.1** |
+| tier2 (base + neighborhood facts) | 18.1 | 31.9 | 13.5 | 21.7 | 38.5 |
+
+Direct test from the plan: with Tier 2, residents on the lowest-crime third of blocks agree they feel safe 38.3% of the time, on the highest-crime third 2.6%; with the base card 66.8% vs 64.2%. So the model does use the facts, but it over-reacts to them.
+**Files:** data/personas/context.py (new), data/download/detroit.py, residents/{prompt,calibrate}.py, residents/calibration_results.json, infra/template.yaml, LOG.md
+**Contracts changed:** none. Persona rows gain `context`, `neighborhood`, `crimes_quarter_mile_2026`, `landbank_lots_quarter_mile`, `liquor_licenses_quarter_mile`, `park_m`, `school_m`, `bus_stop_m`, `requests_311_quarter_mile_year`.
+**Decisions:** Tier 2 stays **off** in the deployed stacks (`PersonaCard=base`). Raw counts such as "121 crimes within a quarter mile" read as alarming to the model and push every answer negative, tripling the error. `PersonaCard` now accepts `base | tier1 | tier2 | all`, so it can be switched on per deploy.
+**Blocked / needs:** Not tried: stating each fact relative to the city ("fewer crimes than most Detroit blocks") instead of as a raw count, which may keep the block-to-block signal without the alarm. Left out for time: 911 calls and response times (319,185 rows), blight tickets (913,837 rows), bus frequency from the schedule feed. The stop ridership period is not stated by the city. `cdc_places_wayne_tracts.json` was fetched directly and is not in the download manifest.
+**Next:** traffic numbers for buildings, then bus.
+
 ### 2026-11-14 23:16 ET · Partner (AI) · Residents (calibration)
 **Did:** Built and ran the accuracy check. `residents/calibrate.py` asks residents four statements with a known real answer from the Detroit resident survey (DMACS) and compares the census-weighted share who agree. 1,400 residents (200 per district), every result stored in `residents/calibration_results.json`. Each run result now carries `calibration` for the deployed model and persona card, and the prototype's "forecast, not a poll" note shows it.
 
