@@ -64,6 +64,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 02:19 ET · Partner (AI) · Residents (test only, no code change)
+**Did:** Ran the batching test from BACKEND_PLAN 15.1 (P1). 200 real residents of Districts 4-7 at their real homes (all 91 within 1 mile of the bus route Hilton Garden Inn → Renaissance Center, plus 109 drawn at random from the 1,909 farther away), Nova 2 Lite, base card, stance only. Each way of asking was run twice and the residents whose answer changed were counted. Same batches asked twice (control): 2 of 200 changed. Random batches of 25 with different batch-mates (how runs work today): 38 of 200 changed, support 86 → 67. Batches sorted by distance with different batch-mates: 49 of 200 changed, oppose 0 → 17. One at a time, asked twice: 24 of 200 changed but totals held (66/118/16 then 64/118/18 support/neutral/oppose). One at a time with temperature 0, asked twice: 10 of 200 changed (69/115/16 then 70/110/20).
+**Files:** BACKEND_PLAN.md (15.1 result), LOG.md
+**Contracts changed:** none
+**Decisions:** Sorting batches by distance does not fix the problem; it was worse than random batches. Asking one at a time is the only method tested where batch-mates cannot matter. Measured cost for 200 residents: $0.022 and 8 s batched (8 calls, 4 at once) against $0.041 and 49 s one at a time (200 calls, 8 at once), so about 1.85 times the cost. Not switched on: needs Partner's go-ahead because it raises cost and run time.
+**Blocked / needs:** One at a time, residents within 1 mile split by vehicles as expected: no vehicle 24 support / 0 neutral / 0 oppose; one vehicle 13 / 20 / 4; two or more 5 / 17 / 8. In random batches the same residents were 24/0/0, 31/6/0 and 23/5/2. So every run made so far overstates support near a site. Even one at a time, 5% to 12% of individual answers differ between two askings; the totals moved by at most 2.5 points on 200 residents. P2 (run-to-run spread on a full run) is still to be measured.
+**Next:** If approved: switch resident batches to one resident per call with temperature 0, check throttling and time on a 2,000-resident run, then P2.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: compact compare profile, no takeaway, no info button
 - Compare: "Who lives here" dot plots replaced with a small table (districts as columns, value + thin bar, highest bold). Takeaway line removed.
 - Map attribution (i) button removed; credits now in the Settings popover.

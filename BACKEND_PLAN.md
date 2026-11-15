@@ -488,6 +488,18 @@ Steps 4–5, 6, 7 and 10 can run in parallel once 2 and 3 are done.
 | P2 | The same proposal gives different totals on different runs (strip club, District 6: 12%, 0.3%, 2.9% and 2.5% support across four runs with different prompts). | Measure run-to-run spread: run the unchanged proposal twice. A changed version only counts as better if it beats the original by more than that spread. |
 | P3 | Only a handful of residents live near any one site (10 of 2,000 within a quarter mile). | Section 16, option C: draw extra residents from the blocks near the site so the near group is large enough to read. |
 
+**P1 test result (Nov 15).** 200 real residents of Districts 4-7 (all 91 within 1 mile of the bus route, 109 at random from farther away), each way of asking run twice:
+
+| Way of asking | Residents whose answer changed between two rounds | Totals, round 1 → round 2 (support / neutral / oppose) | Cost and time for 200 |
+| --- | --- | --- | --- |
+| Random batches of 25, same batch-mates twice (control) | 2 of 200 | 86/108/6 → 88/106/6 | $0.022, 8 s |
+| Random batches of 25, different batch-mates (today's method) | 38 of 200 | 86/108/6 → 67/132/1 | $0.022, 8 s |
+| Batches sorted by distance, different batch-mates | 49 of 200 | 55/145/0 → 56/127/17 | $0.022, 8 s |
+| One at a time | 24 of 200 | 66/118/16 → 64/118/18 | $0.041, 49 s |
+| One at a time, temperature 0 | 10 of 200 | 69/115/16 → 70/110/20 | $0.041, 50 s |
+
+Sorting by distance does not help. One at a time is the fix: batch-mates cannot matter, totals hold within 2.5 points, and residents near the route split by vehicles (no vehicle 24/0/0, one 13/20/4, two or more 5/17/8) where random batches had nearly all of them supporting. Cost is about 1.85 times batched. Not yet switched on.
+
 ### 15.2 The loop
 
 ```
