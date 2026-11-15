@@ -1057,7 +1057,7 @@ var mapView = (function () {
       getColor: col, capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
     if (o.bike && o.change !== 'bike_lane' && t > 900) { var bd = ease((t - 900) / 1400);
       L.push(new deck.PathLayer({ id: 'r-bike', data: lines.map(function (ln) { return along(ln, bd).head; }), getPath: function (d) { return d; },
-        widthUnits: 'pixels', getWidth: 5, getColor: [134, 239, 172, 255], capRounded: true, parameters: { depthTest: false, depthCompare: 'always' }, jointRounded: true, updateTriggers: { getPath: bd } })); }
+        widthUnits: 'pixels', getWidth: 5, getColor: [22, 163, 74, 255], capRounded: true, parameters: { depthTest: false, depthCompare: 'always' }, jointRounded: true, updateTriggers: { getPath: bd } })); }
     var ends = []; lines.forEach(function (ln) { if (ln.length) { ends.push(ln[0]); } }); if (lines.length) { var last = lines[lines.length - 1]; ends.push(last[last.length - 1]); }
     if (o.change === 'close' && t > 1200) L.push(new deck.ScatterplotLayer({ id: 'r-ends', data: ends, getPosition: function (p) { return p; },
       radiusUnits: 'pixels', getRadius: 7 * ease((t - 1200) / 300), getFillColor: [239, 68, 68, 255], stroked: true, getLineColor: [248, 250, 252], lineWidthUnits: 'pixels', getLineWidth: 2, updateTriggers: { getRadius: t } }));
