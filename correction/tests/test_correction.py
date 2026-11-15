@@ -206,6 +206,12 @@ def drive(world, changes, target="more_support_than_oppose", limit=20):
     return loop.load("c1")
 
 
+def nobody_supports(world):
+    """Residents far from the site are neutral, not supportive, in the original run and in every rerun."""
+    world["state"]["far"] = "neutral"
+    world["table"].items["resp#run-0#0"] = {"rows": json.dumps([answer(p, HERE, "neutral") for p in world["people"]])}
+
+
 def said(k, n=20):
     return [{"persona_id": "x", "one_change": k, "reaction": "r"}] * n
 
@@ -224,9 +230,10 @@ def test_loop_moves_the_site_and_stops_when_the_target_is_reached(world):
 
 
 def test_loop_never_exceeds_five_reruns(world, monkeypatch):
-    world["state"]["far"] = "neutral"                 # nobody ever supports: the target cannot be reached
-    monkeypatch.setattr(core.Predictor, "predict", lambda self, place, ppl: {"support": 60.0, "neutral": 30.0, "oppose": 10.0, "opposed_within_quarter_mile": 0.0})
-    out = drive(world, said("different location"), target="majority")           # the predictor is (wrongly) hopeful every time
+    nobody_supports(world)                            # the target cannot be reached
+    hopeful = lambda self, place, ppl: {"support": 0.0 if abs(place["lat"] - ORIGIN[1]) < 1e-9 else 60.0, "neutral": 30.0, "oppose": 10.0, "opposed_within_quarter_mile": 0.0}
+    monkeypatch.setattr(core.Predictor, "predict", hopeful)
+    out = drive(world, said("different location"), target="majority")           # the predictor is (wrongly) hopeful about every other site
     assert out["status"] == "done" and out["stop_reason"] == "5 reruns used"
     assert len(out["attempts"]) == core.MAX_RERUNS == 5 and out["reruns_used"] == 5
     assert len(world["started"]) == 2 + 5 and all(not a["meets_target"] for a in out["attempts"])
@@ -234,7 +241,7 @@ def test_loop_never_exceeds_five_reruns(world, monkeypatch):
 
 
 def test_loop_stops_early_when_no_site_is_predicted_to_do_better(world):
-    world["state"]["far"] = "neutral"
+    nobody_supports(world)
     out = drive(world, said("different location"), target="majority")
     assert out["stop_reason"] == "no remaining candidate is predicted to beat the best so far" and 1 <= len(out["attempts"]) < 5
 
@@ -248,7 +255,7 @@ def test_loop_tries_size_when_opponents_ask_for_smaller(world):
 
 def test_loop_stops_when_the_spending_limit_stops_a_run(world):
     world["state"]["stop"] = "stopped: daily spending limit reached"
-    world["state"]["far"] = "neutral"
+    nobody_supports(world)
     out = drive(world, said("different location"), target="majority")
     assert out["status"] == "done" and out["stop_reason"].startswith("spending limit reached") and len(out["attempts"]) == 0
 

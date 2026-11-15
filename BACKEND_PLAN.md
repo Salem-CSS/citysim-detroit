@@ -628,6 +628,47 @@ Same residents (the same persona ids), same model, same prompt template, same ba
 - Zoning: a sourced table of which uses each district permits would let candidates be filtered properly. Not found yet.
 - Should the user be able to rule sites in or out before the loop starts (for example "not near a school")?
 
+### 15.13 As built (Nov 15, branch `correction-engine`, not on main)
+
+Built and deployed to the test stack `citysim-partner` only. `web/prototype/config.js` on this branch points at that stack.
+
+| Piece | File | Notes |
+| --- | --- | --- |
+| Diagnosis, levers, candidates, predictor, who lives near | `correction/core.py` | no AWS; thresholds named at the top of the file |
+| Asking opponents the seven questions | `correction/ask.py` | nearest opponents first, up to 200; same residents-per-call as the run |
+| The loop | `correction/loop.py` | event driven: `POST /corrections` starts it, each finished rerun calls the next step; no Lambda waits |
+| Site index | `data/correction/build_sites.py` → `s3://…/processed/correction/sites.json` | 53,711 Land Bank lots joined to the parcel file; 377,937 zoned parcels for the zoning lookup |
+| API | `POST /corrections {run_id, target}`, `GET /corrections/{id}` | contract `contracts/correction_result.schema.json`, fixture `fixtures/correction_result.busgarage.json` |
+| Page | "Find a better version" in the results footer | report: best version, why they said no, what was tried, who lives near each site, limits; numbered pins on the map |
+| Tests | `correction/tests/test_correction.py` | 16 tests, including the cap of 5 and each stop reason |
+
+Differences from the plan above:
+- **Not a second state machine.** One Lambda (`correction-step`) is invoked asynchronously for each step; `aggregate_step` tells it when one of its runs finishes. The cap of 5 is in `correction/core.MAX_RERUNS` and checked in `loop.run_finished`.
+- **Candidate pool is Land Bank lots only** (publicly owned), not every vacant parcel. Largest lots first, at least half a mile apart.
+- **Lot size is not matched to the proposal**: the proposal does not carry a required lot area.
+- **Stop rule for sites:** the best remaining site's predicted score, plus the predictor's error on the last site tried, must beat the predictor's own figure for the best site so far; otherwise the engine moves to the next lever or stops.
+- **Later levers build on the best version so far**, not on the original.
+- **Size and hours** have no predictor: their values are tried in order (three quarters, half, a quarter; the other hours options).
+- **Routes** (bus, drone) cannot be moved yet: the location lever needs a single verified site.
+
+Real runs on `citysim-partner` (Nova 2 Lite, 500 residents per district):
+
+| Proposal, districts, mode | Original (support / neutral / oppose) | Repeat differs by | Reruns | Best found | Stop | Time, rerun cost |
+| --- | --- | --- | --- | --- | --- | --- |
+| Strip club at Michigan & Trumbull, D6, Fast | 2.4 / 62.5 / 35.1 | 0.4 pts | 2 sites | 2601 S Fort: 2.5 / 68.0 / 29.5 | no site predicted better | 66 s, $0.16 |
+| Bus garage at Michigan & Trumbull, D5+6, Fast, target majority | 6.9 / 70.4 / 22.7 | 1.1 pts | 1 site | 2960 Poplar: 10.0 / 69.7 / 20.3 | no site predicted better | 70 s, $0.15 |
+| Strip club, D6, Accurate | 16.6 / 33.3 / 50.2 | 1.2 pts | 1 site | 2601 S Fort: 21.4 / 34.9 / 43.7 | no site predicted better | 467 s, $0.13 |
+| 5,000-seat venue, evening, D6, Fast | 6.2 / 59.3 / 34.5 | 0.8 pts | afternoon; 2 sites | 2601 S Fort: 6.8 / 72.8 / 20.3 | no site predicted better | 72 s, $0.24 |
+| Strip club, D6, Fast (final stop rule) | 2.6 / 62.2 / 35.1 | 0.1 pts | 2 sites | 2601 S Fort: 2.9 / 69.1 / 28.0 | no site predicted better | 59 s, $0.16 |
+
+None of the five reached its target. Moving the site cut opposition by 5 to 14 points and never produced more support than opposition.
+
+Known weaknesses:
+- **The predictor is poor.** For the first site it predicted 13% oppose and the run gave 28% to 34%. Residents far from every site still oppose at 20% to 45%, which the distance table underweights after one run.
+- **In Fast mode the same site gives different totals in different corrections** (2601 S Fort: 29.5%, 33.9% and 28.0% oppose) because answers depend on who shares a model call. Use Accurate mode for a correction whose result will be acted on.
+- **The repeat understates variation in Fast mode** (0.1 to 1.1 pts), since two identical runs are nearly identical.
+- Only one district-sized Accurate correction has been run.
+
 ## 16. Parked feature: weighting residents by distance (raised Nov 15, not decided)
 
 **The idea (Partner).** People close to a proposal should count for more in the result than people far from it. Raised after a bus route came back 81% neutral because the typical resident asked lived 5 miles away.

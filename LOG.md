@@ -64,6 +64,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 03:56 ET · Partner (AI) · Correction engine (branch `correction-engine` only, NOT on main)
+**Did:** Built the correction engine from BACKEND_PLAN section 15 and tested it on real AWS. After a run, "Find a better version" works out why residents said no (by distance, by group, and by asking up to 200 opponents the seven parked questions), picks what to change (location, size or hours), draws real alternative sites from 53,711 Land Bank lots in the same zoning district, ranks them from the residents' own answers, and reruns the proposal on the same residents, at most 5 times. Report: best version, why they said no, every attempt with its prediction, who lives near each site, limits.
+**Files:** correction/ (core.py, ask.py, loop.py, tests), data/correction/build_sites.py, infra/runs.py (`launch`, `spec_json` on the run item, the finished run notifies the correction), infra/template.yaml (3 functions, 2 routes), infra/deploy.sh, web/prototype/index.html, web/prototype/config.js, contracts/correction_result.schema.json, fixtures/correction_result.busgarage.json, contracts/README.md, BACKEND_PLAN.md (15.13 As built)
+**Contracts changed:** NEW `contracts/correction_result.schema.json` + fixture (GET /corrections/{id}). POST /corrections `{run_id, target}`; target is `more_support_than_oppose`, `majority` or `two_thirds`. No existing contract changed.
+**Decisions:** Deployed to `citysim-partner` only; `citysim-main` and main do not have it. On this branch `web/prototype/config.js` points at the partner stack: do not merge that file to main as it is. See 15.13 for how the build differs from the plan.
+**Blocked / needs:** Five real corrections ran (59 s to 467 s, $0.13 to $0.24 of reruns each); none reached its target, and moving the site cut opposition by 5 to 14 points. The predictor is weak (predicted 13% oppose, got 28% to 34%). In Fast mode the same site gives different totals in different corrections. Routes cannot be moved yet. To merge: review, deploy `citysim-main` from the merged code, upload nothing new (the site index is already in the bucket), and restore config.js.
+**Next:** Partner to review the branch.
+
 ### 2026-11-15 03:42 ET · Partner (AI) · Infra + Web (failed runs no longer hang)
 **Did:** GET /runs/{id} now checks the run's Step Functions execution while the run is still marked running; if it failed, timed out or was aborted, the response has `status: "failed"` and an `error` line. The page shows "Could not run: ..." and re-enables the button instead of waiting for its time limit. Settings hint for Accurate now reads "about 2 to 3 minutes per district" (measured: 108 s for one district, 631 s for four).
 **Files:** infra/runs.py, infra/template.yaml, infra/tests/test_runs.py, web/prototype/index.html, LOG.md

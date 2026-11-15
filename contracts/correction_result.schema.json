@@ -384,7 +384,8 @@
       }
     },
     "predictor": {
-      "type": "object"
+      "type": "object",
+      "description": "cells used, answers used, and predicted_score_at_best_site: the predictor's own figure for the best site so far, which the remaining candidates are compared with"
     },
     "attempts": {
       "type": "array",
@@ -516,6 +517,10 @@
           },
           "site": {
             "type": "object"
+          },
+          "prediction_error": {
+            "type": "number",
+            "description": "absolute difference between the predicted and the real score for this site, in points"
           },
           "beats_best_beyond_spread": {
             "type": "boolean"

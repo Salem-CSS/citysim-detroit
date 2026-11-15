@@ -10,6 +10,10 @@ Steps
     {"correction_id", "run_id"}            a run this correction started has finished (sent by infra/runs.aggregate_step):
                                            record it, then either stop or start the next rerun
 
+Stopping early: after each rerun the remaining sites are re-ranked. The search for sites ends when the best remaining
+site's predicted score, plus the predictor's error on the last site tried, is still no better than the predictor's
+own figure for the best site so far.
+
 Hard caps, checked here and nowhere else: at most core.MAX_RERUNS reruns per correction; every run is subject to
 the run and day spending limits in shared/budget.py, and a run that was stopped by them ends the correction.
 
@@ -200,8 +204,23 @@ def rank(state: dict, people: dict) -> None:
         c["predicted"] = pred.predict({"kind": "point", "lon": c["lon"], "lat": c["lat"]}, plist)
         c["predicted_score"] = core.score(c["predicted"], state["target"])
     state["candidates"].sort(key=lambda c: (-c["predicted_score"], c["predicted"]["opposed_within_quarter_mile"]))
+    # The same predictor's figure for the best site so far. Candidates are compared with this, not with the best
+    # site's real result, so a predictor that runs high or low everywhere does not decide the outcome.
+    here = best_place(state)
+    ref = core.score(pred.predict(here, plist), state["target"]) if here else None
     state["predictor"] = {"cells": "distance band" + (f" x {trait_name}" if trait_name else ""),
-                          "answers_used": pred.all[3], "min_answers_per_cell": core.MIN_CELL}
+                          "answers_used": pred.all[3], "min_answers_per_cell": core.MIN_CELL, "predicted_score_at_best_site": ref}
+
+
+def best_place(state: dict) -> dict | None:
+    """Where the best version so far is: a rerun's site, or the original verified place."""
+    best = best_so_far(state)
+    for a in state["attempts"]:
+        if a["rerun"] == best["rerun"] and a["lever"] == "location":
+            return {"kind": "point", "lon": a["site"]["lon"], "lat": a["site"]["lat"]}
+    from engine import proximity
+    places = proximity.places_of(state["spec"])
+    return places[0] if places and places[0]["kind"] == "point" else None
 
 
 def run_finished(state: dict, run_id: str) -> None:
@@ -236,6 +255,10 @@ def run_finished(state: dict, run_id: str) -> None:
                    "beats_best_beyond_spread": sc - best["score"] > state["spread_pts"], "meets_target": core.met(sp, state["target"]),
                    "cost_usd": (result.get("run_stats") or {}).get("model_cost_usd"), "seconds": (result.get("run_stats") or {}).get("seconds")}
         state["attempts"].append(attempt)
+        if cand.get("predicted_score") is not None:      # how far off the prediction for this site was, in points
+            attempt["prediction_error"] = state["last_prediction_error"] = round(abs(sc - cand["predicted_score"]), 1)
+        if attempt["beats_best_beyond_spread"]:          # later levers build on the best version, not on the original
+            state["best_spec"] = json.loads(item["spec_json"])
         if attempt["meets_target"]:
             return stop(state, "target reached")
     if state["reruns_used"] >= state["max_reruns"]:
@@ -256,22 +279,30 @@ def next_rerun(state: dict, people: dict) -> None:
     tried = {a["label"] for a in state["attempts"]}
     state["candidates"] = [c for c in state["candidates"] if c["label"] not in tried]
     if not state["candidates"]:
-        state["lever_at"] += 1
-        build_candidates(state, people)
+        next_lever(state, people)
         if not state["candidates"]:
             return stop(state, "every alternative found has been tried")
     rank(state, people)
     cand = state["candidates"][0]
-    best = best_so_far(state)
-    if state["lever"] == "location" and state["attempts"] and cand["predicted_score"] <= best["score"]:
-        state["lever_at"] += 1                           # no remaining site is predicted to beat the best: try the next lever
-        build_candidates(state, people)
+    ref = (state.get("predictor") or {}).get("predicted_score_at_best_site")
+    # Stop trying sites only when none is predicted to beat the best even after allowing for how wrong the
+    # predictor was on the last site it was checked against. A poor predictor therefore cannot end the search early.
+    err = state.get("last_prediction_error") or 0
+    if state["lever"] == "location" and state["attempts"] and ref is not None and cand["predicted_score"] + err <= ref:
+        next_lever(state, people)                        # no remaining site is predicted to beat the best: try the next lever
         if not state["candidates"]:
             return stop(state, "no remaining candidate is predicted to beat the best so far")
         rank(state, people)
         cand = state["candidates"][0]
     state["reruns_used"] += 1
     launch(state, core.apply_candidate(state["spec"], cand), "rerun", cand)
+
+
+def next_lever(state: dict, people: dict) -> None:
+    state["lever_at"] += 1
+    if state.get("best_spec"):
+        state["spec"] = state["best_spec"]
+    build_candidates(state, people)
 
 
 def stop(state: dict, reason: str) -> None:
@@ -286,4 +317,5 @@ def stop(state: dict, reason: str) -> None:
     state["candidates_left"] = [{k: c.get(k) for k in ("label", "predicted", "predicted_score", "who_lives_near")} for c in state.get("candidates", [])][:8]
     state.pop("candidates", None)
     state.pop("spec", None)
+    state.pop("best_spec", None)
     save(state)
