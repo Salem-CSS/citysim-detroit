@@ -1,0 +1,282 @@
+[
+ {
+  "model": "us.amazon.nova-2-lite-v1:0",
+  "card": "tier1",
+  "prompt_version": "statement-v1",
+  "residents": 1400,
+  "per_district": 200,
+  "avg_error_pts": 19.5,
+  "measured": true,
+  "checks": [
+   {
+    "id": "safe_walking",
+    "label": "Feel somewhat or very safe walking in their neighborhood",
+    "real": 85,
+    "source": "DMACS W22 Q76",
+    "statement": "I feel somewhat or very safe walking in my neighborhood.",
+    "simulated": 48.2,
+    "error_pts": -36.8,
+    "neutral": 2.2,
+    "disagree": 49.6,
+    "answered": 1400,
+    "asked": 1400
+   },
+   {
+    "id": "neighborhood_satisfied",
+    "label": "Somewhat, mostly or very satisfied with their neighborhood",
+    "real": 67,
+    "source": "DMACS W22 Q11",
+    "statement": "I am satisfied with my neighborhood as a place to live.",
+    "simulated": 61.5,
+    "error_pts": -5.5,
+    "neutral": 8.4,
+    "disagree": 30.1,
+    "answered": 1400,
+    "asked": 1400
+   },
+   {
+    "id": "right_direction",
+    "label": "Detroit headed in the right direction",
+    "real": 55,
+    "source": "DMACS W22 Q32",
+    "statement": "Detroit is generally headed in the right direction.",
+    "simulated": 36.8,
+    "error_pts": -18.2,
+    "neutral": 29.7,
+    "disagree": 33.5,
+    "answered": 1400,
+    "asked": 1400
+   },
+   {
+    "id": "used_transit",
+    "label": "Used public transportation in Detroit in the past year",
+    "real": 32,
+    "source": "DMACS W20 Q80",
+    "statement": "I have used public transportation in Detroit in the past year.",
+    "simulated": 14.5,
+    "error_pts": -17.5,
+    "neutral": 60.7,
+    "disagree": 24.7,
+    "answered": 1400,
+    "asked": 1400
+   }
+  ],
+  "run_at": "2026-11-15T04:05:11Z",
+  "seconds": 98,
+  "limits": [
+   "Real values are those recorded in BACKEND_PLAN.md section 10; not re-read from the survey PDFs.",
+   "Residents react to a statement; the survey uses its own questions and scales.",
+   "Residents were given their census traits only, with no facts about their neighborhood."
+  ]
+ },
+ {
+  "model": "us.amazon.nova-2-lite-v1:0",
+  "card": "base",
+  "prompt_version": "statement-v1",
+  "residents": 1400,
+  "per_district": 200,
+  "avg_error_pts": 14.1,
+  "measured": true,
+  "checks": [
+   {
+    "id": "safe_walking",
+    "label": "Feel somewhat or very safe walking in their neighborhood",
+    "real": 85,
+    "source": "DMACS W22 Q76",
+    "statement": "I feel somewhat or very safe walking in my neighborhood.",
+    "simulated": 62.4,
+    "error_pts": -22.6,
+    "neutral": 10.7,
+    "disagree": 26.9,
+    "answered": 1400,
+    "asked": 1400
+   },
+   {
+    "id": "neighborhood_satisfied",
+    "label": "Somewhat, mostly or very satisfied with their neighborhood",
+    "real": 67,
+    "source": "DMACS W22 Q11",
+    "statement": "I am satisfied with my neighborhood as a place to live.",
+    "simulated": 71.5,
+    "error_pts": 4.5,
+    "neutral": 16.2,
+    "disagree": 12.3,
+    "answered": 1400,
+    "asked": 1400
+   },
+   {
+    "id": "right_direction",
+    "label": "Detroit headed in the right direction",
+    "real": 55,
+    "source": "DMACS W22 Q32",
+    "statement": "Detroit is generally headed in the right direction.",
+    "simulated": 45.3,
+    "error_pts": -9.7,
+    "neutral": 31.8,
+    "disagree": 22.9,
+    "answered": 1400,
+    "asked": 1400
+   },
+   {
+    "id": "used_transit",
+    "label": "Used public transportation in Detroit in the past year",
+    "real": 32,
+    "source": "DMACS W20 Q80",
+    "statement": "I have used public transportation in Detroit in the past year.",
+    "simulated": 12.4,
+    "error_pts": -19.6,
+    "neutral": 52.0,
+    "disagree": 35.6,
+    "answered": 1400,
+    "asked": 1400
+   }
+  ],
+  "run_at": "2026-11-15T04:06:59Z",
+  "seconds": 107,
+  "limits": [
+   "Real values are those recorded in BACKEND_PLAN.md section 10; not re-read from the survey PDFs.",
+   "Residents react to a statement; the survey uses its own questions and scales.",
+   "Residents were given their census traits only, with no facts about their neighborhood."
+  ]
+ },
+ {
+  "model": "us.amazon.nova-lite-v1:0",
+  "card": "base",
+  "prompt_version": "statement-v1",
+  "residents": 1400,
+  "per_district": 200,
+  "avg_error_pts": 33.5,
+  "measured": true,
+  "checks": [
+   {
+    "id": "safe_walking",
+    "label": "Feel somewhat or very safe walking in their neighborhood",
+    "real": 85,
+    "source": "DMACS W22 Q76",
+    "statement": "I feel somewhat or very safe walking in my neighborhood.",
+    "simulated": 27.1,
+    "error_pts": -57.9,
+    "neutral": 43.7,
+    "disagree": 29.2,
+    "answered": 1398,
+    "asked": 1400
+   },
+   {
+    "id": "neighborhood_satisfied",
+    "label": "Somewhat, mostly or very satisfied with their neighborhood",
+    "real": 67,
+    "source": "DMACS W22 Q11",
+    "statement": "I am satisfied with my neighborhood as a place to live.",
+    "simulated": 46.3,
+    "error_pts": -20.7,
+    "neutral": 30.1,
+    "disagree": 23.5,
+    "answered": 1397,
+    "asked": 1400
+   },
+   {
+    "id": "right_direction",
+    "label": "Detroit headed in the right direction",
+    "real": 55,
+    "source": "DMACS W22 Q32",
+    "statement": "Detroit is generally headed in the right direction.",
+    "simulated": 27.2,
+    "error_pts": -27.8,
+    "neutral": 29.8,
+    "disagree": 43.0,
+    "answered": 1397,
+    "asked": 1400
+   },
+   {
+    "id": "used_transit",
+    "label": "Used public transportation in Detroit in the past year",
+    "real": 32,
+    "source": "DMACS W20 Q80",
+    "statement": "I have used public transportation in Detroit in the past year.",
+    "simulated": 4.4,
+    "error_pts": -27.6,
+    "neutral": 4.0,
+    "disagree": 91.7,
+    "answered": 1397,
+    "asked": 1400
+   }
+  ],
+  "run_at": "2026-11-15T04:08:39Z",
+  "seconds": 93,
+  "limits": [
+   "Real values are those recorded in BACKEND_PLAN.md section 10; not re-read from the survey PDFs.",
+   "Residents react to a statement; the survey uses its own questions and scales.",
+   "Residents were given their census traits only, with no facts about their neighborhood."
+  ]
+ },
+ {
+  "model": "us.amazon.nova-lite-v1:0",
+  "card": "tier1",
+  "prompt_version": "statement-v1",
+  "residents": 1400,
+  "per_district": 200,
+  "avg_error_pts": 38.9,
+  "measured": true,
+  "checks": [
+   {
+    "id": "safe_walking",
+    "label": "Feel somewhat or very safe walking in their neighborhood",
+    "real": 85,
+    "source": "DMACS W22 Q76",
+    "statement": "I feel somewhat or very safe walking in my neighborhood.",
+    "simulated": 27.6,
+    "error_pts": -57.4,
+    "neutral": 30.3,
+    "disagree": 42.1,
+    "answered": 1399,
+    "asked": 1400
+   },
+   {
+    "id": "neighborhood_satisfied",
+    "label": "Somewhat, mostly or very satisfied with their neighborhood",
+    "real": 67,
+    "source": "DMACS W22 Q11",
+    "statement": "I am satisfied with my neighborhood as a place to live.",
+    "simulated": 35.0,
+    "error_pts": -32.0,
+    "neutral": 32.0,
+    "disagree": 32.9,
+    "answered": 1254,
+    "asked": 1400
+   },
+   {
+    "id": "right_direction",
+    "label": "Detroit headed in the right direction",
+    "real": 55,
+    "source": "DMACS W22 Q32",
+    "statement": "Detroit is generally headed in the right direction.",
+    "simulated": 18.9,
+    "error_pts": -36.1,
+    "neutral": 22.9,
+    "disagree": 58.2,
+    "answered": 1373,
+    "asked": 1400
+   },
+   {
+    "id": "used_transit",
+    "label": "Used public transportation in Detroit in the past year",
+    "real": 32,
+    "source": "DMACS W20 Q80",
+    "statement": "I have used public transportation in Detroit in the past year.",
+    "simulated": 2.0,
+    "error_pts": -30.0,
+    "neutral": 2.0,
+    "disagree": 95.9,
+    "answered": 1398,
+    "asked": 1400
+   }
+  ],
+  "run_at": "2026-11-15T04:10:19Z",
+  "seconds": 100,
+  "limits": [
+   "Real values are those recorded in BACKEND_PLAN.md section 10; not re-read from the survey PDFs.",
+   "Residents react to a statement; the survey uses its own questions and scales.",
+   "Residents were given their census traits only, with no facts about their neighborhood."
+  ]
+ }
+]

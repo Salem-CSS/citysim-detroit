@@ -33,6 +33,11 @@ Parameters:
     Type: String
     Default: ""
     Description: Region for Bedrock calls. Empty = the stack's own region.
+  PersonaCard:
+    Type: String
+    Default: base
+    AllowedValues: [base, tier1]
+    Description: Resident profile sent to the model. base = core census traits; tier1 adds more census fields (measured less accurate on Nov 14)
   QuoteShare:
     Type: Number
     Default: 0.1
@@ -73,6 +78,7 @@ Globals:
         BEDROCK_EXTERNAL_ID: !Ref BedrockExternalId
         BEDROCK_REGION: !Ref BedrockRegion
         QUOTE_SHARE: !Ref QuoteShare
+        PERSONA_CARD: !Ref PersonaCard
         MAX_RUN_USD: !Ref MaxRunUsd
         MAX_DAY_USD: !Ref MaxDayUsd
         MAX_RESIDENTS_PER_RUN: !Ref MaxResidentsPerRun

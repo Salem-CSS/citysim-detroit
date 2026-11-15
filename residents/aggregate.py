@@ -69,7 +69,10 @@ def main(rows: list[dict], spec: dict, stats: dict | None = None) -> dict:
     stats.update(residents=asked, valid=len(rows), dropped=dropped, drop_rate=round(dropped / asked, 4) if asked else 0.0,
                  retried=stats.get("retried", 0))
     stats["unreliable"] = stats["drop_rate"] > UNRELIABLE_DROP_RATE
-    result = {"spec_id": spec["spec_id"], "spec_version": spec.get("version", 1), "segments": [], "calibration": None,
+    import os
+    from residents import calibrate
+    result = {"spec_id": spec["spec_id"], "spec_version": spec.get("version", 1), "segments": [],
+              "calibration": calibrate.latest(os.environ.get("RESIDENT_MODEL_ID", ""), os.environ.get("PERSONA_CARD", "base")),
               "run_stats": stats}
     if not rows:
         return {**result, "overall": {"support": 0.0, "neutral": 0.0, "oppose": 0.0}, "districts": [], "reasons": [],

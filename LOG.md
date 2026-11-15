@@ -69,6 +69,22 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 **Blocked / needs:** none
 **Next:** frontend edits on this branch.
 
+### 2026-11-14 23:16 ET · Partner (AI) · Residents (calibration)
+**Did:** Built and ran the accuracy check. `residents/calibrate.py` asks residents four statements with a known real answer from the Detroit resident survey (DMACS) and compares the census-weighted share who agree. 1,400 residents (200 per district), every result stored in `residents/calibration_results.json`. Each run result now carries `calibration` for the deployed model and persona card, and the prototype's "forecast, not a poll" note shows it.
+
+| Model, card | Safe walking (real 85) | Satisfied with neighborhood (67) | Right direction (55) | Used transit (32) | Avg error |
+| --- | --- | --- | --- | --- | --- |
+| Nova 2 Lite, base | 62.4 | 71.5 | 45.3 | 12.4 | **14.1** |
+| Nova 2 Lite, tier1 | 48.2 | 61.5 | 36.8 | 14.5 | 19.5 |
+| Nova Lite, base | 27.1 | 46.3 | 27.2 | 4.4 | 33.5 |
+| Nova Lite, tier1 | 27.6 | 35.0 | 18.9 | 2.0 | 38.9 |
+
+**Files:** residents/calibrate.py, residents/calibration_results.json (new), residents/{prompt,aggregate}.py, infra/template.yaml (`PersonaCard`, default `base`), web/prototype/index.html (`accuracyNote`), LOG.md
+**Contracts changed:** none. `run_result.calibration` is filled (`measured`, `avg_error_pts`, `checks[]`, plus `model`, `run_at`).
+**Decisions:** Deployed residents use **Nova 2 Lite with the base card**. The richer Tier 1 census fields made answers less accurate (19.5 vs 14.1 points): with more hardship detail the model answers more negatively than real Detroiters do. By the plan's own rule (7.1: keep a tier only if error drops) Tier 1 stays off; it is still on every persona row and can be switched on with `PersonaCard=tier1`. Nova Lite is cheaper but far less accurate, so it is not used. Nova Pro could not be measured (throttled).
+**Blocked / needs:** Residents are too negative overall, most on safety (62 vs 85) and transit use (12 vs 32). Real values are the ones in BACKEND_PLAN.md section 10 and were not re-read from the survey PDFs; `data/calibration_targets.json` still says 70 for safe walking where the plan says 85. Residents answered a statement, not the survey's own question and scale. Haiku 5.5 was not compared (not available in this account).
+**Next:** neighborhood facts (Tier 2), tested the same way.
+
 ### 2026-11-14 23:02 ET · Partner (AI) · Engine + Residents + Data
 **Did:** Each resident is now told how far the verified proposal is from their home. `engine/proximity.py` (pure Python) measures from the resident's home block interior point to the verified point, or to the straight line between a route's verified start and end (the line says so, since the real path is unknown). Personas gained `home_lon` / `home_lat` (block interior point, not an address); rebuilt with the same seed and re-uploaded. `infra/runs.plan_batches` passes the spec's verified places to each batch; `residents/batch.py` adds the distance line and stores `distance_m`; `aggregate.py` adds `exposure` groups (within a quarter mile / quarter mile to a mile / more than a mile). Deployed to both stacks.
 **Verified live (`citysim-partner`):** strip club at Trumbull St & Michigan Ave, District 6, 500 residents, 0 dropped, $0.06. By distance: within 1/4 mile (6 residents) 100% oppose; 1/4 to 1 mile (55) 100% oppose; 1 to 3 miles (208) 58% oppose, 41% neutral; over 3 miles (231) 2% oppose, 98% neutral. Overall 0.3% support / 63.4% neutral / 36.3% oppose. Distance check: Newlab to Michigan & Trumbull measures 782 m.
