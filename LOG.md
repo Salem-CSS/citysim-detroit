@@ -39,7 +39,7 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 | Lane | Owner | Status | Last update |
 | --- | --- | --- | --- |
-| Data (census, LODES, Detroit open data → S3) | Partner | Scripts fixed; all 35 raw files downloaded on Partner's laptop (about 2 GB, row counts match the services). Nothing in S3 yet | 11-14 21:30 |
+| Data (census, LODES, Detroit open data → S3) | Partner | Scripts fixed; all 35 raw files downloaded on Partner's laptop (about 2 GB, row counts match the services). Nothing in S3 yet | 11-14 20:20 |
 | Buildings (Overture → Athena → tiles) | Salem | **Built in Athena** (335,338 bldgs, 95% measured height). Vector tiles (z10-14, ~20 MB) power the main prototype map + `/map3d.html`. Districts approximate until real file | 11-14 20:00 |
 | Engine (traffic Lambda) | — | Load, trips, impact lines work; 6 actions are stubs taking v2 `values` | 11-14 19:05 |
 | Residents (Bedrock) | — | v2 framework: prompt + checks + tests done (stance/reason/quote sample); batching stubbed | 11-14 19:05 |
