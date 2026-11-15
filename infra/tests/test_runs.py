@@ -47,3 +47,19 @@ def test_answers_endpoint_matches_the_contract(monkeypatch):
                                {"persona_id": "d6-0001", "stance": "support", "reason": "jobs"}]
     assert runs.get_answers({"pathParameters": {"id": "resp#r1#0"}})["statusCode"] == 404
     assert runs.get_answers({"pathParameters": {"id": "nope"}})["statusCode"] == 404
+
+
+def test_a_run_that_died_in_step_functions_is_reported_as_failed(monkeypatch):
+    class SF:
+        def __init__(self, status):
+            self.status = status
+
+        def describe_execution(self, executionArn):
+            assert executionArn == "arn:aws:states:us-east-2:1:execution:citysim-x-run:r1"
+            return {"status": self.status, "error": "ClientError"}
+
+    monkeypatch.setenv("STATE_MACHINE_ARN", "arn:aws:states:us-east-2:1:stateMachine:citysim-x-run")
+    assert runs.execution_failure("r1", SF("RUNNING")) is None and runs.execution_failure("r1", SF("SUCCEEDED")) is None
+    assert runs.execution_failure("r1", SF("FAILED")) == "the run failed on the server (ClientError)"
+    monkeypatch.delenv("STATE_MACHINE_ARN")
+    assert runs.execution_failure("r1", SF("FAILED")) is None
