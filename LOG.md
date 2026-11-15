@@ -59,6 +59,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 20:20 ET · Salem (AI) · Web
+**Did:** Resident dots are white before a run (were grey). After a run they keep the stance colors: blue support, grey neutral, orange oppose.
+**Files:** web/prototype/index.html
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
 ### 2026-11-14 20:15 ET · Salem (AI) · Web
 **Did:** Roads only show inside the selected districts (corridors pre-split per district in overlays.geojson, property `d`). Added a Roads on/off toggle in the map key; roads show before and after a run while the toggle is on.
 **Files:** web/prototype/tools/make_geo.py, web/prototype/geo/overlays.geojson, web/prototype/index.html, LOG.md
