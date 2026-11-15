@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: bus animation follows the streets
+- The route line and the bus now follow the shortest drivable path over the basemap's own road lines (Dijkstra in the browser, nodes snapped to 4 m so tile seams join; freeways and service roads weighted down). Falls back to a straight line if no path is found. No outside routing service.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: bus build animation
 - Pressing Ask residents on a change_transit proposal with known places plays a short animation before the run overlay: camera frames From→To, the route line draws itself, a stop (pole + blue sign) rises with a ripple at each end, a yellow bus drives the route and parks at the last stop. Only From or only Where → one stop rises. Illustration only; feeds no numbers. Cleared on the next question.
 - Run overlay waits for the animation (runOver.show delay).
