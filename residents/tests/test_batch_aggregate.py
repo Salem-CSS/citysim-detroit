@@ -45,6 +45,7 @@ def env(monkeypatch):
     monkeypatch.setattr(batch, "MODEL_ID", "us.amazon.nova-lite-v1:0")
     monkeypatch.setattr(batch, "load_personas", lambda districts: {p["persona_id"]: p for p in people()})
     monkeypatch.setattr(prompt, "QUOTE_SHARE", 0.0)
+    monkeypatch.setattr(batch, "PER_CALL", 25)          # the older tests describe several residents sharing a call
     monkeypatch.setenv("MAX_RUN_USD", "10")
     monkeypatch.setenv("MAX_DAY_USD", "10")
 
@@ -68,6 +69,18 @@ def test_invalid_answers_are_asked_once_more_then_dropped():
     rows = json.loads(table.items["resp#r1#0"]["rows"])
     assert [r["persona_id"] for r in rows] == ids[:3] and rows[0]["weight"] == 100.0 and rows[0]["tenure"] == "renter"
     assert ids[0] not in client.calls[1]["messages"][0]["content"][0]["text"]                 # retry asks only the missing ones
+
+
+def test_one_resident_per_call_by_default(monkeypatch):
+    monkeypatch.setattr(batch, "PER_CALL", 1)
+    ids = [p["persona_id"] for p in people()]
+    client, table = Client(*[answers([i]) for i in ids]), Table()
+    stats = batch.main(event(), client=client, table=table)
+    assert stats["calls"] == 4 and stats["valid"] == 4 and stats["dropped"] == 0
+    for i, call in zip(ids, client.calls):                                                    # each call names one resident only
+        text = call["messages"][0]["content"][0]["text"]
+        assert i in text and not any(o in text for o in ids if o != i)
+        assert call["inferenceConfig"]["temperature"] == 0
 
 
 def test_no_engine_result_means_no_impact_line():

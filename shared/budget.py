@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import time
 from pathlib import Path
 
@@ -50,9 +51,16 @@ def _limit(name: str) -> int:
     return int(float(raw) * 1_000_000)
 
 
+_local = threading.local()
+
+
 def _table():
+    """One table handle per thread, made once: building it for every call cost more time than the model call."""
     import boto3
-    return boto3.resource("dynamodb").Table(os.environ["RUNS_TABLE"])
+    name = os.environ["RUNS_TABLE"]
+    if getattr(_local, "name", None) != name:
+        _local.table, _local.name = boto3.session.Session().resource("dynamodb").Table(name), name
+    return _local.table
 
 
 def _day_key() -> str:

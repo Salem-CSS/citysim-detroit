@@ -38,6 +38,14 @@ Parameters:
     Default: base
     AllowedValues: [base, tier1, tier2, all]
     Description: Resident profile sent to the model. base = core census traits; tier1 adds more census fields; tier2 adds facts around the home; all = both. See residents/calibration_results.json
+  ResidentsPerCall:
+    Type: Number
+    Default: 1
+    Description: Residents sharing one model call. 1 = each resident is asked alone (answers do not depend on who else is in the call). 25 = the old batches, faster and cheaper but less reliable. See BACKEND_PLAN 15.1
+  CallsAtOnce:
+    Type: Number
+    Default: 1
+    Description: Parallel model calls inside each group of 25 residents (10 groups run at once). The account allows 200 requests a minute for the resident model; raise this only if that cap is raised
   QuoteShare:
     Type: Number
     Default: 0.1
@@ -78,6 +86,8 @@ Globals:
         BEDROCK_EXTERNAL_ID: !Ref BedrockExternalId
         BEDROCK_REGION: !Ref BedrockRegion
         QUOTE_SHARE: !Ref QuoteShare
+        RESIDENTS_PER_CALL: !Ref ResidentsPerCall
+        CALLS_AT_ONCE: !Ref CallsAtOnce
         PERSONA_CARD: !Ref PersonaCard
         MAX_RUN_USD: !Ref MaxRunUsd
         MAX_DAY_USD: !Ref MaxDayUsd
@@ -168,7 +178,7 @@ Resources:
     Properties:
       FunctionName: !Sub citysim-${Stage}-resident-batch
       Handler: infra.runs.resident_batch
-      Timeout: 120
+      Timeout: 600                     # one resident per call under a 200-a-minute cap: a group of 25 can wait
       Policies:
         - DynamoDBCrudPolicy: {TableName: !Ref RunsTable}   # spend counters
         - Statement:
