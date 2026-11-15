@@ -67,3 +67,9 @@ def test_wrapped_value_is_unwrapped():
     from agent.handler import clean_values
     vals, notes = clean_values("add_drone_route", {"flights_per_day": {"value": 150, "source": "from_question"}})
     assert vals == {"flights_per_day": 150} and notes == []
+
+
+def test_yes_no_option_given_as_text_is_accepted():
+    from agent import handler
+    values, notes = handler.clean_values("modify_road", {"bike_lane": "true", "change": "remove_lanes"})
+    assert values["bike_lane"] is True and notes == []

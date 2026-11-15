@@ -22,6 +22,7 @@ for d in range(1, 8):
     for p in json.loads((SRC / f"district_{d}.json").read_text(encoding="utf-8")):
         props = {"persona_id": p["persona_id"], "d": p["district"]}
         props.update({k: p[k] for k in FIELDS if p.get(k) is not None})
+        props["weight"] = round(p["weight"], 1)          # census weight: adults this resident stands for (district profiles)
         for line in p.get("context") or []:
             if line.startswith("Neighborhood: "):
                 props["neighborhood"] = line[len("Neighborhood: "):]

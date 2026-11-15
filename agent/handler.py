@@ -74,8 +74,8 @@ def clean_values(action_type: str, raw: dict) -> tuple[dict, list[str]]:
             allowed = [o["value"] for o in c["options"]]
             if v in allowed:
                 out[k] = v
-            elif str(v) in map(str, allowed):
-                out[k] = allowed[[str(a) for a in allowed].index(str(v))]
+            elif str(v).lower() in [str(a).lower() for a in allowed]:      # "200" for 200, "true" for True
+                out[k] = allowed[[str(a).lower() for a in allowed].index(str(v).lower())]
             else:
                 notes.append(f"{c['label']}: '{v}' isn't an option, kept the default")
         elif c["type"] == "text":
