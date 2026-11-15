@@ -68,6 +68,25 @@ select option { background: #0D1426; color: #F8FAFC; }
 :root[data-theme="light"] .note--ok .icon { color: #15803D; }
 /* settings */
 .btn.settings-btn { height: auto; min-width: 56px; background: var(--panel); color: var(--text); }
+/* Saved correction example (preview of the correction engine). Self-contained: everything is under .corrx */
+.corrx { position: absolute; top: 92px; right: 16px; z-index: 7; width: min(600px, calc(100% - 32px)); max-height: calc(100% - 116px); overflow: auto; padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+.corrx[hidden] { display: none; }
+.corrx h2 { margin: 0; font-size: 20px; } .corrx h3 { margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
+.corrx p { margin: 0 0 6px; line-height: 1.5; font-size: 14px; } .corrx small, .corrx .muted { color: var(--text-2); font-size: 13px; line-height: 1.45; display: block; }
+.corrx__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.corrx__tag { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--raised); font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); margin-bottom: 8px; }
+.corrx .try { padding: 12px 14px; border-radius: var(--r-sm); background: var(--raised); display: flex; flex-direction: column; gap: 8px; }
+.corrx .try.is-best { outline: 2px solid var(--support); }
+.corrx .try__head { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; font-size: 14px; }
+.corrx .tries { display: flex; flex-direction: column; gap: 8px; }
+.corrx .ask { display: grid; grid-template-columns: 1fr 48px; gap: 4px 12px; align-items: center; font-size: 14px; margin-bottom: 8px; }
+.corrx .ask b { text-align: right; font-variant-numeric: tabular-nums; } .corrx .ask i { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: rgba(148,163,184,0.22); overflow: hidden; display: block; }
+.corrx .ask i u { display: block; height: 100%; background: var(--text-2); }
+.corrx table { width: 100%; border-collapse: collapse; font-size: 13px; } .corrx th, .corrx td { text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(148,163,184,0.18); }
+.corrx th { color: var(--text-2); font-weight: 600; } .corrx td.num, .corrx th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.corrx details summary { cursor: pointer; font-size: 13px; font-weight: 600; } .corrx blockquote { margin: 6px 0 0; padding-left: 10px; border-left: 2px solid rgba(148,163,184,0.4); font-size: 13px; color: var(--text-2); }
+.corrx-pin { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 700 13px system-ui; color: #0F172A; background: #F8FAFC; border: 2px solid #0F172A; }
+.corrx-pin.is-best { background: #38BDF8; }
 .settings { position: absolute; top: 92px; right: 16px; z-index: 6; width: 260px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .settings[hidden] { display: none; }
 .settings .demo-q { width: 100%; height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--panel-line); background: var(--raised); color: var(--text); font: inherit; font-size: 13px; }
@@ -500,8 +519,11 @@ button { cursor: pointer; }
       <button type="button" class="dchip" data-d="1" aria-pressed="false" style="--c:#F59E0B"><span class="dot"></span>District 1</button><button type="button" class="dchip" data-d="2" aria-pressed="false" style="--c:#10B981"><span class="dot"></span>District 2</button><button type="button" class="dchip" data-d="3" aria-pressed="false" style="--c:#EF4444"><span class="dot"></span>District 3</button><button type="button" class="dchip" data-d="4" aria-pressed="true" style="--c:#A371F7"><span class="dot"></span>District 4</button><button type="button" class="dchip" data-d="5" aria-pressed="true" style="--c:#4C8DFF"><span class="dot"></span>District 5</button><button type="button" class="dchip" data-d="6" aria-pressed="true" style="--c:#DB61A2"><span class="dot"></span>District 6</button><button type="button" class="dchip" data-d="7" aria-pressed="true" style="--c:#2EC4B6"><span class="dot"></span>District 7</button>
     </div>
 
+      <button type="button" class="btn panel settings-btn" id="corrxBtn" aria-label="Correction engine preview: a saved example" title="Correction engine preview: a saved example" aria-expanded="false" aria-controls="corrx"><svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M9 12l2 2 4-4"/></svg></button>
       <button type="button" class="btn panel settings-btn" id="settingsBtn" aria-label="Settings" aria-expanded="false" aria-controls="settings"><svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   </header>
+
+  <div class="corrx panel" id="corrx" role="dialog" aria-label="Correction engine preview" hidden></div>
 
   <div class="settings panel" id="settings" role="dialog" aria-label="Settings" hidden>
     <h3>Appearance</h3>
@@ -2236,6 +2258,64 @@ document.getElementById('rcClose').addEventListener('click',function(){ rc.hidde
 document.addEventListener('keydown',function(e){ if(e.key==='Escape') rc.hidden=true; });
 
 // ---------- Demo mode: the page presents itself (Settings > Presentation). ?demo=1 starts it on load. ----------
+// ---------- Correction engine preview: the saved report of one real correction (corrections/example.json) ----------
+// Read-only. Nothing here calls the backend. The engine itself lives on the `correction-engine` branch.
+(function(){
+  var btn=document.getElementById('corrxBtn'), box=document.getElementById('corrx'), data=null, pins=[], r=Math.round;
+  function bar(sp){ return '<div class="split" role="img" aria-label="'+r(sp.support)+'% support, '+r(sp.neutral)+'% neutral, '+r(sp.oppose)+'% oppose"><span style="width:'+sp.support+'%"></span><span style="width:'+sp.neutral+'%"></span><span style="width:'+sp.oppose+'%"></span></div>'+
+    '<small>'+r(sp.support)+'% support · '+r(sp.neutral)+'% neutral · '+r(sp.oppose)+'% oppose</small>'; }
+  function counts(o){ return Object.keys(o||{}).map(function(k){ return o[k]+' "'+esc(k)+'"'; }).join(', '); }
+  function after(a){
+    var h='', t=a.asked_then, f=a.follow_up, G={asked_for_it:'Asked for this change, still opposed', new_opponent:'Did not oppose before, opposes now'};
+    var row=t&&t.by_request[0];
+    if(row) h+='<small>Of the '+row.asked_for_it+' opponents who had asked for "'+esc(row.change)+'": '+row.oppose+' oppose this version, '+row.neutral+' are neutral, '+row.support+' support.</small>';
+    var w=f&&f.wordings&&f.wordings.stance; if(!w) return h;
+    h+='<details><summary>Why they still oppose ('+(f.asked.asked_for_it+f.asked.new_opponent)+' residents asked)</summary>'+
+      '<small>Object anywhere in the city, or only near home: '+counts(w.scope.all)+'. Would accept some version: '+counts(w.acceptable_version.all)+'.</small>';
+    (w.sentences||[]).slice(0,4).forEach(function(x){ h+='<blockquote><b>'+G[x.group]+':</b> “'+esc(x.text)+'”</blockquote>'; });
+    return h+'</details>';
+  }
+  function near(w){ return w?'<td class="num">'+w.adults_within_quarter_mile.toLocaleString()+'</td><td class="num">'+w.adults_within_1_mile.toLocaleString()+'</td>':'<td class="num">–</td><td class="num">–</td>'; }
+  function render(st){
+    var snap=st.snapshot, best=st.best||{}, d=st.diagnosis, a=d.opponents_asked;
+    var h='<div class="corrx__head"><div><span class="corrx__tag">Preview · saved example</span><h2>Finding a version residents accept</h2></div><button type="button" class="btn btn--outline" id="corrxClose">Close</button></div>'+
+      '<p class="muted">When residents say no, the correction engine works out why and reruns changed versions of the proposal on the same residents. It is still being tuned and is not switched on here. This is the full report of a real correction run on '+esc(snap.ran_on)+' in '+esc(snap.mode)+' mode, on '+snap.residents.toLocaleString()+' simulated residents of '+esc(snap.districts)+'. A forecast, not a poll.</p>'+
+      '<section><h3>The proposal</h3><p>'+esc(snap.proposal.replace(/^Proposal:\s*/,''))+'</p>'+bar(st.original.split)+'</section>'+
+      '<section><h3>Why they said no</h3>'+d.sentences.slice(1).map(function(x){ return '<p>'+esc(x)+'</p>'; }).join('');
+    if(a) h+='<h3 style="margin-top:14px">What opponents said would change their mind</h3>'+a.one_change.map(function(c){ return '<div class="ask"><span>'+esc(c.change.replace(/^./,function(x){ return x.toUpperCase(); }))+'</span><b>'+r(c.share)+'%</b><i><u style="width:'+c.share+'%"></u></i></div>'; }).join('')+
+      '<small>'+a.asked+' opponents asked, nearest to the site first.</small>';
+    h+='</section><section><h3>What was tried</h3><div class="tries">'+st.attempts.map(function(t){
+      return '<div class="try'+(best.rerun===t.rerun?' is-best':'')+'"><div class="try__head"><span>'+t.rerun+'. '+esc(t.label)+'</span><span>'+(t.change_vs_original>0?'+':'')+t.change_vs_original+' pts</span></div>'+bar(t.split)+
+        '<small>'+(t.meets_target?'Reaches the target.':t.beats_best_beyond_spread?'Better than what came before by more than run-to-run variation.':'Not better than what came before.')+'</small>'+after(t)+'</div>'; }).join('')+'</div>'+
+      '<small style="margin-top:8px">Points are support minus oppose, against the original. Each version keeps the changes of the best one before it. Run-to-run variation on the unchanged proposal: '+st.spread_pts+' pts. Stopped: '+esc(st.stop_reason)+'. Target: '+esc(st.target_text)+' (not reached).</small></section>';
+    var sites=[['Original site', st.original.who_lives_near]].concat(st.attempts.filter(function(t){ return t.lever==='location'; }).map(function(t){ return [t.rerun+'. '+((t.site||{}).name||''), t.who_lives_near]; }));
+    h+='<section><h3>Who lives near each site</h3><table><thead><tr><th>Site</th><th class="num">Adults within ¼ mi</th><th class="num">Within 1 mi</th></tr></thead><tbody>'+
+      sites.map(function(x){ return '<tr><td>'+esc(x[0])+'</td>'+near(x[1])+'</tr>'; }).join('')+'</tbody></table>'+
+      '<small style="margin-top:8px">Adults from 2020 census blocks. Moving a proposal changes who lives next to it: fewer objections can simply mean fewer neighbours.</small></section>'+
+      '<section><h3>Limits</h3>'+(st.limits||[]).map(function(x){ return '<small>'+esc(x)+'</small>'; }).join('')+'</section>';
+    box.innerHTML=h; document.getElementById('corrxClose').addEventListener('click',close);
+  }
+  function pinsOn(){ pinsOff(); if(!data || !window.maplibregl || !mapView.map) return;
+    data.attempts.forEach(function(t){ if(t.lever!=='location' || !t.site || t.site.lon==null) return;
+      var el=document.createElement('div'); el.className='corrx-pin'+((data.best||{}).rerun===t.rerun?' is-best':''); el.textContent=t.rerun; el.title=t.label;
+      pins.push(new maplibregl.Marker({element:el}).setLngLat([t.site.lon,t.site.lat]).addTo(mapView.map)); }); }
+  function pinsOff(){ pins.forEach(function(m){ m.remove(); }); pins=[]; }
+  function open(){
+    var pop=document.getElementById('settings'); if(pop && !pop.hidden){ pop.hidden=true; document.getElementById('settingsBtn').setAttribute('aria-expanded','false'); }
+    box.hidden=false; btn.setAttribute('aria-expanded','true');
+    if(data){ pinsOn(); return; }
+    box.innerHTML='<p class="muted">Opening the saved example…</p>';
+    fetch('corrections/example.json').then(function(x){ if(!x.ok) throw new Error('not found'); return x.json(); })
+      .then(function(st){ data=st; render(st); if(!box.hidden) pinsOn(); })
+      .catch(function(e){ box.innerHTML='<p class="muted">The saved example could not be opened ('+esc(e.message)+').</p>'; });
+  }
+  function close(){ box.hidden=true; btn.setAttribute('aria-expanded','false'); pinsOff(); }
+  btn.addEventListener('click',function(e){ e.stopPropagation(); if(box.hidden) open(); else close(); });
+  box.addEventListener('click',function(e){ e.stopPropagation(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !box.hidden) close(); });
+  document.getElementById('settingsBtn').addEventListener('click',function(){ if(!box.hidden) close(); });
+})();
+
 var demo=(function(){
   var DEFAULT_Q='Build a 120-unit apartment building at Michigan Ave and Trumbull', DEMO_D=[5,6];
   var on=false, token=0, bar=document.getElementById('demoBar'), tog=document.getElementById('demoToggle'), qIn=document.getElementById('demoQ');

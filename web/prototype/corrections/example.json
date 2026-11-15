@@ -1,0 +1,1156 @@
+{
+ "correction_id": "corr-6f361de981",
+ "status": "done",
+ "stage": "done",
+ "target": "more_support_than_oppose",
+ "target_text": "more residents support than oppose",
+ "original_run_id": "run-cc56432e0d",
+ "mode": "accurate",
+ "max_reruns": 5,
+ "reruns_used": 5,
+ "attempts": [
+  {
+   "rerun": 1,
+   "run_id": "run-85d3aaec07",
+   "lever": "hours",
+   "label": "Change typical start time to Afternoon",
+   "proposal": "Proposal: 5000 seat concert venue at Michigan Ave and Trumbull (seats: 5000 seats, typical start time: Afternoon) in District 6.",
+   "split": {
+    "support": 6.5,
+    "neutral": 60.6,
+    "oppose": 32.9,
+    "n": 497
+   },
+   "score": -26.4,
+   "change_vs_original": 5.7,
+   "bands": [
+    {
+     "label": "Within a quarter mile",
+     "support": 0.0,
+     "neutral": 0.0,
+     "oppose": 100.0,
+     "n": 6
+    },
+    {
+     "label": "A quarter mile to a mile",
+     "support": 3.9,
+     "neutral": 3.8,
+     "oppose": 92.3,
+     "n": 55
+    },
+    {
+     "label": "1 to 3 miles",
+     "support": 11.1,
+     "neutral": 39.5,
+     "oppose": 49.4,
+     "n": 207
+    },
+    {
+     "label": "More than 3 miles",
+     "support": 3.2,
+     "neutral": 93.1,
+     "oppose": 3.6,
+     "n": 229
+    }
+   ],
+   "predicted": null,
+   "predicted_score": null,
+   "who_lives_near": null,
+   "site": {},
+   "beats_best_beyond_spread": true,
+   "meets_target": false,
+   "cost_usd": 0.1403,
+   "seconds": 177,
+   "asked_then": {
+    "change_made": "limited hours",
+    "by_request": [
+     {
+      "change": "limited hours",
+      "asked_for_it": 184,
+      "answered_rerun": 184,
+      "support": 1,
+      "neutral": 20,
+      "oppose": 163
+     }
+    ]
+   },
+   "follow_up": {
+    "asked": {
+     "asked_for_it": 60,
+     "new_opponent": 7
+    },
+    "wordings": {
+     "change": {
+      "answered": 67,
+      "average_characters": 74,
+      "distinct_sentences": 23,
+      "would_change": {
+       "asked_for_it": {
+        "limited hours": 60
+       },
+       "new_opponent": {
+        "limited hours": 7
+       },
+       "all": {
+        "limited hours": 67
+       }
+      },
+      "sentences": [
+       {
+        "group": "asked_for_it",
+        "text": "The noise from afternoon concerts will still be disruptive despite the change in start time."
+       },
+       {
+        "group": "asked_for_it",
+        "text": "The noise from afternoon concerts will still disturb our peace."
+       },
+       {
+        "group": "asked_for_it",
+        "text": "The noise from afternoon concerts will still be disruptive to my home, even if they start later."
+       },
+       {
+        "group": "asked_for_it",
+        "text": "The noise from afternoon concerts will still disturb my family and home."
+       },
+       {
+        "group": "new_opponent",
+        "text": "Afternoon concerts will still lead to disruptive noise affecting my family and home."
+       },
+       {
+        "group": "new_opponent",
+        "text": "Afternoon concerts will still cause disruptive noise near my home."
+       },
+       {
+        "group": "new_opponent",
+        "text": "Afternoon concerts will still cause disruptive noise near my home and affect my children."
+       },
+       {
+        "group": "new_opponent",
+        "text": "Afternoon concerts will still cause disruptive noise near my home and affect my children."
+       }
+      ]
+     },
+     "stance": {
+      "answered": 67,
+      "average_characters": 272,
+      "distinct_sentences": 62,
+      "scope": {
+       "asked_for_it": {
+        "only near my home": 60
+       },
+       "new_opponent": {
+        "only near my home": 6,
+        "anywhere in the city": 1
+       },
+       "all": {
+        "only near my home": 66,
+        "anywhere in the city": 1
+       }
+      },
+      "acceptable_version": {
+       "asked_for_it": {
+        "yes": 60
+       },
+       "new_opponent": {
+        "no": 7
+       },
+       "all": {
+        "yes": 60,
+        "no": 7
+       }
+      },
+      "sentences": [
+       {
+        "group": "asked_for_it",
+        "text": "I still oppose this proposal because the noise from a 5000-seat concert venue would be disruptive, even with an afternoon start time. The change to afternoon performances doesn't alleviate my concerns about the noise impacting my quality of life."
+       },
+       {
+        "group": "asked_for_it",
+        "text": "I still oppose this proposal because the noise from a 5000-seat concert venue would be disruptive, even with afternoon start times. The change to afternoon starts doesn't sufficiently address my concerns about noise impacting my home, which is only 600 feet away."
+       },
+       {
+        "group": "asked_for_it",
+        "text": "I still oppose the proposal because the noise impact would be disruptive even with afternoon start times. The change to afternoon concerts doesn't sufficiently address the noise concern, especially given the proximity to my home."
+       },
+       {
+        "group": "asked_for_it",
+        "text": "I still oppose the proposal because the noise impact would be too disruptive, even with afternoon start times. The venue being only 700 feet from my home means noise would affect my family significantly, and limited hours alone don't resolve this concern for me."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose this proposal because the afternoon start time means noise and disruption will occur during hours when my children are at home, impacting their wellbeing. Even though the start time was changed from evening to afternoon, the noise will still be a significant disturbance."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose the concert venue because the noise would significantly impact our quality of life, even with the start time moved to the afternoon. While the change to an afternoon start time is a small improvement, it doesn't mitigate the disturbance to our family and the neighborhood. The proximity of the venue to our home is the primary concern."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose this proposal because the noise from a 5000-seat concert venue, even starting in the afternoon, would still disrupt my family and home. The change to an afternoon start time doesn't alleviate my concerns about the ongoing noise impact."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose this proposal because I am concerned about the noise impact, even with the start time moved to the afternoon. Living close with children at home, I can't risk disrupted daily life from loud concerts, regardless of timing."
+       }
+      ]
+     }
+    },
+    "questions": {
+     "change": [
+      "This change was made and you oppose the proposal as it now stands. In one sentence (under 200 characters), why?",
+      "What one change would make you more supportive now?"
+     ],
+     "stance": [
+      "Explain your overall position on this proposal in two or three sentences (under 500 characters): what you object to, and how the change that was made affected your view.",
+      "Would you object to this proposal anywhere in the city, or only near your home?",
+      "Is there any version of this proposal you would accept?"
+     ]
+    }
+   }
+  },
+  {
+   "rerun": 2,
+   "run_id": "run-fcaee23b49",
+   "lever": "location",
+   "label": "Move it to the Land Bank lot at 2601 S Fort, Boynton (District 6)",
+   "proposal": "Proposal: 5000 seat concert venue at 2601 S Fort (seats: 5000 seats, typical start time: Afternoon) in District 6.",
+   "split": {
+    "support": 4.9,
+    "neutral": 78.4,
+    "oppose": 16.7,
+    "n": 495
+   },
+   "score": -11.8,
+   "change_vs_original": 20.3,
+   "bands": [
+    {
+     "label": "Within a quarter mile",
+     "support": 0.0,
+     "neutral": 0.0,
+     "oppose": 100.0,
+     "n": 9
+    },
+    {
+     "label": "A quarter mile to a mile",
+     "support": 11.8,
+     "neutral": 0.0,
+     "oppose": 88.2,
+     "n": 26
+    },
+    {
+     "label": "1 to 3 miles",
+     "support": 28.0,
+     "neutral": 37.1,
+     "oppose": 34.9,
+     "n": 36
+    },
+    {
+     "label": "More than 3 miles",
+     "support": 2.6,
+     "neutral": 88.4,
+     "oppose": 9.0,
+     "n": 424
+    }
+   ],
+   "predicted": {
+    "support": 2.3,
+    "neutral": 82.9,
+    "oppose": 14.7,
+    "opposed_within_quarter_mile": 1.77
+   },
+   "predicted_score": -12.4,
+   "who_lives_near": {
+    "adults_within_quarter_mile": 759,
+    "adults_within_1_mile": 4662,
+    "simulated_residents_within_1_mile": 35,
+    "renters_pct": 48.2,
+    "no_car_pct": 15.3,
+    "age_65_plus_pct": 8.7
+   },
+   "site": {
+    "name": "2601 S Fort",
+    "neighborhood": "Boynton",
+    "district": 6,
+    "zoning": "B4",
+    "lot_sqft": 5420,
+    "lon": -83.1598,
+    "lat": 42.27011
+   },
+   "beats_best_beyond_spread": true,
+   "meets_target": false,
+   "cost_usd": 0.1347,
+   "seconds": 164,
+   "asked_then": {
+    "change_made": "different location",
+    "by_request": [
+     {
+      "change": "limited hours",
+      "asked_for_it": 184,
+      "answered_rerun": 184,
+      "support": 0,
+      "neutral": 166,
+      "oppose": 18
+     }
+    ]
+   },
+   "follow_up": {
+    "asked": {
+     "asked_for_it": 0,
+     "new_opponent": 60
+    },
+    "wordings": {
+     "change": {
+      "answered": 60,
+      "average_characters": 72,
+      "distinct_sentences": 28,
+      "would_change": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "limited hours": 59,
+        "smaller": 1
+       },
+       "all": {
+        "limited hours": 59,
+        "smaller": 1
+       }
+      },
+      "sentences": [
+       {
+        "group": "new_opponent",
+        "text": "The noise from such a large venue so close to my home would be unbearable."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from concerts would disrupt my family's peace and quiet."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from a 5000-seat venue so close to my home would be disruptive."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from such a large venue so close to my home would be disruptive, especially with children."
+       }
+      ]
+     },
+     "stance": {
+      "answered": 60,
+      "average_characters": 275,
+      "distinct_sentences": 60,
+      "scope": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "only near my home": 57,
+        "anywhere in the city": 3
+       },
+       "all": {
+        "only near my home": 57,
+        "anywhere in the city": 3
+       }
+      },
+      "acceptable_version": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "no": 53,
+        "yes": 7
+       },
+       "all": {
+        "no": 53,
+        "yes": 7
+       }
+      },
+      "sentences": [
+       {
+        "group": "new_opponent",
+        "text": "I oppose this proposal because the noise from a 5000-seat concert venue would significantly impact my quality of life, being only 350 feet from my home. The change to the Land Bank lot doesn't mitigate this issue, as the proximity remains problematic."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose this proposal because the noise from a 5000-seat concert venue would significantly impact my home, which is only 550 feet away. The change to the Land Bank lot doesn't mitigate this issue since it's still too close to my residence."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose this proposal because the noise from a 5000-seat concert venue would significantly impact my quality of life, being only 750 feet from my home. The change to the Land Bank lot doesn't mitigate this issue, as the proximity remains problematic."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose this proposal because the noise from a 5000-seat concert venue would significantly impact my home, which is only 800 feet away. The change to the Land Bank lot doesn't mitigate this issue since it's still too close to my residence."
+       }
+      ]
+     }
+    },
+    "questions": {
+     "change": [
+      "This change was made and you oppose the proposal as it now stands. In one sentence (under 200 characters), why?",
+      "What one change would make you more supportive now?"
+     ],
+     "stance": [
+      "Explain your overall position on this proposal in two or three sentences (under 500 characters): what you object to, and how the change that was made affected your view.",
+      "Would you object to this proposal anywhere in the city, or only near your home?",
+      "Is there any version of this proposal you would accept?"
+     ]
+    }
+   },
+   "prediction_error": 0.6
+  },
+  {
+   "rerun": 3,
+   "run_id": "run-28fadee6b8",
+   "lever": "size",
+   "label": "Make it smaller: seats 4,000 instead of 5,000",
+   "proposal": "Proposal: 5000 seat concert venue at 2601 S Fort (seats: 4000 seats, typical start time: Afternoon) in District 6.",
+   "split": {
+    "support": 4.1,
+    "neutral": 81.6,
+    "oppose": 14.3,
+    "n": 494
+   },
+   "score": -10.2,
+   "change_vs_original": 21.9,
+   "bands": [
+    {
+     "label": "Within a quarter mile",
+     "support": 0.0,
+     "neutral": 0.0,
+     "oppose": 100.0,
+     "n": 9
+    },
+    {
+     "label": "A quarter mile to a mile",
+     "support": 11.8,
+     "neutral": 0.0,
+     "oppose": 88.2,
+     "n": 26
+    },
+    {
+     "label": "1 to 3 miles",
+     "support": 22.4,
+     "neutral": 50.9,
+     "oppose": 26.7,
+     "n": 36
+    },
+    {
+     "label": "More than 3 miles",
+     "support": 2.1,
+     "neutral": 91.0,
+     "oppose": 6.9,
+     "n": 423
+    }
+   ],
+   "predicted": null,
+   "predicted_score": null,
+   "who_lives_near": null,
+   "site": {},
+   "beats_best_beyond_spread": true,
+   "meets_target": false,
+   "cost_usd": 0.1348,
+   "seconds": 167,
+   "asked_then": {
+    "change_made": "smaller",
+    "by_request": [
+     {
+      "change": "limited hours",
+      "asked_for_it": 184,
+      "answered_rerun": 184,
+      "support": 0,
+      "neutral": 168,
+      "oppose": 16
+     }
+    ]
+   },
+   "follow_up": {
+    "asked": {
+     "asked_for_it": 0,
+     "new_opponent": 57
+    },
+    "wordings": {
+     "change": {
+      "answered": 57,
+      "average_characters": 77,
+      "distinct_sentences": 30,
+      "would_change": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "limited hours": 56,
+        "different location": 1
+       },
+       "all": {
+        "limited hours": 56,
+        "different location": 1
+       }
+      },
+      "sentences": [
+       {
+        "group": "new_opponent",
+        "text": "The noise from the concerts will still be disruptive despite the reduced size."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from the concerts will still disturb my family, especially with children at home."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from the concerts will still be disruptive despite the reduced size."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from the concerts will disturb my children and home."
+       }
+      ]
+     },
+     "stance": {
+      "answered": 57,
+      "average_characters": 254,
+      "distinct_sentences": 54,
+      "scope": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "only near my home": 57
+       },
+       "all": {
+        "only near my home": 57
+       }
+      },
+      "acceptable_version": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "no": 56,
+        "yes": 1
+       },
+       "all": {
+        "no": 56,
+        "yes": 1
+       }
+      },
+      "sentences": [
+       {
+        "group": "new_opponent",
+        "text": "I oppose this proposal because the noise from concerts, even with a reduced capacity, will still significantly impact my quality of life. The change to 4,000 seats doesn't alleviate my concerns enough to support it."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose the concert venue because the noise will disrupt my family, especially with children at home. Even though they reduced the capacity to 4,000 seats, it's still too close to my home at 550 ft. The afternoon start time doesn't mitigate the noise concern for me."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose this proposal because the noise from a 4,000-seat concert venue would still be disruptive to my home, even though it's been reduced from 5,000 seats. The change doesn't sufficiently address my concerns about noise pollution."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose the revised proposal because even with 4,000 seats instead of 5,000, the venue will still be too close to my home at 800 feet. The noise from afternoon concerts will disrupt my family, especially with children at home. The reduction in seats doesn't alleviate my concerns about the impact on our quiet neighborhood."
+       }
+      ]
+     }
+    },
+    "questions": {
+     "change": [
+      "This change was made and you oppose the proposal as it now stands. In one sentence (under 200 characters), why?",
+      "What one change would make you more supportive now?"
+     ],
+     "stance": [
+      "Explain your overall position on this proposal in two or three sentences (under 500 characters): what you object to, and how the change that was made affected your view.",
+      "Would you object to this proposal anywhere in the city, or only near your home?",
+      "Is there any version of this proposal you would accept?"
+     ]
+    }
+   }
+  },
+  {
+   "rerun": 4,
+   "run_id": "run-38a862265b",
+   "lever": "size",
+   "label": "Make it smaller: seats 2,500 instead of 5,000",
+   "proposal": "Proposal: 5000 seat concert venue at 2601 S Fort (seats: 2500 seats, typical start time: Afternoon) in District 6.",
+   "split": {
+    "support": 5.9,
+    "neutral": 80.2,
+    "oppose": 14.0,
+    "n": 495
+   },
+   "score": -8.1,
+   "change_vs_original": 24.0,
+   "bands": [
+    {
+     "label": "Within a quarter mile",
+     "support": 0.0,
+     "neutral": 0.0,
+     "oppose": 100.0,
+     "n": 9
+    },
+    {
+     "label": "A quarter mile to a mile",
+     "support": 11.8,
+     "neutral": 0.0,
+     "oppose": 88.2,
+     "n": 26
+    },
+    {
+     "label": "1 to 3 miles",
+     "support": 30.8,
+     "neutral": 37.2,
+     "oppose": 32.0,
+     "n": 36
+    },
+    {
+     "label": "More than 3 miles",
+     "support": 3.5,
+     "neutral": 90.5,
+     "oppose": 6.1,
+     "n": 424
+    }
+   ],
+   "predicted": null,
+   "predicted_score": null,
+   "who_lives_near": null,
+   "site": {},
+   "beats_best_beyond_spread": true,
+   "meets_target": false,
+   "cost_usd": 0.1448,
+   "seconds": 240,
+   "asked_then": {
+    "change_made": "smaller",
+    "by_request": [
+     {
+      "change": "limited hours",
+      "asked_for_it": 184,
+      "answered_rerun": 184,
+      "support": 0,
+      "neutral": 169,
+      "oppose": 15
+     }
+    ]
+   },
+   "follow_up": {
+    "asked": {
+     "asked_for_it": 0,
+     "new_opponent": 55
+    },
+    "wordings": {
+     "change": {
+      "answered": 55,
+      "average_characters": 76,
+      "distinct_sentences": 29,
+      "would_change": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "limited hours": 51,
+        "different location": 4
+       },
+       "all": {
+        "limited hours": 51,
+        "different location": 4
+       }
+      },
+      "sentences": [
+       {
+        "group": "new_opponent",
+        "text": "The noise from the concerts would still be disruptive despite the smaller size."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from the concerts will still be disruptive to my family, especially with kids at home."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from the concerts will still be disruptive despite the smaller size."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from the concerts will disturb my children and home."
+       }
+      ]
+     },
+     "stance": {
+      "answered": 55,
+      "average_characters": 247,
+      "distinct_sentences": 50,
+      "scope": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "only near my home": 55
+       },
+       "all": {
+        "only near my home": 55
+       }
+      },
+      "acceptable_version": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "no": 53,
+        "yes": 2
+       },
+       "all": {
+        "no": 53,
+        "yes": 2
+       }
+      },
+      "sentences": [
+       {
+        "group": "new_opponent",
+        "text": "I oppose the revised proposal because even with fewer seats, the venue will still be too close to my home. The noise from afternoon concerts will disrupt my peace and quiet, and being only 350 feet away makes it unacceptable regardless of size."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose the revised proposal because even with fewer seats, the venue will still be too close to my home. The noise from afternoon concerts will disrupt my family, especially with children at home. Reducing the seats didn't change the fact that it's still right next door."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose the revised proposal because even with fewer seats, the venue will still be too close to my home. The noise from afternoon concerts will disrupt my peace and quiet, and reducing the capacity doesn't sufficiently address my concerns."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose the revised proposal because even with fewer seats, the venue will still generate significant noise that will disturb my home and family. The reduction in size hasn't changed the fact that it's too close to my residence."
+       }
+      ]
+     }
+    },
+    "questions": {
+     "change": [
+      "This change was made and you oppose the proposal as it now stands. In one sentence (under 200 characters), why?",
+      "What one change would make you more supportive now?"
+     ],
+     "stance": [
+      "Explain your overall position on this proposal in two or three sentences (under 500 characters): what you object to, and how the change that was made affected your view.",
+      "Would you object to this proposal anywhere in the city, or only near your home?",
+      "Is there any version of this proposal you would accept?"
+     ]
+    }
+   }
+  },
+  {
+   "rerun": 5,
+   "run_id": "run-9dc3cedf1f",
+   "lever": "size",
+   "label": "Make it smaller: seats 1,000 instead of 5,000",
+   "proposal": "Proposal: 5000 seat concert venue at 2601 S Fort (seats: 1000 seats, typical start time: Afternoon) in District 6.",
+   "split": {
+    "support": 4.6,
+    "neutral": 81.9,
+    "oppose": 13.5,
+    "n": 496
+   },
+   "score": -8.9,
+   "change_vs_original": 23.2,
+   "bands": [
+    {
+     "label": "Within a quarter mile",
+     "support": 0.0,
+     "neutral": 0.0,
+     "oppose": 100.0,
+     "n": 9
+    },
+    {
+     "label": "A quarter mile to a mile",
+     "support": 7.8,
+     "neutral": 0.0,
+     "oppose": 92.2,
+     "n": 26
+    },
+    {
+     "label": "1 to 3 miles",
+     "support": 25.2,
+     "neutral": 44.6,
+     "oppose": 30.1,
+     "n": 36
+    },
+    {
+     "label": "More than 3 miles",
+     "support": 2.7,
+     "neutral": 91.8,
+     "oppose": 5.5,
+     "n": 425
+    }
+   ],
+   "predicted": null,
+   "predicted_score": null,
+   "who_lives_near": null,
+   "site": {},
+   "beats_best_beyond_spread": false,
+   "meets_target": false,
+   "cost_usd": 0.1292,
+   "seconds": 162,
+   "asked_then": {
+    "change_made": "smaller",
+    "by_request": [
+     {
+      "change": "limited hours",
+      "asked_for_it": 184,
+      "answered_rerun": 184,
+      "support": 0,
+      "neutral": 170,
+      "oppose": 14
+     }
+    ]
+   },
+   "follow_up": {
+    "asked": {
+     "asked_for_it": 0,
+     "new_opponent": 54
+    },
+    "wordings": {
+     "change": {
+      "answered": 54,
+      "average_characters": 81,
+      "distinct_sentences": 28,
+      "would_change": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "limited hours": 38,
+        "different location": 16
+       },
+       "all": {
+        "limited hours": 38,
+        "different location": 16
+       }
+      },
+      "sentences": [
+       {
+        "group": "new_opponent",
+        "text": "The noise from even a smaller venue will still disturb my peace at home."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from even a smaller venue will still disrupt my family and home."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from even a smaller venue will still disrupt my peace at home."
+       },
+       {
+        "group": "new_opponent",
+        "text": "The noise from even a smaller venue will still disrupt our peace at home."
+       }
+      ]
+     },
+     "stance": {
+      "answered": 54,
+      "average_characters": 241,
+      "distinct_sentences": 50,
+      "scope": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "only near my home": 54
+       },
+       "all": {
+        "only near my home": 54
+       }
+      },
+      "acceptable_version": {
+       "asked_for_it": {},
+       "new_opponent": {
+        "no": 53,
+        "yes": 1
+       },
+       "all": {
+        "no": 53,
+        "yes": 1
+       }
+      },
+      "sentences": [
+       {
+        "group": "new_opponent",
+        "text": "I oppose the revised proposal because even with fewer seats, the venue will still be too close to my home. The noise from afternoon concerts will disrupt my peace and quiet, and being only 350 feet away makes it unacceptable regardless of size."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose the revised proposal because even with only 1,000 seats, the venue will still generate significant noise, especially with afternoon start times. The reduction in size doesn't mitigate the disturbance to our neighborhood and my children's peace."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose the revised proposal because even with fewer seats, the venue will still generate significant noise, impacting my quality of life. The change from 5,000 to 1,000 seats doesn't sufficiently address my concerns about noise pollution."
+       },
+       {
+        "group": "new_opponent",
+        "text": "I oppose the revised proposal because even with fewer seats, the venue will still generate significant noise, impacting my family's peace and quiet. The change to 1,000 seats doesn't sufficiently mitigate the disturbance for me."
+       }
+      ]
+     }
+    },
+    "questions": {
+     "change": [
+      "This change was made and you oppose the proposal as it now stands. In one sentence (under 200 characters), why?",
+      "What one change would make you more supportive now?"
+     ],
+     "stance": [
+      "Explain your overall position on this proposal in two or three sentences (under 500 characters): what you object to, and how the change that was made affected your view.",
+      "Would you object to this proposal anywhere in the city, or only near your home?",
+      "Is there any version of this proposal you would accept?"
+     ]
+    }
+   }
+  }
+ ],
+ "created": 1794757639,
+ "follow_up": "both",
+ "updated": 1794758928,
+ "proposal": "Proposal: 5000 seat concert venue at Michigan Ave and Trumbull (seats: 5000 seats) in District 6.",
+ "diagnosis": {
+  "overall": {
+   "support": 3.6,
+   "neutral": 60.7,
+   "oppose": 35.7,
+   "n": 498
+  },
+  "target": "more_support_than_oppose",
+  "target_text": "more residents support than oppose",
+  "target_met": false,
+  "has_place": true,
+  "bands": [
+   {
+    "label": "Within a quarter mile",
+    "support": 0.0,
+    "neutral": 0.0,
+    "oppose": 100.0,
+    "n": 6
+   },
+   {
+    "label": "A quarter mile to a mile",
+    "support": 3.9,
+    "neutral": 3.8,
+    "oppose": 92.3,
+    "n": 55
+   },
+   {
+    "label": "1 to 3 miles",
+    "support": 6.5,
+    "neutral": 39.1,
+    "oppose": 54.4,
+    "n": 208
+   },
+   {
+    "label": "More than 3 miles",
+    "support": 1.1,
+    "neutral": 93.9,
+    "oppose": 5.1,
+    "n": 229
+   }
+  ],
+  "within_1_mile": {
+   "support": 3.5,
+   "neutral": 3.5,
+   "oppose": 93.0,
+   "n": 61
+  },
+  "beyond_1_mile": {
+   "support": 3.6,
+   "neutral": 68.2,
+   "oppose": 28.2,
+   "n": 437
+  },
+  "opposition_is_local": true,
+  "groups": [
+   {
+    "label": "Renters",
+    "support": 3.7,
+    "neutral": 64.0,
+    "oppose": 32.4,
+    "n": 242,
+    "oppose_elsewhere": 38.8,
+    "stands_out": false
+   },
+   {
+    "label": "Homeowners",
+    "support": 3.6,
+    "neutral": 57.6,
+    "oppose": 38.8,
+    "n": 256,
+    "oppose_elsewhere": 32.4,
+    "stands_out": false
+   },
+   {
+    "label": "Under 35",
+    "support": 9.1,
+    "neutral": 69.8,
+    "oppose": 21.1,
+    "n": 170,
+    "oppose_elsewhere": 44.5,
+    "stands_out": false
+   },
+   {
+    "label": "35 to 64",
+    "support": 0.4,
+    "neutral": 61.6,
+    "oppose": 38.0,
+    "n": 249,
+    "oppose_elsewhere": 33.6,
+    "stands_out": false
+   },
+   {
+    "label": "65 and over",
+    "support": 0.0,
+    "neutral": 36.1,
+    "oppose": 63.9,
+    "n": 79,
+    "oppose_elsewhere": 30.5,
+    "stands_out": true
+   },
+   {
+    "label": "No car",
+    "support": 3.1,
+    "neutral": 56.6,
+    "oppose": 40.3,
+    "n": 82,
+    "oppose_elsewhere": 34.8,
+    "stands_out": false
+   },
+   {
+    "label": "Has a car",
+    "support": 3.7,
+    "neutral": 61.5,
+    "oppose": 34.8,
+    "n": 416,
+    "oppose_elsewhere": 40.3,
+    "stands_out": false
+   }
+  ],
+  "opponent_reasons": [
+   {
+    "reason": "noise",
+    "share": 100.0
+   }
+  ],
+  "opponents_asked": {
+   "asked": 184,
+   "one_change": [
+    {
+     "change": "limited hours",
+     "count": 184,
+     "share": 100.0
+    }
+   ],
+   "sentences": [
+    "The noise would be unbearable so close to my home.",
+    "The noise will disturb my peace and quite at home; limited hours might help.",
+    "The noise will disrupt my peace and quiet; I can't have that so close to home.",
+    "The noise will disrupt my family and home life.",
+    "The noise will disrupt our peace and quiet; limited hours might help.",
+    "The noise would disrupt my peace and quiet, making life harder."
+   ]
+  },
+  "sentences": [
+   "3.6% support, 60.7% neutral and 35.7% oppose (498 residents).",
+   "Within a mile of the site 93.0% oppose (61 residents); farther away 28.2% oppose (437). Opposition is concentrated near the site, so where it goes matters.",
+   "Groups that oppose more than everyone else: 65 and over (63.9% against 30.5%).",
+   "The main reason opponents give is noise (100.0% of opponents).",
+   "Asked what one change would make them more supportive, 100.0% of 184 opponents said \"limited hours\"."
+  ],
+  "levers_asked_for": [
+   "hours"
+  ],
+  "asked_for_but_not_tried": []
+ },
+ "original": {
+  "run_id": "run-cc56432e0d",
+  "split": {
+   "support": 3.6,
+   "neutral": 60.7,
+   "oppose": 35.7,
+   "n": 498
+  },
+  "score": -32.1,
+  "bands": [
+   {
+    "label": "Within a quarter mile",
+    "support": 0.0,
+    "neutral": 0.0,
+    "oppose": 100.0,
+    "n": 6
+   },
+   {
+    "label": "A quarter mile to a mile",
+    "support": 3.9,
+    "neutral": 3.8,
+    "oppose": 92.3,
+    "n": 55
+   },
+   {
+    "label": "1 to 3 miles",
+    "support": 6.5,
+    "neutral": 39.1,
+    "oppose": 54.4,
+    "n": 208
+   },
+   {
+    "label": "More than 3 miles",
+    "support": 1.1,
+    "neutral": 93.9,
+    "oppose": 5.1,
+    "n": 229
+   }
+  ],
+  "who_lives_near": {
+   "adults_within_quarter_mile": 881,
+   "adults_within_1_mile": 9760,
+   "simulated_residents_within_1_mile": 61,
+   "renters_pct": 46.0,
+   "no_car_pct": 12.4,
+   "age_65_plus_pct": 26.3
+  }
+ },
+ "levers": [
+  "hours",
+  "location",
+  "size"
+ ],
+ "lever_at": 2,
+ "lever": "size",
+ "repeat": {
+  "run_id": "run-c81909159d",
+  "split": {
+   "support": 3.9,
+   "neutral": 60.2,
+   "oppose": 35.8,
+   "n": 498
+  },
+  "score": -31.9
+ },
+ "spread_pts": 0.2,
+ "spread_note": "The unchanged proposal was run twice. The two runs differ by this many points on the target measure; a changed version only counts as better if it beats the best so far by more than that.",
+ "site_rule": {
+  "original_zoning": "B4",
+  "nearest_parcel_m": 39,
+  "lots_in_pool": 136,
+  "rule": "Land Bank lots in the selected districts in zoning district B4, at least 0.5 miles apart and from the original site, lots at least as large as the median lot in that pool, fewest adults living within a mile first. Same zoning district as your site; whether the use is permitted there was not checked."
+ },
+ "predictor": {
+  "cells": "distance band x age",
+  "answers_used": 1988,
+  "min_answers_per_cell": 5,
+  "predicted_score_at_best_site": -13.1
+ },
+ "last_prediction_error": 0.6,
+ "stop_reason": "5 reruns used",
+ "best": {
+  "label": "Make it smaller: seats 2,500 instead of 5,000",
+  "score": -8.1,
+  "split": {
+   "support": 5.9,
+   "neutral": 80.2,
+   "oppose": 14.0,
+   "n": 495
+  },
+  "rerun": 4,
+  "proposal": "Proposal: 5000 seat concert venue at 2601 S Fort (seats: 2500 seats, typical start time: Afternoon) in District 6."
+ },
+ "limits": [
+  "Best of 5 versions tried, not the best possible.",
+  "A forecast from simulated residents, not a poll.",
+  "Candidate sites share the original site's zoning district; whether the use is permitted there was not checked.",
+  "Moving a proposal changes who lives near it: compare 'who lives near' for each site before choosing one."
+ ],
+ "candidates_left": [
+  {
+   "label": "Make it smaller: seats 1,000 instead of 5,000",
+   "predicted": null,
+   "predicted_score": null,
+   "who_lives_near": null
+  }
+ ],
+ "snapshot": {
+  "ran_on": "November 15, 2026",
+  "mode": "Accurate",
+  "residents": 498,
+  "districts": "District 6",
+  "proposal": "Proposal: 5000 seat concert venue at Michigan Ave and Trumbull (seats: 5000 seats) in District 6."
+ }
+}
