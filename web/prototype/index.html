@@ -68,6 +68,7 @@
 .settings { position: absolute; top: 92px; right: 16px; z-index: 6; width: 260px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .settings[hidden] { display: none; }
 .settings h3 { margin: 0; font-size: 16px; }
+.settings .credits { margin: 4px 0 0; font-size: 11px; line-height: 1.45; color: var(--text-3); }
 .settings .seg { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--raised); }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -250,6 +251,15 @@ button { cursor: pointer; }
 .cmp .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 .cmp .takeaway { padding: 14px 16px; border-radius: var(--r-sm); background: var(--raised); font-size: 15px; line-height: 1.55; }
 .cmp .takeaway b { color: var(--text); }
+.cmp .ptab { width: 100%; max-width: 560px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.cmp .ptab th, .cmp .ptab td { padding: 7px 10px; text-align: left; font-size: 14px; border-bottom: 1px solid rgba(148,163,184,0.10); }
+.cmp .ptab thead th { font-size: 13px; font-weight: 700; color: var(--text-2); white-space: nowrap; }
+.cmp .ptab thead i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 6px; }
+.cmp .ptab tbody th { font-weight: 500; color: var(--text-2); white-space: nowrap; }
+.cmp .ptab td { color: var(--text-2); }
+.cmp .ptab td.hi { color: var(--text); font-weight: 700; }
+.cmp .ptab .mb { display: block; height: 3px; margin-top: 4px; border-radius: 2px; background: rgba(148,163,184,0.15); overflow: hidden; }
+.cmp .ptab .mb span { display: block; height: 100%; border-radius: 2px; }
 
 /* toast */
 .toast { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%); z-index: 20; padding: 10px 16px; border-radius: 10px;
@@ -365,6 +375,7 @@ button { cursor: pointer; }
   <div class="settings panel" id="settings" role="dialog" aria-label="Settings" hidden>
     <h3>Appearance</h3>
     <div class="seg" role="group" aria-label="Theme"><button type="button" data-theme-set="dark" aria-pressed="true">Dark</button><button type="button" data-theme-set="light" aria-pressed="false">Light</button></div>
+    <p class="credits">Map data © OpenStreetMap contributors · © CARTO · Buildings © Overture Maps Foundation (ODbL)</p>
   </div>
 
   <!-- BLOCKS (left): built from the question -->
@@ -472,8 +483,6 @@ var mapView = (function () {
     container: el, style: STYLE, center: [-83.09, 42.36], zoom: 11, pitch: 50, bearing: -12,
     maxPitch: 70, minZoom: 10, maxBounds: [[-83.6, 42.1], [-82.6, 42.6]], attributionControl: false
   });
-  map.addControl(new maplibregl.AttributionControl({ compact: true,
-    customAttribution: 'Buildings © Overture Maps Foundation (ODbL) · © CARTO · © OpenStreetMap contributors' }), 'bottom-left');
   var overlay = new deck.MapboxOverlay({ interleaved: true, layers: [], getTooltip: function (i) {
     var p = i.object && i.object.properties;
     if (!p || p.kind !== 'artery') return null;
@@ -818,7 +827,6 @@ var mapView = (function () {
         step(2); step(3);
         ready = true; api.setSelected(sel, true); kick();
         setTimeout(hideLoader, 700);                  // our layers are on; don't wait for the slow basemap to finish
-        var at = document.querySelector('.maplibregl-ctrl-attrib'); if (at) at.classList.remove('maplibregl-compact-show');
       }).catch(function (u) { console.error('map data missing:', u); hideLoader(); });
   });
 
@@ -1023,10 +1031,16 @@ function openCompare(){
   if(data.some(function(c){return c.P;})){
     var maxInc=Math.ceil(Math.max.apply(null,data.map(function(c){return c.P&&c.P.median_income||0;}))/10000)*10000||60000;
     var money=function(v){ return '$'+r(v/1000)+'k'; };
-    body+='<section><h3>Who lives here</h3><p>Census-based profile of each district\'s residents.</p>'+
-      dotRow('Rent their home', function(c){ return c.P?c.P.renters:null; }, pct, 100)+
-      dotRow('Have no car', function(c){ return c.P?c.P.no_car:null; }, pct, 100)+axis(100,pct)+
-      (data.some(function(c){return c.P&&c.P.median_income;}) ? dotRow('Median household income', function(c){ return c.P&&c.P.median_income?c.P.median_income:null; }, money, maxInc)+axis(maxInc,money) : '')+
+    var prow=function(label, get, fmt, max){
+      var vals=data.map(get); if(vals.every(function(v){return v==null;})) return '';
+      var hi=Math.max.apply(null,vals.filter(function(v){return v!=null;}));
+      return '<tr><th scope="row">'+label+'</th>'+data.map(function(c,i){ var v=vals[i];
+        return '<td'+(v===hi&&n>1?' class="hi"':'')+'>'+(v==null?'–':fmt(v)+'<span class="mb"><span style="width:'+Math.min(100,100*v/max)+'%;background:'+c.x.c+'"></span></span>')+'</td>'; }).join('')+'</tr>'; };
+    body+='<section><h3>Who lives here</h3><table class="ptab"><thead><tr><th></th>'+data.map(function(c){ return '<th><i '+col(c)+'></i>D'+c.d+'</th>'; }).join('')+'</tr></thead><tbody>'+
+      prow('Rent home', function(c){ return c.P?c.P.renters:null; }, pct, 100)+
+      prow('No car', function(c){ return c.P?c.P.no_car:null; }, pct, 100)+
+      prow('Median income', function(c){ return c.P&&c.P.median_income?c.P.median_income:null; }, money, maxInc)+
+      '</tbody></table>'+
       '<h3 style="margin-top:18px">Age mix</h3>'+
       data.filter(function(c){return c.P&&c.P.age;}).map(function(c){ var a=c.P.age; return stackRow(c,[{cls:'a1',name:'Under 35',v:a['Under 35']},{cls:'a2',name:'35 to 64',v:a['35 to 64']},{cls:'a3',name:'65 and over',v:a['65 and over']}],
         r(a['65 and over'])+'%<small>65 and over</small>'); }).join('')+
@@ -1041,7 +1055,7 @@ function openCompare(){
     take='<div class="takeaway">Biggest difference: <b>'+esc(big.label)+'</b>, '+big.fmt(big.lo.v)+' in District '+big.lo.c.d+' vs '+big.fmt(big.hi.v)+' in District '+big.hi.c.d+'.</div>';
   }
   if(!state.asked) h+='<p class="muted" style="margin:0">Ask a question to see how each district feels. For now, here is who lives in each.</p>';
-  el.innerHTML=h+take+body; el.hidden=false;
+  el.innerHTML=h+body; el.hidden=false;
   var res=document.getElementById('results'); res.classList.add('is-compare');
   var b=document.getElementById('compareBtn'); b.textContent='Close comparison'; b.setAttribute('aria-expanded','true');
   document.querySelector('.results__body').scrollTop=0;
