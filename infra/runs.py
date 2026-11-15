@@ -18,7 +18,22 @@ import uuid
 
 CORS = {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"}
 BATCH = 25
-MODES = {"fast": 25, "accurate": 1}      # residents per model call
+# Three ways to ask residents (decided by Partner, Nov 15):
+#   instant   groups of 25, every group sent at once
+#   fast      the smallest groups that still fit one minute's model allowance, every group sent at once
+#   accurate  one resident per call, 10 batches in flight (the 200-a-minute cap sets the pace)
+MODES = {"instant": 25, "fast": None, "accurate": 1}      # residents per model call; fast is sized per run
+FAST_BUDGET = 170        # model calls a Fast run is sized to. The account allows 200 a minute (measured Nov 15); the rest is headroom for retries
+FAST_MIN = 5             # smallest group Fast uses (a choice)
+
+
+def per_call_for(mode: str, residents: int) -> int:
+    """Residents per model call. Fast: answer calls plus one quote call per 25 residents must fit FAST_BUDGET."""
+    if mode != "fast":
+        return MODES[mode]
+    import math
+    room = max(1.0, FAST_BUDGET - residents / BATCH)
+    return max(FAST_MIN, min(BATCH, math.ceil(residents / room)))
 
 
 def _table():
@@ -56,7 +71,7 @@ def start_run(event, context=None):
     spec["status"] = "confirmed"
     mode = body.get("mode") or default_mode()
     if mode not in MODES:
-        return _resp(400, {"error": 'mode must be "fast" or "accurate"'})
+        return _resp(400, {"error": 'mode must be "instant", "fast" or "accurate"'})
     run_id = f"run-{uuid.uuid4().hex[:10]}"
     _table().put_item(Item={"run_id": run_id, "spec_id": spec["spec_id"], "spec_version": spec["version"], "mode": mode,
                             "total": residents, "answered": 0,
@@ -67,7 +82,7 @@ def start_run(event, context=None):
 
 
 def default_mode() -> str:
-    return "fast" if int(os.environ.get("RESIDENTS_PER_CALL", "1")) > 1 else "accurate"
+    return "instant" if int(os.environ.get("RESIDENTS_PER_CALL", "1")) > 1 else "accurate"
 
 
 def get_run(event, context=None):
@@ -132,7 +147,8 @@ def engine_step(event, context=None):
 
 
 def plan_batches(event, context=None):
-    """Split the personas for the chosen districts into 25-resident batches (ids only; residents load from S3)."""
+    """Split the personas for the chosen districts into batches of about 25 (ids only; residents load from S3).
+    A batch holds a whole number of model calls, so no resident ends up in a smaller group than the mode intends."""
     per = int(os.environ.get("PERSONAS_PER_DISTRICT", "500"))
     ids = [f"d{d}-{i:04d}" for d in event["spec"].get("districts", []) for i in range(per)]
     from engine import proximity
@@ -140,12 +156,18 @@ def plan_batches(event, context=None):
     places = proximity.places_of(event["spec"])
     computed, lines = False, {}       # per-resident lines are built in the batch from places and street effects
     effects = (event.get("engine") or {}).get("street_effects") or []
-    per_call = MODES.get(event.get("mode") or default_mode(), 1)
-    batches = [{"run_id": event["run_id"], "batch": n, "spec": spec, "residents_per_call": per_call, "persona_ids": ids[i:i + BATCH], "places": places, "street_effects": effects,
-                "impacts_computed": computed, "impact_lines": {p: lines[p] for p in ids[i:i + BATCH] if p in lines}}
-               for n, i in enumerate(range(0, len(ids), BATCH))]
-    _update(event["run_id"], batches=len(batches), total=len(ids))
-    return {**event, "batches": batches}
+    mode = event.get("mode") or default_mode()
+    per_call = per_call_for(mode, len(ids)) if mode in MODES else 1
+    groups = max(1, BATCH // per_call)               # model calls per batch
+    size = per_call * groups
+    at_once = groups if mode == "fast" else None     # fast: a batch's calls go out together; else the stack setting
+    batches = [{"run_id": event["run_id"], "batch": n, "spec": spec, "residents_per_call": per_call, "calls_at_once": at_once,
+                "persona_ids": ids[i:i + size], "places": places, "street_effects": effects,
+                "impacts_computed": computed, "impact_lines": {p: lines[p] for p in ids[i:i + size] if p in lines}}
+               for n, i in enumerate(range(0, len(ids), size))]
+    _update(event["run_id"], batches=len(batches), total=len(ids), per_call=per_call)
+    # Accurate: 10 batches in flight, as before. Instant and Fast: every batch at once.
+    return {**event, "batches": batches, "max_concurrency": 10 if mode == "accurate" else len(batches)}
 
 
 def resident_batch(event, context=None):
@@ -178,6 +200,7 @@ def aggregate_step(event, context=None):
         result["stopped"] = stopped                 # for example the spending limit was reached mid-run
     spend = table.get_item(Key={"run_id": f"spend#{run_id}"}, ConsistentRead=True).get("Item") or {}
     result["run_stats"]["mode"] = event.get("mode") or default_mode()
+    result["run_stats"]["residents_per_call"] = (event.get("batches") or [{}])[0].get("residents_per_call")
     result["run_stats"]["model_cost_usd"] = round(int(spend.get("micro_usd", 0)) / 1e6, 4)
     _update(run_id, status="done", stage="done", result_json=json.dumps(result), finished=int(time.time()))
     return {"run_id": run_id, "status": "done"}

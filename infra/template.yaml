@@ -239,7 +239,7 @@ Resources:
           Residents:
             Type: Map
             ItemsPath: $.batches
-            MaxConcurrency: 10
+            MaxConcurrencyPath: $.max_concurrency      # 10 for Accurate; every batch at once for Instant and Fast (infra/runs.plan_batches)
             ResultPath: $.batch_results
             ItemProcessor:
               ProcessorConfig: {Mode: INLINE}
