@@ -65,6 +65,8 @@ def clean_values(action_type: str, raw: dict) -> tuple[dict, list[str]]:
         if c is None:
             notes.append(f"ignored unknown field {k}")
             continue
+        if isinstance(v, dict) and "value" in v:   # the model sometimes wraps a value as {value, source}
+            v = v["value"]
         if c.get("options"):
             allowed = [o["value"] for o in c["options"]]
             if v in allowed:

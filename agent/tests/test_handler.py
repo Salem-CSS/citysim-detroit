@@ -61,3 +61,9 @@ def test_spec_validates_against_contract():
     _, out, _ = call({"actions": [{"type": "modify_road", "values": {"street": "vernor_w", "lanes_removed": 1}}],
                       "unsupported": [], "confidence": "medium"}, question="road diet on Vernor", districts=[6])
     assert validate("scenario_spec", out["spec"]) == []
+
+
+def test_wrapped_value_is_unwrapped():
+    from agent.handler import clean_values
+    vals, notes = clean_values("add_drone_route", {"flights_per_day": {"value": 150, "source": "from_question"}})
+    assert vals == {"flights_per_day": 150} and notes == []

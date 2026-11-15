@@ -40,7 +40,7 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 | Lane | Owner | Status | Last update |
 | --- | --- | --- | --- |
 | Data (census, LODES, Detroit open data → S3) | Partner | **In S3:** `s3://citysim-data-707604458164/raw/` (us-east-2), 35 files, 2.07 GB. Processing not started | 11-14 20:41 |
-| Buildings (Overture → Athena → tiles) | Salem | **Built in Athena** (335,338 bldgs, 95% measured height). Vector tiles (z10-14, ~20 MB) power the main prototype map + `/map3d.html`. Districts approximate until real file | 11-14 20:00 |
+| Buildings (Overture → tiles) | Salem + Partner | 335,338 bldgs; tiles tagged with **official 2026 districts**; table rebuilt with DuckDB and stored in `s3://citysim-data-707604458164/processed/buildings/` | 11-14 21:04 |
 | Engine (traffic Lambda) | — | Load, trips, impact lines work; 6 actions are stubs taking v2 `values` | 11-14 19:05 |
 | Residents (Bedrock) | — | v2 framework: prompt + checks + tests done (stance/reason/quote sample); batching stubbed | 11-14 19:05 |
 | Agent + Infra (AWS stack) | Salem | `infra/` SAM stack written (not deployed yet). `POST /scenario` works in tests (Bedrock → validated v2 spec); run pipeline wired with stubs | 11-14 20:35 |
@@ -60,6 +60,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 ---
 
 ## Entries
+
+### 2026-11-14 21:04 ET · Partner (AI) · Data + Web + Infra
+**Did:** (1) Rebuilt the Detroit buildings table on a laptop with DuckDB from the same Overture release (2026-10-21.0); it matches the Athena build exactly: 335,338 buildings, 318,480 measured, 94 from floors, 16,764 defaulted, max 221.5 m. Uploaded to `s3://citysim-data-707604458164/processed/buildings/detroit_buildings.parquet`. (2) Replaced the hand-drawn districts with the city's **official 2026 council districts** in `geo/districts.geojson`, re-split the road corridors by them, and re-exported all 222 tiles so each building's `d` tag is official. (3) Deployed `citysim-main` in account 707604458164 (us-east-2) and pointed `web/prototype/config.js` at it. (4) Fixed the agent dropping a value the model wrapped as `{value, source}`. (5) $10 monthly AWS budget with email alerts at 50% and 100%. (6) Git tags `checkpoint-2026-11-14-before-build` (branch) and `checkpoint-2026-11-14-main` (main before this merge).
+**Files:** data/buildings/duckdb_build.py (new), web/prototype/tools/make_geo.py (`--districts`), web/prototype/geo/{districts,overlays,residents_demo}.geojson, web/prototype/tiles/** (regenerated), web/prototype/config.js, agent/handler.py, agent/tests/test_handler.py, LOG.md
+**Contracts changed:** none
+**Decisions:** Live backend = `citysim-main` in 707604458164: `https://ja14jurk92.execute-api.us-east-2.amazonaws.com`. Test stack `citysim-partner`: `https://6dxcfjf4tg.execute-api.us-east-2.amazonaws.com`. Buildings per district changed a lot with the official boundaries (old → new): D1 68,621 → 63,015; D2 53,395 → 49,792; D3 63,179 → 50,452; D4 12,632 → 45,953; D5 32,700 → 32,416; D6 24,994 → 36,538; D7 79,653 → 57,052; outside any district 164 → 120.
+**Blocked / needs:** Salem: `detroit_map.py` REGIONS are no longer used when `--districts` is passed; anything else in index.html that assumed the old shapes should be checked. Resident dots in `residents_demo.geojson` are still demo placements.
+**Next:** personas, `residents/batch.py`, `residents/aggregate.py`.
 
 ### 2026-11-14 20:50 ET · Partner (AI) · Agent+Infra
 **Did:** Deployed `citysim-partner` in account 707604458164, **us-east-2**: `https://6dxcfjf4tg.execute-api.us-east-2.amazonaws.com`. `POST /scenario` returned a valid drone spec from a real Nova Pro call in that account (no second account needed); `POST /runs` → `GET /runs/{id}` completes through the stubs. Added a hard spending limit for every Bedrock call.

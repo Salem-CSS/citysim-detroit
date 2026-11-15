@@ -3,8 +3,11 @@
     python web/prototype/tools/make_geo.py
 
 - detroit.geojson    real city limits (Overture locality, simplified ~80 m; hole = Hamtramck + Highland Park)
-- districts.geojson  APPROXIMATE council districts: hand-drawn regions clipped to city limits.
-                     Replace with data/raw/detroit/council_districts_2026.geojson when Partner downloads it.
+- districts.geojson  council districts. With --districts <official file> (the city's 2026 layer,
+                     data/raw/detroit/council_districts_2026.geojson, property district_number) these are the
+                     OFFICIAL boundaries. Without it they fall back to hand-drawn APPROXIMATE regions.
+
+    python web/prototype/tools/make_geo.py --districts data/raw/detroit/council_districts_2026.geojson
 - overlays.geojson   12 road corridors on REAL street geometry (Overture transportation segments, see
                      roads_overture.json) with a DEMO load until the engine supplies real ones,
                      drone route + 400 m noise band, Michigan Central hub
@@ -57,11 +60,21 @@ def main():
     city = wkt.loads(DETROIT_WKT)
     (OUT / "detroit.geojson").write_text(json.dumps(r6(fc([feat(city, name="Detroit")]))))
 
+    from shapely.geometry import shape
+    official = sys.argv[sys.argv.index("--districts") + 1] if "--districts" in sys.argv else None
+    if official:
+        region = {int(f["properties"]["district_number"]): shape(f["geometry"]).buffer(0)
+                  for f in json.loads(Path(official).read_text())["features"]}
+        if sorted(region) != [1, 2, 3, 4, 5, 6, 7]:
+            raise SystemExit(f"expected districts 1-7 in {official}, found {sorted(region)}")
+        region = {d: region[d].simplify(0.00005) for d in sorted(region)}   # ~5 m, keeps the file small
+    else:
+        region = {d: Polygon(ring).intersection(city) for d, ring in REGIONS.items()}
     dists = []
-    for d, ring in REGIONS.items():
-        g = Polygon(ring).intersection(city)
+    for d, g in region.items():
         p = g.representative_point()
-        dists.append(feat(g, district=f"District {d}", n=d, color=DCOL[d], label=[round(p.x, 5), round(p.y, 5)]))
+        dists.append(feat(g, district=f"District {d}", n=d, color=DCOL[d], label=[round(p.x, 5), round(p.y, 5)],
+                          source="official_2026" if official else "approximate"))
     (OUT / "districts.geojson").write_text(json.dumps(r6(fc(dists))))
 
     route = LineString(ROUTE_LL)
@@ -72,7 +85,7 @@ def main():
     for name, road, load, parts in CORRIDORS:
         g = linemerge(unary_union([wkt.loads(raw[p]) for p in parts if p in raw]))
         for df in dists:                      # split per district so the map can show only selected ones
-            piece = g.intersection(Polygon(REGIONS[df["properties"]["n"]]).intersection(city))
+            piece = g.intersection(region[df["properties"]["n"]])
             if not piece.is_empty and piece.length > 0:
                 over.append(feat(piece, kind="artery", road=road, name=name, load=load, d=df["properties"]["n"]))
     over += [feat(route, kind="drone_route"), feat(band, kind="noise_band"),
