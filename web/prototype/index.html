@@ -1183,7 +1183,8 @@ var mapView = (function () {
       var left = document.getElementById('app').classList.contains('has-blocks') ? 400 : 60;
       var pad = { top: 140, bottom: 140, left: left, right: 460 };
       var cam = map.cameraForBounds([lo, hi], { padding: pad, maxZoom: 16 }) || {};
-      map.easeTo({ center: cam.center || a, zoom: Math.min((cam.zoom || 16) - 0.4, kind === 'building' ? 16.6 : 16), pitch: kind === 'drone' ? 60 : 50, bearing: map.getBearing(), duration: 700 });
+      if (kind === 'building') map.easeTo({ center: a, zoom: 17.2, pitch: 58, bearing: map.getBearing(), offset: [(left - 460) / 2, 60], duration: 800 });
+      else map.easeTo({ center: cam.center || a, zoom: Math.min((cam.zoom || 16) - 0.4, 16), pitch: kind === 'drone' ? 60 : 50, bearing: map.getBearing(), duration: 700 });
       if (kind === 'building') { var cb = map.cameraForBounds([[a[0] - .002, a[1] - .0015], [a[0] + .002, a[1] + .0015]], { padding: pad, maxZoom: 17 }) || {}; cam = cb; }
       var go = function () { if (build !== B || B.ready) return; if (b && kind === 'transit') { try { B.path = roadPath(a, b); } catch (e) { B.path = null; } } B.ready = true; B.t0 = performance.now(); };
       map.once('moveend', function () { map.once('idle', go); setTimeout(go, 900); });   // street tiles for the framed view are loaded by then
