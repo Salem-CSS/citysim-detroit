@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: people stand out on the light map
+- Light theme: residents use deeper colours (not asked = dark slate, support = sky-600, oppose = orange-600, neutral = slate-500) with a white outline and slightly bigger dots; walkers use the same colours. Dark theme unchanged.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: earthy light map
 - Light theme now swaps the basemap to CARTO Voyager (no labels) and recolours it: blue water, green parks/grass/woods, warm beige land; buildings use a warm tan height ramp; road overlay and outside-district tint use light warm colours. Dark theme unchanged. Our sources/layers (buildings, outside tint, roads) are carried across the style swap (setStyle transformStyle) and repainted.
 - Files: web/prototype/index.html only.
