@@ -3,6 +3,7 @@
 POST /runs        start_run   -> writes a pending row, starts the state machine, returns {run_id}
                   body {spec, mode}: mode "fast" = 25 residents share a model call, "accurate" = one resident per call
 GET  /runs/{id}   get_run     -> the row (status, stage, mode, total, answered, result)
+POST /corrections, GET /corrections/{id}  -> correction/loop.py (the correction engine)
 GET  /runs/{id}/answers  get_answers -> each resident's own answer (contracts/run_answers.schema.json)
 State machine     engine_step -> plan_batches -> Map(resident_batch, 10 at a time) -> aggregate_step
 
@@ -39,31 +40,40 @@ def _update(run_id, **fields):
 
 # ---------- API ----------
 def start_run(event, context=None):
-    import boto3
     body = json.loads(event.get("body") or "{}")
-    spec = body.get("spec")
+    code, out = launch(body.get("spec"), body.get("mode"))
+    return _resp(code, out)
+
+
+def launch(spec, mode=None, correction_id=None):
+    """Check a proposal and start a run of it. Returns (http status, body). Used by POST /runs and by the correction
+    engine, which passes its correction_id so the finished run reports back to it."""
+    import boto3
     if not spec or not spec.get("actions"):
-        return _resp(400, {"error": "spec with at least one action is required"})
+        return 400, {"error": "spec with at least one action is required"}
     residents = len(spec.get("districts", [])) * int(os.environ.get("PERSONAS_PER_DISTRICT", "500"))
     cap = int(os.environ["MAX_RESIDENTS_PER_RUN"])
     if residents > cap:
-        return _resp(400, {"error": f"this run would ask {residents} residents; the limit is {cap}"})
+        return 400, {"error": f"this run would ask {residents} residents; the limit is {cap}"}
     from agent.handler import check_places
     spec["status"] = "draft"
     spec = check_places(spec)                       # the panel may have edited places and values; re-verify and rebuild the sentence
     if spec["status"] == "needs_info":
-        return _resp(400, {"error": "this proposal needs a place before it can run", "questions": spec["questions"], "spec": spec})
+        return 400, {"error": "this proposal needs a place before it can run", "questions": spec["questions"], "spec": spec}
     spec["status"] = "confirmed"
-    mode = body.get("mode") or default_mode()
+    mode = mode or default_mode()
     if mode not in MODES:
-        return _resp(400, {"error": 'mode must be "fast" or "accurate"'})
+        return 400, {"error": 'mode must be "fast" or "accurate"'}
     run_id = f"run-{uuid.uuid4().hex[:10]}"
-    _table().put_item(Item={"run_id": run_id, "spec_id": spec["spec_id"], "spec_version": spec["version"], "mode": mode,
-                            "total": residents, "answered": 0,
-                            "status": "running", "stage": "engine", "created": int(time.time())})
-    boto3.client("stepfunctions").start_execution(stateMachineArn=os.environ["STATE_MACHINE_ARN"], name=run_id,
-                                                  input=json.dumps({"run_id": run_id, "spec": spec, "mode": mode, "started": int(time.time())}))
-    return _resp(202, {"run_id": run_id, "mode": mode, "total": residents})
+    item = {"run_id": run_id, "spec_id": spec["spec_id"], "spec_version": spec["version"], "mode": mode,
+            "total": residents, "answered": 0, "spec_json": json.dumps(spec),
+            "status": "running", "stage": "engine", "created": int(time.time())}
+    payload = {"run_id": run_id, "spec": spec, "mode": mode, "started": int(time.time())}
+    if correction_id:
+        item["correction_id"] = payload["correction_id"] = correction_id
+    _table().put_item(Item=item)
+    boto3.client("stepfunctions").start_execution(stateMachineArn=os.environ["STATE_MACHINE_ARN"], name=run_id, input=json.dumps(payload))
+    return 202, {"run_id": run_id, "mode": mode, "total": residents}
 
 
 def default_mode() -> str:
@@ -73,8 +83,9 @@ def default_mode() -> str:
 def get_run(event, context=None):
     run_id = (event.get("pathParameters") or {}).get("id")
     item = _table().get_item(Key={"run_id": run_id}).get("Item")
-    if not item or str(run_id).startswith(("spend#", "resp#")):
+    if not item or str(run_id).startswith(("spend#", "resp#", "corr#")):
         return _resp(404, {"error": "no such run"})
+    item.pop("spec_json", None)
     if "result_json" in item:                       # stored as text so numbers stay numbers
         item["result"] = json.loads(item.pop("result_json"))
     return _resp(200, item)
@@ -85,7 +96,7 @@ def get_answers(event, context=None):
     Works while the run is still going (the answers stored so far)."""
     run_id = (event.get("pathParameters") or {}).get("id")
     table = _table()
-    item = None if str(run_id).startswith(("spend#", "resp#")) else table.get_item(Key={"run_id": run_id}).get("Item")
+    item = None if str(run_id).startswith(("spend#", "resp#", "corr#")) else table.get_item(Key={"run_id": run_id}).get("Item")
     if not item:
         return _resp(404, {"error": "no such run"})
     rows = read_rows(table, run_id, int(item.get("batches", 0)))
@@ -160,4 +171,8 @@ def aggregate_step(event, context=None):
     result["run_stats"]["mode"] = event.get("mode") or default_mode()
     result["run_stats"]["model_cost_usd"] = round(int(spend.get("micro_usd", 0)) / 1e6, 4)
     _update(run_id, status="done", stage="done", result_json=json.dumps(result), finished=int(time.time()))
+    if event.get("correction_id") and os.environ.get("CORRECTION_FUNCTION"):       # a rerun of the correction engine: tell it
+        import boto3
+        boto3.client("lambda").invoke(FunctionName=os.environ["CORRECTION_FUNCTION"], InvocationType="Event",
+                                      Payload=json.dumps({"correction_id": event["correction_id"], "run_id": run_id}).encode())
     return {"run_id": run_id, "status": "done"}

@@ -165,6 +165,45 @@ Resources:
       Events:
         Get: {Type: HttpApi, Properties: {ApiId: !Ref Api, Path: "/runs/{id}/answers", Method: GET}}
 
+  # ---------- correction engine (BACKEND_PLAN.md section 15) ----------
+  CorrectionStartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub citysim-${Stage}-correction-start
+      Handler: correction.loop.start
+      Environment: {Variables: {CORRECTION_FUNCTION: !Sub "citysim-${Stage}-correction-step"}}
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref RunsTable}
+        - Statement: [{Effect: Allow, Action: "lambda:InvokeFunction", Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:citysim-${Stage}-correction-step"}]
+      Events:
+        Post: {Type: HttpApi, Properties: {ApiId: !Ref Api, Path: /corrections, Method: POST}}
+
+  CorrectionGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub citysim-${Stage}-correction-get
+      Handler: correction.loop.get
+      Policies: [{DynamoDBReadPolicy: {TableName: !Ref RunsTable}}]
+      Events:
+        Get: {Type: HttpApi, Properties: {ApiId: !Ref Api, Path: "/corrections/{id}", Method: GET}}
+
+  CorrectionStepFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub citysim-${Stage}-correction-step
+      Handler: correction.loop.step
+      Timeout: 900
+      MemorySize: 2048
+      Environment: {Variables: {STATE_MACHINE_ARN: !Ref RunMachine, CORRECTION_FUNCTION: !Sub "citysim-${Stage}-correction-step"}}
+      EventInvokeConfig: {MaximumRetryAttempts: 0}          # a failed step stops the correction; it is never replayed
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref RunsTable}
+        - StepFunctionsExecutionPolicy: {StateMachineName: !GetAtt RunMachine.Name}
+        - !If [HasDataBucket, {S3ReadPolicy: {BucketName: !Ref DataBucket}}, !Ref AWS::NoValue]
+        - Statement:
+            - {Effect: Allow, Action: [bedrock:InvokeModel], Resource: "*"}
+            - {Effect: Allow, Action: "geo-places:SearchText", Resource: "*"}
+
   EngineFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -207,7 +246,10 @@ Resources:
       FunctionName: !Sub citysim-${Stage}-aggregate
       Handler: infra.runs.aggregate_step
       Timeout: 60
-      Policies: [{DynamoDBCrudPolicy: {TableName: !Ref RunsTable}}]
+      Environment: {Variables: {CORRECTION_FUNCTION: !Sub "citysim-${Stage}-correction-step"}}
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref RunsTable}
+        - Statement: [{Effect: Allow, Action: "lambda:InvokeFunction", Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:citysim-${Stage}-correction-step"}]
 
   RunMachine:
     Type: AWS::Serverless::StateMachine
