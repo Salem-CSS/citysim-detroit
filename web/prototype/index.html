@@ -489,7 +489,7 @@ function renderTiles(){
     var t=document.createElement('div'); t.className='tile'+(has?'':' is-pending');
     t.innerHTML='<div class="tile__name"><span class="dot" style="--c:'+x.c+'"></span>District '+d+'</div>'+
       '<div class="tile__pct num">'+(has?x.s+'%':'—')+'</div>'+
-      (has?'<div class="split"><span style="width:'+x.s+'%"></span><span style="width:'+x.n+'%"></span><span style="width:'+x.o+'%"></span></div><div class="tile__sub">Top worry: '+x.w+'</div>'
+      (has?'<div class="split"><span style="width:'+x.s+'%"></span><span style="width:'+x.n+'%"></span><span style="width:'+x.o+'%"></span></div><div class="tile__sub">'+(state.spec?'Top reason: ':'Top worry: ')+x.w+'</div>'
           :'<div class="tile__sub">'+(state.asked?'Sample has no data here':'500 residents · '+x.area)+'</div>');
     el.appendChild(t);
   });
@@ -630,7 +630,7 @@ function showResult(res){
   document.getElementById('ovS').textContent=r(o.support)+'%'; document.getElementById('ovN').textContent=r(o.neutral)+'%'; document.getElementById('ovO').textContent=r(o.oppose)+'%';
   var bar=document.getElementById('ovBar'); bar.setAttribute('aria-label',r(o.support)+'% support, '+r(o.neutral)+'% neutral, '+r(o.oppose)+'% oppose');
   bar.children[0].style.width=o.support+'%'; bar.children[1].style.width=o.neutral+'%'; bar.children[2].style.width=o.oppose+'%';
-  var lean = o.support>50?'A majority supports this.':o.oppose>50?'A majority opposes this.':o.support>o.oppose?'Leaning yes. No majority either way.':o.oppose>o.support?'Leaning no. No majority either way.':'Evenly split.';
+  var lean = o.support>50?'A majority supports this.':o.oppose>50?'A majority opposes this.':o.neutral>=50?'Most residents are neutral. Among the rest, '+(o.support>o.oppose?'more support than oppose.':o.oppose>o.support?'more oppose than support.':'support and opposition are even.'):o.support>o.oppose?'Leaning yes. No majority either way.':o.oppose>o.support?'Leaning no. No majority either way.':'Evenly split.';
   var range = o.support_range ? ' Support range '+o.support_range[0]+'% to '+o.support_range[1]+'% (sampling spread only).' : '';
   document.getElementById('ovLean').textContent=lean+range;
   var st=res.run_stats||{};
@@ -645,7 +645,7 @@ function showResult(res){
   var seg=(res.segments||[])[0], esc=function(t){return String(t).replace(/</g,'&lt;');}, notes=(res.engine_notes||[]).map(esc).join(' ');
   var head = seg ? '<b>Traffic: '+esc(seg.name)+' goes from '+seg.aadt_before.toLocaleString()+' to '+seg.aadt_after.toLocaleString()+' vehicles a day'+
         (seg.load_after?' (load '+seg.load_before+' to '+seg.load_after+')':'')+'.</b> '
-    : res.transit ? '<b>Bus service: '+res.transit.adults_within_quarter_mile.toLocaleString()+' adults live within a quarter mile of the line.</b> '
+    : res.transit ? '<b>Bus service: '+res.transit.straight_line_miles+' miles in a straight line.</b> '
     : '<b>Traffic: not calculated.</b> ';
   document.getElementById('trafficNote').innerHTML='<div>'+head+(notes||'Residents reacted to the proposal as described.')+
     (st.dropped?' '+st.dropped+' of '+st.residents+' residents gave no valid answer.':'')+(res.stopped?' The run stopped early: '+String(res.stopped[0]).replace(/</g,'&lt;'):'')+'</div>';

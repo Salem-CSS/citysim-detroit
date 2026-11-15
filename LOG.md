@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 23:46 ET · Partner (AI) · Web (live test)
+**Did:** Tested the live Vercel site (citysim-detroit.vercel.app) against `citysim-main` with real clicks and typing. (1) "Build a 400 unit apartment building at Michigan Ave and 14th St": place verified, 1,999 of 2,000 residents answered in about 40 s, 9% support / 83% neutral / 8% oppose, traffic sentence showed Michigan Ave 8,347 → 9,972 vehicles a day, accuracy sentence showed 13.1 points. (2) "I want a bus route from the Hilton hotel to the Renaissance Center" typed while the first proposal was open: replaced it, asked which Hilton with three buttons, run button disabled; clicking "Hilton Garden Inn" verified both ends. (3) Running it: 2,000 residents, 19% / 77% / 4%, 1,966 adults within a quarter mile of the line. No console errors. Then fixed three wording problems the test showed.
+**Files:** web/prototype/index.html, LOG.md
+**Contracts changed:** none
+**Decisions:** A mostly-neutral result now reads "Most residents are neutral…" (it said "Leaning yes" at 9% support and 83% neutral). District tiles say "Top reason" for live results, since the top reason can be why people support (access, for a bus route). The bus headline shows the line's length and no longer repeats the adults sentence.
+**Blocked / needs:** With four districts selected most residents live miles from the site and answer neutral, so city-wide totals look flat; the by-distance view is where the signal is, and the site does not show it yet.
+**Next:** correction engine; map marker.
+
 ### 2026-11-14 23:29 ET · Partner (AI) · Engine + Infra + Web
 **Did:** Traffic engine for buildings and a first bus-route result, deployed to `citysim-partner` and `citysim-main`. `engine/handler.py` (pure Python, reads `s3://citysim-data-707604458164/processed/engine/engine_data.json` built by `data/engine_data.py`: 14,243 blocks, 272 tracts, 1,427 counted segments, 5,101 stops).
 - **add_building**, when the homes (or a grocery's floor area) were stated: trips from `data/ite_rates.csv`; Detroit adjustment by the site tract's no-vehicle household share (ACS B25044); all adjusted trips placed on the busiest counted street at the verified site; load before and after. Any other use returns no trips and says why.
