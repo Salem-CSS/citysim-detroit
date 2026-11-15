@@ -39,7 +39,7 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 | Lane | Owner | Status | Last update |
 | --- | --- | --- | --- |
-| Data (census, LODES, Detroit open data → S3) | Partner | Scripts fixed; all 35 raw files downloaded on Partner's laptop (about 2 GB, row counts match the services). Nothing in S3 yet | 11-14 20:20 |
+| Data (census, LODES, Detroit open data → S3) | Partner | **In S3:** `s3://citysim-data-707604458164/raw/` (us-east-2), 35 files, 2.07 GB. Processing not started | 11-14 20:41 |
 | Buildings (Overture → Athena → tiles) | Salem | **Built in Athena** (335,338 bldgs, 95% measured height). Vector tiles (z10-14, ~20 MB) power the main prototype map + `/map3d.html`. Districts approximate until real file | 11-14 20:00 |
 | Engine (traffic Lambda) | — | Load, trips, impact lines work; 6 actions are stubs taking v2 `values` | 11-14 19:05 |
 | Residents (Bedrock) | — | v2 framework: prompt + checks + tests done (stance/reason/quote sample); batching stubbed | 11-14 19:05 |
@@ -60,6 +60,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 ---
 
 ## Entries
+
+### 2026-11-14 20:41 ET · Partner (AI) · Data + Infra
+**Did:** Created the data bucket and uploaded all raw data: `s3://citysim-data-707604458164/raw/` in **us-east-2**, 35 objects, 2.07 GB (byte count matches the laptop). Merged `main` (backend skeleton, dual-account Bedrock) into `claude/confident-ritchie-ccwiqs`; 19 tests pass. Parcels (377,940 rows) and city building footprints (380,076 rows) are complete after a downloader fix.
+**Files:** data/download/_arcgis.py, LOG.md
+**Contracts changed:** none
+**Decisions:** Partner wants the live backend in account **707604458164** (AWS project "Fresh Deploy"), not 574246332084. That account's organization policy refuses us-east-1, us-west-1 and us-west-2; **us-east-2 (Ohio) works**. Read access checked there for S3, Lambda, DynamoDB, Step Functions, API Gateway, CloudFormation, Bedrock, Location, Budgets. Inference profiles `us.amazon.nova-2-lite-v1:0` and `us.anthropic.claude-haiku-5-5` are listed in us-east-2; no model call has been made yet. The command line signs in with `aws login` (browser session), so no access keys exist.
+**Blocked / needs:** Salem: `infra/deploy.sh` and `BedrockRegion` default to us-east-1; in this account they need `AWS_REGION=us-east-2` and `BedrockRegion=us-east-2`. Athena (us-west-2) cannot run in this account. Real council districts are at `raw/detroit/council_districts_2026.geojson` (7 rows).
+**Next:** spending alert, then a first deploy of the stack in us-east-2.
 
 ### 2026-11-15 ET · Partner (AI) · Residents + Data (plan only)
 **Did:** Switched the resident model to Claude Haiku 5.5 and added a researched plan for richer personas (more census fields per resident, plus what is around their home). No code changed.
