@@ -1051,13 +1051,13 @@ var mapView = (function () {
     var t = performance.now() - build.t0, o = build.opts, lines = o.lines || [], pd = ease(t / 1600), L = [];
     var heads = lines.map(function (ln) { return along(ln, pd).head; });
     var col = o.change === 'close' ? [239, 68, 68, 240] : o.change === 'bike_lane' ? [74, 222, 128, 240] : [249, 115, 22, 240];
-    L.push(new deck.PathLayer({ id: 'r-glow', data: heads, getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 18,
-      getColor: [col[0], col[1], col[2], 60], capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
-    L.push(new deck.PathLayer({ id: 'r-line', data: heads, getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 8,
+    L.push(new deck.PathLayer({ id: 'r-glow', data: heads, getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 26,
+      getColor: [col[0], col[1], col[2], 70], capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
+    L.push(new deck.PathLayer({ id: 'r-line', data: heads, getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 12,
       getColor: col, capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
     if (o.bike && o.change !== 'bike_lane' && t > 900) { var bd = ease((t - 900) / 1400);
       L.push(new deck.PathLayer({ id: 'r-bike', data: lines.map(function (ln) { return along(ln, bd).head; }), getPath: function (d) { return d; },
-        widthUnits: 'pixels', getWidth: 4, getColor: [134, 239, 172, 255], capRounded: true, jointRounded: true, updateTriggers: { getPath: bd } })); }
+        widthUnits: 'pixels', getWidth: 5, getColor: [134, 239, 172, 255], capRounded: true, parameters: { depthTest: false, depthCompare: 'always' }, jointRounded: true, updateTriggers: { getPath: bd } })); }
     var ends = []; lines.forEach(function (ln) { if (ln.length) { ends.push(ln[0]); } }); if (lines.length) { var last = lines[lines.length - 1]; ends.push(last[last.length - 1]); }
     if (o.change === 'close' && t > 1200) L.push(new deck.ScatterplotLayer({ id: 'r-ends', data: ends, getPosition: function (p) { return p; },
       radiusUnits: 'pixels', getRadius: 7 * ease((t - 1200) / 300), getFillColor: [239, 68, 68, 255], stroked: true, getLineColor: [248, 250, 252], lineWidthUnits: 'pixels', getLineWidth: 2, updateTriggers: { getRadius: t } }));
@@ -1326,7 +1326,7 @@ var mapView = (function () {
       var pad = { top: 140, bottom: 140, left: left, right: 460 };
       var cam = map.cameraForBounds([lo, hi], { padding: pad, maxZoom: 16 }) || {};
       if (kind === 'road' && opts.ends) { var cr = map.cameraForBounds([[Math.min(opts.ends[0][0], opts.ends[1][0]), Math.min(opts.ends[0][1], opts.ends[1][1])], [Math.max(opts.ends[0][0], opts.ends[1][0]), Math.max(opts.ends[0][1], opts.ends[1][1])]], { padding: pad, maxZoom: 16.5 }) || {};
-        map.easeTo({ center: cr.center || a, zoom: Math.min((cr.zoom || 16) - 0.3, 16.5), pitch: 50, bearing: map.getBearing(), duration: 700 }); }
+        map.easeTo({ center: cr.center || a, zoom: Math.min((cr.zoom || 16) + 0.2, 16.5), pitch: 50, bearing: map.getBearing(), duration: 700 }); }
       else if (kind === 'rezone' && b) map.easeTo({ center: cam.center || a, zoom: Math.min((cam.zoom || 16) - 0.3, 16.5), pitch: 50, bearing: map.getBearing(), duration: 700 });
       else if (kind === 'road' || kind === 'rezone') map.easeTo({ center: a, zoom: 16, pitch: 50, bearing: map.getBearing(), offset: [(left - 460) / 2, 40], duration: 700 });
       else if (kind === 'event') map.easeTo({ center: a, zoom: 15.2, pitch: 50, bearing: map.getBearing(), offset: [(left - 460) / 2, 40], duration: 700 });
@@ -1352,7 +1352,7 @@ var mapView = (function () {
       return 1300 + (kind === 'building' ? 2100 : kind === 'road' ? 2600 : kind === 'event' ? 3600 : kind === 'rezone' ? (b ? 2700 : 1900) : b ? DRAW + DRIVE : RISE + 300);
     },
     clearBuild: function () { build = null; render(); },
-    lastBuild: function () { return build && { a: build.a, moved: build.moved || 0 }; },
+    lastBuild: function () { return build && { kind: build.kind, a: build.a, moved: build.moved || 0, lines: build.opts && build.opts.lines ? build.opts.lines.length : 0, bike: build.opts && build.opts.bike, t: performance.now() - build.t0 }; },
     pick: function (what, cb, key, near) {           // top-down view; next click on a road/intersection returns its name + point. near = [lon, lat] to look at
       if (pickCb) endPick(null);
       pickPrev = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(), duration: 600 };
