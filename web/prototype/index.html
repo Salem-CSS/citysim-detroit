@@ -1080,18 +1080,50 @@ var mapView = (function () {
       getColor: [250, 204, 21, Math.round(110 * ease((t - 300) / 800))], capRounded: true, jointRounded: true, updateTriggers: { getColor: t } }));
     return L;
   }
+  // dominant street direction near c (degrees, 0..90): Detroit's grid is rotated in most neighbourhoods
+  function gridAngle(c) {
+    var src = basemapSource(), kx = 111320 * Math.cos(c[1] * Math.PI / 180), ky = 110540, bins = new Array(45).fill(0);
+    if (src) ['roads', 'transportation'].forEach(function (sl) { try { map.querySourceFeatures(src, { sourceLayer: sl }).forEach(function (f) {
+      var p = f.properties || {}; if (!ROAD_W[p.kind || p.class] || p.kind === 'highway') return;
+      var g = f.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+      lines.forEach(function (ln) { for (var i = 1; i < ln.length; i++) {
+        var x0 = (ln[i - 1][0] - c[0]) * kx, y0 = (ln[i - 1][1] - c[1]) * ky, x1 = (ln[i][0] - c[0]) * kx, y1 = (ln[i][1] - c[1]) * ky;
+        if (Math.hypot(x0, y0) > 600) continue; var L = Math.hypot(x1 - x0, y1 - y0); if (L < 5) continue;
+        var ang = (Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI + 360) % 90; bins[Math.floor(ang / 2) % 45] += L; } }); }); } catch (e) {} });
+    var best = 0; for (var i = 1; i < 45; i++) if (bins[i] > bins[best]) best = i;
+    return best * 2 + 1;
+  }
+  function pathLen(p, kx, ky) { var L = 0; for (var i = 1; i < p.length; i++) L += Math.hypot((p[i][0] - p[i - 1][0]) * kx, (p[i][1] - p[i - 1][1]) * ky); return L; }
+  function blockBetween(A, C) {               // area with corners A and C, edges along the street grid
+    var kx = 111320 * Math.cos(A[1] * Math.PI / 180), ky = 110540, th = gridAngle(A) * Math.PI / 180, u = [Math.cos(th), Math.sin(th)], v = [-Math.sin(th), Math.cos(th)];
+    var cx = (C[0] - A[0]) * kx, cy = (C[1] - A[1]) * ky, cu = cx * u[0] + cy * u[1], cv = cx * v[0] + cy * v[1];
+    function back(su, sv) { return [A[0] + (su * u[0] + sv * v[0]) / kx, A[1] + (su * u[1] + sv * v[1]) / ky]; }
+    var B = back(cu, 0), D = back(0, cv), ring = [];
+    [[A, B], [B, C], [C, D], [D, A]].forEach(function (e) {
+      var p = null; try { p = roadPath(e[0], e[1]); } catch (x) {}
+      var straight = Math.hypot((e[1][0] - e[0][0]) * kx, (e[1][1] - e[0][1]) * ky);
+      if (!p || pathLen(p, kx, ky) > straight * 1.6) p = [e[0], e[1]];        // a detour would distort the area: use the straight edge
+      ring = ring.concat(p.slice(ring.length ? 1 : 0)); });
+    return ring;
+  }
   // ---- rezoning: the area fills with the new zone's colour, with its name ----
   function rezoneLayers() {
-    var t = performance.now() - build.t0, o = build.opts, a = build.a, k = ease(t / 1300), R = o.r * (0.4 + 0.6 * k);
-    var kx = 111320 * Math.cos(a[1] * Math.PI / 180), ring = [];
-    for (var i = 0; i <= 48; i++) { var g = 2 * Math.PI * i / 48; ring.push([a[0] + R * Math.cos(g) / kx, a[1] + R * Math.sin(g) / 110540]); }
-    var c = o.color;
+    var t = performance.now() - build.t0, o = build.opts, a = build.a, c = o.color, ring, edge, k, mid = a;
+    if (o.ring) {                                                                  // two corners: the edge traces the streets, then the block fills
+      ring = o.ring; edge = along(ring, ease(t / 1400)).head; k = ease((t - 1100) / 700);
+      var sx = 0, sy = 0; ring.forEach(function (p) { sx += p[0]; sy += p[1]; }); mid = [sx / ring.length, sy / ring.length];
+    } else {
+      k = ease(t / 1300); var R = o.r * (0.4 + 0.6 * k), kx = 111320 * Math.cos(a[1] * Math.PI / 180); ring = [];
+      for (var i = 0; i <= 48; i++) { var g = 2 * Math.PI * i / 48; ring.push([a[0] + R * Math.cos(g) / kx, a[1] + R * Math.sin(g) / 110540]); }
+      edge = ring;
+    }
+    var tl = o.ring ? t - 1300 : t;
     return [
-      new deck.SolidPolygonLayer({ id: 'z-fill', data: [{ p: ring }], getPolygon: function (d) { return d.p; }, getFillColor: [c[0], c[1], c[2], Math.round(110 * k)], updateTriggers: { getPolygon: k, getFillColor: k } }),
-      new deck.PathLayer({ id: 'z-edge', data: [ring], getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 3, getColor: [c[0], c[1], c[2], Math.round(255 * k)],
-        getDashArray: [6, 4], updateTriggers: { getPath: k, getColor: k } }),
-      new deck.TextLayer({ id: 'z-label', data: [{ p: a, s: o.label }], getPosition: function (d) { return d.p; }, getText: function (d) { return d.s; },
-        getSize: 16, getColor: [248, 250, 252, Math.round(255 * ease((t - 600) / 500))], getBackgroundColor: [15, 23, 42, Math.round(220 * ease((t - 600) / 500))], background: true,
+      new deck.SolidPolygonLayer({ id: 'z-fill', data: [{ p: ring }], getPolygon: function (d) { return d.p; }, getFillColor: [c[0], c[1], c[2], Math.round(110 * Math.max(0, k))], updateTriggers: { getPolygon: k, getFillColor: k } }),
+      new deck.PathLayer({ id: 'z-edge', data: [edge], getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 4, getColor: [c[0], c[1], c[2], 255],
+        capRounded: true, jointRounded: true, updateTriggers: { getPath: t } }),
+      new deck.TextLayer({ id: 'z-label', data: [{ p: mid, s: o.label }], getPosition: function (d) { return d.p; }, getText: function (d) { return d.s; },
+        getSize: 16, getColor: [248, 250, 252, Math.round(255 * ease((tl - 600) / 500))], getBackgroundColor: [15, 23, 42, Math.round(220 * ease((tl - 600) / 500))], background: true,
         backgroundPadding: [8, 5], fontWeight: 700, fontFamily: 'Inter, system-ui, sans-serif', parameters: { depthTest: false, depthCompare: 'always' }, updateTriggers: { getColor: t, getBackgroundColor: t } })
     ];
   }
@@ -1295,6 +1327,7 @@ var mapView = (function () {
       var cam = map.cameraForBounds([lo, hi], { padding: pad, maxZoom: 16 }) || {};
       if (kind === 'road' && opts.ends) { var cr = map.cameraForBounds([[Math.min(opts.ends[0][0], opts.ends[1][0]), Math.min(opts.ends[0][1], opts.ends[1][1])], [Math.max(opts.ends[0][0], opts.ends[1][0]), Math.max(opts.ends[0][1], opts.ends[1][1])]], { padding: pad, maxZoom: 16.5 }) || {};
         map.easeTo({ center: cr.center || a, zoom: Math.min((cr.zoom || 16) - 0.3, 16.5), pitch: 50, bearing: map.getBearing(), duration: 700 }); }
+      else if (kind === 'rezone' && b) map.easeTo({ center: cam.center || a, zoom: Math.min((cam.zoom || 16) - 0.3, 16.5), pitch: 50, bearing: map.getBearing(), duration: 700 });
       else if (kind === 'road' || kind === 'rezone') map.easeTo({ center: a, zoom: 16, pitch: 50, bearing: map.getBearing(), offset: [(left - 460) / 2, 40], duration: 700 });
       else if (kind === 'event') map.easeTo({ center: a, zoom: 15.2, pitch: 50, bearing: map.getBearing(), offset: [(left - 460) / 2, 40], duration: 700 });
       else if (kind === 'building') map.easeTo({ center: a, zoom: 17.2, pitch: 58, bearing: map.getBearing(), offset: [(left - 460) / 2, 60], duration: 800 });
@@ -1309,13 +1342,14 @@ var mapView = (function () {
           opts.lines = ls; }
         if (kind === 'event') { var org = []; for (var oi = 0; oi < 8; oi++) { var g = 2 * Math.PI * oi / 8 + .3; org.push([a[0] + 750 * Math.cos(g) / (111320 * Math.cos(a[1] * Math.PI / 180)), a[1] + 750 * Math.sin(g) / 110540]); }
           try { opts.paths = roadPathsTo(a, org); } catch (e) { opts.paths = []; } }
+        if (kind === 'rezone' && b) { try { opts.ring = blockBetween(a, b); } catch (e) { opts.ring = [a, [b[0], a[1]], b, [a[0], b[1]], a]; } }
         if (kind === 'building') { var sp = null; try { sp = openSpot(a, opts.w || 40, opts.d || 28); } catch (e) {}
           if (sp) { B.a = sp; opts.poly = footprint(sp, opts.w || 40, opts.d || 28, opts.ang || 0); B.moved = Math.round(Math.hypot((sp[0] - a[0]) * 111320 * Math.cos(a[1] * Math.PI / 180), (sp[1] - a[1]) * 110540)); if (B.moved > 25) map.easeTo({ center: sp, offset: [(left - 460) / 2, 60], duration: 500 }); } }
         B.ready = true; B.t0 = performance.now(); };
       map.once('moveend', function () { map.once('idle', go); setTimeout(go, 900); });   // street tiles for the framed view are loaded by then
       setTimeout(go, 2000);
       requestAnimationFrame(buildLoop);
-      return 1300 + (kind === 'building' ? 2100 : kind === 'road' ? 2600 : kind === 'event' ? 3600 : kind === 'rezone' ? 1900 : b ? DRAW + DRIVE : RISE + 300);
+      return 1300 + (kind === 'building' ? 2100 : kind === 'road' ? 2600 : kind === 'event' ? 3600 : kind === 'rezone' ? (b ? 2700 : 1900) : b ? DRAW + DRIVE : RISE + 300);
     },
     clearBuild: function () { build = null; render(); },
     lastBuild: function () { return build && { a: build.a, moved: build.moved || 0 }; },
@@ -1604,7 +1638,7 @@ function blockHTML(a,b){
   if(b.fromQ){ var m=state.question.match(b.fromQ); if(m) v = b.qValue || (b.type==='stepper'? +m[1] : v); }
   state.defaults[a+'.'+b.id]=v;
   if(b.type==='select') ctl='<select aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'">'+b.options.map(function(o){return '<option'+(o===v?' selected':'')+'>'+o+'</option>';}).join('')+'</select>';
-  if(b.type==='text'){ var isPlace=/^(where|from|to)$/.test(b.id);
+  if(b.type==='text'){ var isPlace=/^(where|from|to|corner2)$/.test(b.id);
     var sv=String(v==null?'':v), extra='';
     if(isPlace){ var cm=sv.match(/\s*\(?\s*(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*\)?\s*$/); if(cm && cm.index>0){ sv=sv.slice(0,cm.index).trim(); extra=' data-picked="'+esc(sv)+'" data-ll="'+cm[1]+', '+cm[2]+'"'; } }
     ctl='<input type="text" maxlength="160" aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'"'+extra+' placeholder="'+(isPlace?'Pick a road on the map, or type cross streets':'Not given')+'" value="'+esc(sv)+'">';
@@ -1656,8 +1690,10 @@ function openBlocks(q, spec){
   var notes = spec && spec.unsupported && spec.unsupported.length ? '<div class="changed-note"><span>Not covered yet: '+spec.unsupported.map(function(t){return String(t).replace(/</g,'&lt;');}).join('; ')+'</span></div>' : '';
   var empty = spec && !spec.actions.length ? '<div class="changed-note"><span>Couldn\'t match this to a proposal type yet. Try naming a drone route, building, road change, bus route, rezoning or event venue.</span></div>' : '';
   body.innerHTML=questionsHTML(spec)+notes+empty+state.actions.map(function(a){
-    var A=lib[a];
-    return '<section class="group"><div class="group__title"><span class="group__icon">'+ICONS[A.icon]+'</span>'+A.title+'</div><div style="display:flex;flex-direction:column;gap:8px">'+A.blocks.map(function(b){return blockHTML(a,b);}).join('')+'</div></section>';
+    var A=lib[a], rz=(A.type||a)==='rezone';
+    return '<section class="group"><div class="group__title"><span class="group__icon">'+ICONS[A.icon]+'</span>'+A.title+'</div><div style="display:flex;flex-direction:column;gap:8px">'+A.blocks.map(function(b){
+      if(rz && b.id==='where') return blockHTML(a,Object.assign({},b,{label:'First corner'}))+blockHTML(a,{id:'corner2',label:'Opposite corner',type:'text',value:''});
+      return blockHTML(a,b);}).join('')+'</div></section>';
   }).join('');
   wireBlocks(); body.scrollTop=0;
   blocksEl.hidden=false; app.classList.add('has-blocks');
@@ -1728,7 +1764,10 @@ function playProposal(){
   var ev=acts.filter(function(x){ return x.type==='add_event_surge'; })[0];
   if(ev){ var vp=placeOf(ev,'where')||presetOf(ev,'site'); if(vp) return mapView.playBuild('event',vp,null,{}); }
   var rz=acts.filter(function(x){ return x.type==='rezone'; })[0];
-  if(rz){ var zp=placeOf(rz,'where'); if(zp){ var z=presetVal(rz,'new_zone')||'SD2', zc=(rz.constraints||[]).filter(function(x){return x.id==='new_zone';})[0];
+  if(rz){ var zp=placeOf(rz,'where'), c2i=body.querySelector('input[data-k="'+rz.action_id+'.corner2"]'), zq=c2i&&(coordsIn(c2i.value)||(c2i.dataset.ll&&c2i.dataset.picked===c2i.value&&coordsIn(c2i.dataset.ll)));
+    if(zp&&zq){ var z2=presetVal(rz,'new_zone')||'SD2', zc2=(rz.constraints||[]).filter(function(x){return x.id==='new_zone';})[0], zl2=zc2&&(zc2.options||[]).filter(function(o){return o.value===z2;})[0];
+      return mapView.playBuild('rezone',zp,zq,{color:ZONE_COL[z2]||[56,189,248],label:'Rezoned: '+(zl2?zl2.label:z2)}); }
+    if(zp){ var z=presetVal(rz,'new_zone')||'SD2', zc=(rz.constraints||[]).filter(function(x){return x.id==='new_zone';})[0];
     var zl=zc&&(zc.options||[]).filter(function(o){return o.value===z;})[0];
     return mapView.playBuild('rezone',zp,null,{r:180,color:ZONE_COL[z]||[56,189,248],label:'Rezoned: '+(zl?zl.label:z)}); } }
   return 0;
