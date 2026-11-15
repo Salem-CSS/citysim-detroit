@@ -20,3 +20,5 @@ node_modules/
 # aws
 .aws-sam/
 cdk.out/
+# generated building tiles (python -m data.buildings.export_tiles)
+web/prototype/buildings/

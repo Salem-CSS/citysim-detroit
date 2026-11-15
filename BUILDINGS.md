@@ -6,6 +6,45 @@ Instructions for building the 3D building layer. Written so a person or a coding
 
 **Time:** about 45 minutes, mostly downloads.
 
+**Status (11-14 19:30 ET): the fast path below is done and is the default.** The longer guide after it (SEMCOG merge, parcel/block tags) is optional polish.
+
+## Fast path (done, use this)
+
+Overture alone is enough: inside Detroit city limits it has **335,338 buildings, 95% with a measured (lidar) height**. Everything is scripted:
+
+```bash
+pip install boto3 pyarrow shapely
+python -m data.buildings.athena_build --bucket citysim-athena-574246332084-usw2   # runs data/buildings/sql/01-04 in Athena (us-west-2), downloads Parquet
+#   or, if the tables already exist:  ... --download-only
+python -m data.buildings.export_tiles [--districts data/raw/detroit/council_districts_2026.geojson]
+#   writes web/prototype/buildings/index.json + t/*.json
+open web/prototype/map3d.html   # serve the folder: python -m http.server -d web/prototype
+```
+
+| Step | File | What it does |
+| --- | --- | --- |
+| Tables | `data/buildings/sql/01_tables.sql` | External tables over Overture buildings + divisions (bbox fields are `double`) |
+| Box cut | `sql/02_bbox.sql` | 607,306 buildings in a box around Detroit (~93 MB scanned) |
+| Clip + heights | `sql/03_clip.sql` | Keep centroids inside the Overture `Detroit` locality polygon (drops Hamtramck, Highland Park, Dearborn, Windsor). Height = Overture height, else floors × 3.5 m, else default by class |
+| Check | `sql/04_check.sql` | Expected numbers below |
+| Tiles | `data/buildings/export_tiles.py` | 0.01° grid tiles, ~1 m quantized, delta-encoded JSON; optional district tag |
+| Map | `web/prototype/map3d.html` | MapLibre + deck.gl extruded buildings, loads only visible tiles, color by height or height source |
+
+Results (Overture release 2026-10-21.0, already built in account 574246332084, table `overture.detroit_buildings`):
+
+| | Count |
+| --- | --- |
+| Buildings in city limits | 335,338 |
+| Measured height (Overture/lidar) | 318,480 (95%) |
+| Height from floors | 94 |
+| Default height by class | 16,764 |
+| Median / max height | 5.1 m / 221.5 m (Renaissance Center) |
+| 50 m or taller | 105 |
+
+Overture counts fewer buildings than the city's 419,882 figure in SCOPE.md, mostly garages and sheds missing from the footprint sources. Fine for the map; add SEMCOG (section 4) if you need them.
+
+Tiles are generated data and gitignored (`web/prototype/buildings/`). To show them on the deployed site, either commit them (decision pending, see LOG.md) or host them on S3/CloudFront and open `map3d.html?src=https://<host>/buildings/`.
+
 ---
 
 ## 0. The plan in one paragraph
@@ -101,7 +140,7 @@ Overture's bucket is in **us-west-2**, so Athena must run in **us-west-2**.
    CREATE EXTERNAL TABLE IF NOT EXISTS overture.buildings (
      id          string,
      geometry    binary,
-     bbox        struct<xmin:float, xmax:float, ymin:float, ymax:float>,
+     bbox        struct<xmin:double, xmax:double, ymin:double, ymax:double>,   -- must be double, float gives HIVE_BAD_DATA
      height      double,
      num_floors  int,
      class       string,

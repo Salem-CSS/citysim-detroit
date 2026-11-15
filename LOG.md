@@ -40,7 +40,7 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 | Lane | Owner | Status | Last update |
 | --- | --- | --- | --- |
 | Data (census, LODES, Detroit open data → S3) | Partner | Not started. Scripts ready; follow DATA_SETUP.md | 11-14 17:50 |
-| Buildings (Overture + SEMCOG → S3) | Partner | Not started. Follow BUILDINGS.md after data | 11-14 17:50 |
+| Buildings (Overture → Athena → tiles) | Salem | **Built in Athena** (335,338 bldgs, 95% measured height). Tile exporter + `web/prototype/map3d.html` done; tiles not generated/hosted yet | 11-14 19:35 |
 | Engine (traffic Lambda) | — | Load, trips, impact lines work; 6 actions are stubs taking v2 `values` | 11-14 19:05 |
 | Residents (Bedrock) | — | v2 framework: prompt + checks + tests done (stance/reason/quote sample); batching stubbed | 11-14 19:05 |
 | Agent + Infra (Strands, AWS stack) | — | Not started | 11-14 17:50 |
@@ -49,6 +49,8 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Open questions / handoffs
 
+- **For Salem / Partner:** where do building tiles live? (a) commit `web/prototype/buildings/` (~15–20 MB) so Vercel serves them, or (b) S3/CloudFront and use `map3d.html?src=`. Currently gitignored.
+- **For Partner:** after DATA_SETUP.md, rerun `python -m data.buildings.export_tiles --districts data/raw/detroit/council_districts_2026.geojson` so buildings carry their district.
 - **For Partner:** contracts changed to v2 (see 19:05 entry). If your AI already wrote code against the old `top_concern` / 1–5 `support` / `assumptions` fields, update it.
 - **For Partner:** run DATA_SETUP.md, then BUILDINGS.md. Post bucket name, object count and building totals here when done.
 - **For Partner:** confirm which AWS region you're using (docs assume `us-east-1`; Overture/Athena work runs in `us-west-2`).
@@ -57,6 +59,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 ---
 
 ## Entries
+
+### 2026-11-14 19:35 ET · Salem (AI) · Data
+**Did:** Built accurate Detroit buildings in Athena (us-west-2, account 574246332084): Overture 2026-10-21.0 → bbox cut → clipped to the Overture `Detroit` locality polygon → height filled. 335,338 buildings; 318,480 measured height, 94 from floors, 16,764 defaulted; median 5.1 m, max 221.5 m, 105 at 50 m+. Scripted the whole thing (SQL + boto3 runner), wrote a tile exporter and a deck.gl 3D map page (tested on synthetic tiles).
+**Files:** data/buildings/{athena_build.py,export_tiles.py,sql/01-04,tests/test_export.py}, web/prototype/map3d.html, BUILDINGS.md (fast path section; bbox fields fixed to `double`), data/requirements.txt (+boto3), .gitignore (+web/prototype/buildings/)
+**Contracts changed:** none
+**Decisions:** Overture only (95% measured heights; SEMCOG optional). AWS account is on the Free plan (no charges). Athena bucket: `citysim-athena-574246332084-usw2`; tables `overture.detroit_buildings` (clipped) and `overture.detroit_bbox_buildings`. Tile format documented in export_tiles.py docstring.
+**Blocked / needs:** someone with AWS CLI creds runs `athena_build --download-only` + `export_tiles` (the AI workspace can't reach S3). Tile hosting decision (see handoffs).
+**Next:** generate tiles, host them, then wire map3d into the Next.js app as the base map.
 
 ### 2026-11-14 19:10 ET · Salem (AI) · Agent+Infra
 **Did:** Read-only look at the team AWS account (console). It is empty: 0 S3 buckets, 0 Lambda functions (us-east-1 and us-east-2), 0 DynamoDB tables, 0 IAM users. Console defaults to us-east-2 (Ohio). Bedrock no longer needs "model access" turned on; models enable on first call.
