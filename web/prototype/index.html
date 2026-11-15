@@ -1076,10 +1076,25 @@ function sampleDistrict(d){              // offline mode only: plausible placeho
   return { sample:true, groups:GROUP_ORDER.map(mk), profile:{ residents:500, age:{'Under 35':u35,'35 to 64':100-u35-o65,'65 and over':o65},
            renters:Math.round(40+k(3)*30), no_car:Math.round(15+k(4)*20), median_income:Math.round(28000+k(5)*30000) } };
 }
+var _census={};
+function censusProfile(d){                // same figures as residents/aggregate.profile, weighted by each resident's census weight
+  if(_census[d]!==undefined) return _census[d];
+  var rs=mapView.residents().filter(function(r){ return r.d===d && r.t && r.t.weight; });
+  if(!rs.length) return _census[d]=null;
+  var tot=rs.reduce(function(a,r){ return a+r.t.weight; },0), share=function(keep){ return Math.round(1000*rs.reduce(function(a,r){ return a+(keep(r.t)?r.t.weight:0); },0)/tot)/10; };
+  var inc=rs.filter(function(r){ return r.t.hh_income!=null; }).sort(function(a,b){ return a.t.hh_income-b.t.hh_income; }), half=inc.reduce(function(a,r){ return a+r.t.weight; },0)/2, acc=0, med=null;
+  for(var i=0;i<inc.length;i++){ acc+=inc[i].t.weight; if(acc>=half){ med=inc[i].t.hh_income; break; } }
+  var P={ residents:rs.length, age:{'Under 35':share(function(t){return t.age<35;}), '35 to 64':share(function(t){return t.age>=35&&t.age<65;}), '65 and over':share(function(t){return t.age>=65;})},
+          renters:share(function(t){return t.tenure==='renter';}), no_car:share(function(t){return t.vehicles===0;}) };
+  if(med!=null) P.median_income=med;
+  return _census[d]=P;
+}
 function districtData(d){
   var live=state.result && (state.result.districts||[]).filter(function(x){return x.district===d;})[0];
   if(live) return { sample:false, split:live.split, top:live.top_reason, n:live.n,
     groups: live.groups && live.groups.length ? live.groups : null, overallGroups: state.result.groups||[], profile: live.profile||null };
+  var P=censusProfile(d);                 // before a run: who lives here, from the census-built residents on the map
+  if(P) return { sample:false, groups:null, profile:P };
   if(window.CITYSIM_API && state.result) return { sample:false, groups:null, profile:null };
   return sampleDistrict(d);
 }
@@ -1271,7 +1286,7 @@ function wireQuestions(spec){
     var i=document.getElementById('ask'); i.value=b.dataset.answer; document.getElementById('askForm').requestSubmit(); }); });
   if(spec) spec.actions.forEach(function(a){ a.constraints.forEach(function(c){
     if(!c.resolved) return; var blk=body.querySelector('.block[data-k="'+a.action_id+'.'+c.id+'"]'); if(!blk) return;
-    blk.insertAdjacentHTML('beforeend','<div class="muted" style="font-size:13px">Verified: '+String(c.resolved.name).replace(/</g,'&lt;')+' · District '+c.resolved.district+'</div>'); }); });
+    blk.insertAdjacentHTML('beforeend','<div class="muted verified" style="font-size:13px">Verified: '+String(c.resolved.name).replace(/</g,'&lt;')+' · District '+c.resolved.district+'</div>'); }); });
 }
 function openBlocks(q, spec){
   var lib = spec ? specToLib(spec) : ACTIONS;
@@ -1300,6 +1315,7 @@ function askBackend(q){
 }
 function markChanged(el,v){
   var k=el.dataset.k, blk=body.querySelector('.block[data-k="'+k+'"]');
+  var ver=blk.querySelector('.verified'); if(ver) ver.hidden = String(v)!==String(state.defaults[k]);   // a changed place is checked again when residents are asked
   blk.classList.toggle('is-changed', String(v)!==String(state.defaults[k]));
   var n=body.querySelectorAll('.block.is-changed').length, note=document.getElementById('changedNote');
   if(state.asked && n){

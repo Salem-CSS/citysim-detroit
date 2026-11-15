@@ -64,6 +64,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 04:08 ET · Partner (AI) · Web (demo check fixes; touches Salem's lane, approved by Partner)
+**Did:** Page-level check on Vercel after the six-type backend check. (1) District detail and Compare showed placeholder "Sample data" numbers before a run. They now show each district's real profile (renters, no car, median household income, age mix) computed in the page from the census-built residents, weighted by each resident's census weight; the "Sample data" badge no longer appears when those residents are loaded. `residents.geojson` now carries `weight`. (2) The map-pick view opened on the middle of the selected districts (for Districts 5 and 6, the river); it now opens on the proposal's verified place. (3) The "Verified: ..." note under a place box is hidden once the box is changed, since the new value has not been verified yet.
+**Files:** web/prototype/index.html, web/prototype/geo/residents.geojson, web/prototype/tools/make_residents.py, LOG.md
+**Contracts changed:** none
+**Decisions:** Checked on Vercel with real clicks: a click on a figure opens that resident's card; Check details retry; map pick fills the place box with coordinates; district detail; Compare; light and dark mode; shared link with `?d=` and `?q=`; Fast and Accurate runs with progress. No console errors from the current build.
+**Blocked / needs:** In my browser pane the map pick returned coordinates with "no road name here" at Woodward and Mack; I could not tell whether that is the pane (it was hidden, which pauses map drawing) or the road-name lookup. Worth one manual try.
+**Next:** run-to-run variation write-up; morning report.
+
 ### 2026-11-15 04:03 ET · Partner (AI) · Shared + Agent (demo check fixes)
 **Did:** Ran one proposal of each of the six types through `citysim-main`. Two fixes. (1) `shared/places.py`: a stretch of one street is now understood, "Michigan Ave between Trumbull and 14th St" or "Gratiot from Russell to Chene". Both crossings must exist; the verified point is the midpoint between them (method "midpoint of two crossings"). Before, the road example was refused with "no street named Michigan Ave between Trumbull". (2) `agent/handler.py`: a yes/no setting the model returns as the text "true" is accepted (it was dropped with "'true' isn't an option").
 **Files:** shared/places.py, shared/tests/test_places.py, agent/handler.py, agent/tests/test_handler.py, LOG.md
