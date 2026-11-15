@@ -65,6 +65,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: road change, event surge, rezoning animations
+- modify_road: traces the named street itself (picked Where → that road ±320 m; preset street → named street between its ends, falls back to a street path between the ends). Orange = remove lanes, red = close (red end caps), green = bike lane only; a bike lane added alongside draws a light-green line inside.
+- add_event_surge: yellow venue disc rises with pulsing rings, then crowds of dots flow in along street paths from 8 directions (~750 m out; one Dijkstra from the venue).
+- rezone: a 180 m circle fills with the new zone's colour (R3 green, R5 yellow, B4 purple, SD2 teal) with a dashed edge and a "Rezoned: …" label (no parcel shapes yet).
+- Road graph refactor: roadGraph / dijkstra / roadPath / roadPathsTo / streetNear.
+- **Note:** Vercel is rate-limiting deploys on this project ("retry in 24 hours"); new pushes (preview and main) will not deploy until it clears. Tested by loading the committed index.html into the existing preview tab.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: new building lands on open land
 - Building animation searches outward from the picked point (10 m rings, up to 260 m) for a spot where the footprint overlaps no existing building (+3 m) and stays clear of road centrelines, then builds there; camera follows if it moved. Keeps the picked point if tiles aren't loaded or nothing is free. Existing buildings can't be hidden individually (tiles carry no ids), so no demolition.
 - Files: web/prototype/index.html only.

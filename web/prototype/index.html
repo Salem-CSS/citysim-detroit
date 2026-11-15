@@ -1092,7 +1092,7 @@ var mapView = (function () {
         getDashArray: [6, 4], updateTriggers: { getPath: k, getColor: k } }),
       new deck.TextLayer({ id: 'z-label', data: [{ p: a, s: o.label }], getPosition: function (d) { return d.p; }, getText: function (d) { return d.s; },
         getSize: 16, getColor: [248, 250, 252, Math.round(255 * ease((t - 600) / 500))], getBackgroundColor: [15, 23, 42, Math.round(220 * ease((t - 600) / 500))], background: true,
-        backgroundPadding: [8, 5], fontWeight: 700, fontFamily: 'Inter, system-ui, sans-serif', updateTriggers: { getColor: t, getBackgroundColor: t } })
+        backgroundPadding: [8, 5], fontWeight: 700, fontFamily: 'Inter, system-ui, sans-serif', parameters: { depthTest: false, depthCompare: 'always' }, updateTriggers: { getColor: t, getBackgroundColor: t } })
     ];
   }
   function boxMesh(parts) {                  // parts: [[cx, cy, cz, sx, sy, sz], ...] -> one mesh
