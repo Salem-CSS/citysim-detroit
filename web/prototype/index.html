@@ -941,6 +941,35 @@ var mapView = (function () {
     return [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2], [-w / 2, -d / 2]].map(function (p) {
       return [c[0] + (p[0] * cs - p[1] * sn) / k, c[1] + (p[0] * sn + p[1] * cs) / 110540]; });
   }
+  // nearest open spot for the footprint: no overlap with an existing building, clear of road centrelines
+  function openSpot(c, w, d) {
+    var k = 111320 * Math.cos(c[1] * Math.PI / 180), ky = 110540, R = 260;
+    function m(p) { return [(p[0] - c[0]) * k, (p[1] - c[1]) * ky]; }
+    var boxes = [], segs = [];
+    try { map.querySourceFeatures('bldg', { sourceLayer: 'buildings' }).forEach(function (f) {
+      var g = f.geometry, polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+      polys.forEach(function (pl) { var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+        pl[0].forEach(function (q) { var v = m(q); x0 = Math.min(x0, v[0]); y0 = Math.min(y0, v[1]); x1 = Math.max(x1, v[0]); y1 = Math.max(y1, v[1]); });
+        if (x1 > -R - 60 && x0 < R + 60 && y1 > -R - 60 && y0 < R + 60) boxes.push([x0, y0, x1, y1]); }); }); } catch (e) {}
+    var src = basemapSource();
+    if (src) ['roads', 'transportation'].forEach(function (sl) { try { map.querySourceFeatures(src, { sourceLayer: sl }).forEach(function (f) {
+      var p = f.properties || {}; if (!ROAD_W[p.kind || p.class]) return;
+      var g = f.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+      lines.forEach(function (ln) { for (var i = 1; i < ln.length; i++) { var a = m(ln[i - 1]), b = m(ln[i]);
+        if (Math.max(a[0], b[0]) > -R - 60 && Math.min(a[0], b[0]) < R + 60 && Math.max(a[1], b[1]) > -R - 60 && Math.min(a[1], b[1]) < R + 60) segs.push([a, b, (p.kind === 'major_road' || p.kind === 'highway') ? 14 : 9]); } }); }); } catch (e) {} });
+    function dPS(p, a, b) { var dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy, t = L ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L)) : 0; return Math.hypot(a[0] + t * dx - p[0], a[1] + t * dy - p[1]); }
+    function clear(x, y) {
+      var X0 = x - w / 2 - 3, X1 = x + w / 2 + 3, Y0 = y - d / 2 - 3, Y1 = y + d / 2 + 3;
+      for (var i = 0; i < boxes.length; i++) { var b = boxes[i]; if (b[0] < X1 && b[2] > X0 && b[1] < Y1 && b[3] > Y0) return false; }
+      var half = Math.hypot(w, d) / 2;
+      for (var j = 0; j < segs.length; j++) { if (dPS([x, y], segs[j][0], segs[j][1]) < half * 0.75 + segs[j][2]) return false; }
+      return true; }
+    if (!boxes.length && !segs.length) return null;                                // tiles not loaded: keep the picked point
+    for (var r = 0; r <= R; r += 10) { var n = Math.max(1, Math.round(2 * Math.PI * r / 10));
+      for (var i = 0; i < n; i++) { var a = 2 * Math.PI * i / n, x = r * Math.cos(a), y = r * Math.sin(a);
+        if (clear(x, y)) return [c[0] + x / k, c[1] + y / ky]; } }
+    return null;
+  }
   function buildingLayers() {
     var t = performance.now() - build.t0, o = build.opts, H = o.floors * 3.4, RISE_B = 1600, L = [];
     var rip = [{ p: build.a }];
@@ -1186,13 +1215,17 @@ var mapView = (function () {
       if (kind === 'building') map.easeTo({ center: a, zoom: 17.2, pitch: 58, bearing: map.getBearing(), offset: [(left - 460) / 2, 60], duration: 800 });
       else map.easeTo({ center: cam.center || a, zoom: Math.min((cam.zoom || 16) - 0.4, 16), pitch: kind === 'drone' ? 60 : 50, bearing: map.getBearing(), duration: 700 });
       if (kind === 'building') { var cb = map.cameraForBounds([[a[0] - .002, a[1] - .0015], [a[0] + .002, a[1] + .0015]], { padding: pad, maxZoom: 17 }) || {}; cam = cb; }
-      var go = function () { if (build !== B || B.ready) return; if (b && kind === 'transit') { try { B.path = roadPath(a, b); } catch (e) { B.path = null; } } B.ready = true; B.t0 = performance.now(); };
+      var go = function () { if (build !== B || B.ready) return; if (b && kind === 'transit') { try { B.path = roadPath(a, b); } catch (e) { B.path = null; } }
+        if (kind === 'building') { var sp = null; try { sp = openSpot(a, opts.w || 40, opts.d || 28); } catch (e) {}
+          if (sp) { B.a = sp; opts.poly = footprint(sp, opts.w || 40, opts.d || 28, opts.ang || 0); B.moved = Math.round(Math.hypot((sp[0] - a[0]) * 111320 * Math.cos(a[1] * Math.PI / 180), (sp[1] - a[1]) * 110540)); if (B.moved > 25) map.easeTo({ center: sp, offset: [(left - 460) / 2, 60], duration: 500 }); } }
+        B.ready = true; B.t0 = performance.now(); };
       map.once('moveend', function () { map.once('idle', go); setTimeout(go, 900); });   // street tiles for the framed view are loaded by then
       setTimeout(go, 2000);
       requestAnimationFrame(buildLoop);
       return 1300 + (kind === 'building' ? 2100 : b ? DRAW + DRIVE : RISE + 300);
     },
     clearBuild: function () { build = null; render(); },
+    lastBuild: function () { return build && { a: build.a, moved: build.moved || 0 }; },
     pick: function (what, cb, key, near) {           // top-down view; next click on a road/intersection returns its name + point. near = [lon, lat] to look at
       if (pickCb) endPick(null);
       pickPrev = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(), duration: 600 };
