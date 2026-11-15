@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · main: fits laptop screens
+- Removed the 820 px minimum page height (now 100dvh, floor 600 px) and stopped page scrolling on desktop widths, so the ask bar and Compare button stay on screen at 1366×768. Stacked layout under 1100 px still scrolls.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · main: heat map removed
 - Removed the Heat map toggle from the map key (heat layers never draw; dots always show).
 - Files: web/prototype/index.html only.
