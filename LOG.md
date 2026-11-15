@@ -65,6 +65,16 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · main: consistency test of all six build animations
+- Measured on the live site against the basemap streets and building tiles:
+  - Bus (5 routes): 100% of each route within 15 m of a street; 4–5 stops each.
+  - Building (6 sites): 0 overlaps with existing buildings; 29–44 m from the nearest street centreline; moved up to 130 m to find open land.
+  - Road change: Michigan / W Vernor / Trumbull presets and picked Woodward / Gratiot / Grand River all trace the named street (100% on street). Fixed: long straight streets (Woodward) were nearly dropped at the trace radius; lines are now densified before clipping (Woodward 3 → 43 points, 589 m).
+  - Event (3 venues): 8 crowd paths each, 94–100% on streets.
+  - Rezoning (3 areas): edges 97–100% on streets.
+  - Drone: curved path renders.
+- Files: web/prototype/index.html (densify fix; lastBuild exposes computed shapes for testing).
+
 ### 2026-11-15 · Salem (AI) · main: no traffic lines, orange reason bars
 - Removed the traffic colour lines (green/yellow/red arteries) from the map and the Light/Busy/Heavy key. Roads toggle still shows/hides the grey street layer.
 - Top reasons bars back to orange (still scaled to share of all residents).
