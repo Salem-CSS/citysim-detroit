@@ -68,7 +68,16 @@
 .settings { position: absolute; top: 92px; right: 16px; z-index: 6; width: 260px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .settings[hidden] { display: none; }
 .settings h3 { margin: 0; font-size: 16px; }
-.runover { position: absolute; z-index: 7; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 340px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.runscrim { position: absolute; inset: 0; z-index: 6; background: rgba(5,8,15,.45); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); animation: rofade .3s ease; }
+.runscrim[hidden] { display: none; }
+@keyframes rofade { from { opacity: 0; } }
+.ro-grid { display: grid; grid-template-columns: repeat(25, 1fr); gap: 4px; padding: 4px 0; }
+.ro-grid i { aspect-ratio: 1; border-radius: 50%; background: rgba(148,163,184,.18); transition: background .35s, transform .35s; }
+.ro-grid i.on { background: var(--c, var(--support)); transform: scale(1.15); }
+.ro-grid.is-wait i { animation: ropulse 1.6s ease-in-out infinite; animation-delay: calc(var(--k) * 12ms); }
+@keyframes ropulse { 50% { background: rgba(148,163,184,.4); } }
+.runover { animation: rofade .3s ease; }
+.runover { position: absolute; z-index: 7; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
 .app.has-blocks .runover { left: calc(50% + 180px); } .runover[hidden] { display: none; }
 .ro-top { display: flex; align-items: center; gap: 10px; font-size: 16px; }
 .ro-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(148,163,184,.3); border-top-color: var(--support); animation: rospin .8s linear infinite; }
@@ -82,7 +91,7 @@
 .ro-ds span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--raised); font-size: 13px; font-weight: 600; }
 .ro-ds i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
 .ro-sub { font-size: 13px; color: var(--text-3); }
-@media (prefers-reduced-motion: reduce) { .ro-spin, .ro-bar.is-wait span { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .ro-spin, .ro-bar.is-wait span, .ro-grid.is-wait i, .runscrim, .runover { animation: none; } }
 .pickbar { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); z-index: 7; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; font-size: 15px; }
 .pickbar[hidden] { display: none; }
 .pickbar svg { color: var(--oppose); flex: 0 0 auto; }
@@ -454,8 +463,10 @@ button { cursor: pointer; }
     <p class="credits">Map data © OpenStreetMap contributors · © CARTO · Buildings © Overture Maps Foundation (ODbL)</p>
   </div>
 
+  <div class="runscrim" id="runScrim" hidden></div>
   <div class="runover panel" id="runOver" role="status" aria-live="polite" hidden>
     <div class="ro-top"><span class="ro-spin" aria-hidden="true"></span><b id="roTitle">Asking 2,000 residents</b></div>
+    <div class="ro-grid" id="roGrid" aria-hidden="true"></div>
     <div class="ro-num"><b class="num" id="roDone">0</b><span id="roOf">of 2,000 answered</span></div>
     <div class="ro-bar"><span id="roBar"></span></div>
     <div class="ro-ds" id="roDs"></div>
@@ -1509,11 +1520,16 @@ var runOver={
     document.getElementById('roTitle').textContent='Asking '+n.toLocaleString()+' residents';
     document.getElementById('roDs').innerHTML=ds.map(function(d){ return '<span><i style="--c:'+DISTRICTS[d].c+'"></i>District '+d+' · '+Math.round(n/ds.length)+'</span>'; }).join('');
     document.getElementById('roSub').textContent=mode==='accurate'?'Accurate mode · one resident at a time, takes several minutes':mode==='sample'?'Sample data':'Fast mode · usually about a minute';
-    this.update(0,n); o.hidden=false; },
+    var g=document.getElementById('roGrid'), per=Math.ceil(200/ds.length), html='';    // 200 dots, coloured by district, each = n/200 residents
+    ds.forEach(function(d,di){ for(var i=0;i<per && di*per+i<200;i++){ var k=di*per+i; html+='<i style="--c:'+DISTRICTS[d].c+';--k:'+k+'"></i>'; } });
+    g.innerHTML=html; this.order=[].slice.call(g.children).map(function(_,i){return i;}).sort(function(){ return Math.random()-.5; });
+    this.update(0,n); o.hidden=false; document.getElementById('runScrim').hidden=false; },
   update:function(a,tot){ document.getElementById('roDone').textContent=Math.min(a,tot).toLocaleString();
     document.getElementById('roOf').textContent='of '+tot.toLocaleString()+' answered';
-    var bar=document.getElementById('roBar'); bar.parentNode.classList.toggle('is-wait',!a); bar.style.width=a?Math.min(100,100*a/tot)+'%':''; },
-  hide:function(){ document.getElementById('runOver').hidden=true; }
+    var bar=document.getElementById('roBar'); bar.parentNode.classList.toggle('is-wait',!a); bar.style.width=a?Math.min(100,100*a/tot)+'%':'';
+    var g=document.getElementById('roGrid'), dots=g.children, lit=Math.round(dots.length*Math.min(1,a/tot)); g.classList.toggle('is-wait',!a);
+    (this.order||[]).forEach(function(i,j){ if(dots[i]) dots[i].classList.toggle('on', j<lit); }); },
+  hide:function(){ document.getElementById('runOver').hidden=true; document.getElementById('runScrim').hidden=true; }
 };
 function runLive(btn){
   var api=(window.CITYSIM_API||'').replace(/\/$/,''), spec=specWithEdits(), n=spec.districts.length*500;
@@ -1561,7 +1577,7 @@ document.getElementById('runBtn').addEventListener('click',function(){
   var b=this;
   if(window.CITYSIM_API && state.spec && state.spec.actions.length){ runLive(b); return; }   // real residents
   b.disabled=true; b.textContent='Asking 2,000 residents…';
-  var N=selected().length*500; runOver.show(N,'sample'); setTimeout(function(){ runOver.update(Math.round(N*0.55),N); },500);
+  var N=selected().length*500; runOver.show(N,'sample'); [300,700,1000,1300].forEach(function(t,i){ setTimeout(function(){ runOver.update(Math.round(N*[.2,.5,.8,1][i]),N); },t); });
   setTimeout(function(){
     runOver.hide(); state.asked=true; b.disabled=false; app.classList.add('has-results'); map.dataset.state='results'; mapView.update();
     body.querySelectorAll('.block').forEach(function(x){x.classList.remove('is-changed');});

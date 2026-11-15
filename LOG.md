@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: nicer run overlay
+- While residents are being asked: the app dims behind a centred card with a 200-dot grid (coloured by district) that lights up as answers come in, the answered count, a progress bar and per-district chips. Pulses until the first answers arrive. Sample (offline) runs animate the same way.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: rank-by menu, stance-coloured person badge, compact person card, run overlay
 - Compare > By group: "Rank by" menu (default order, average, or any district, high to low).
 - Person card: district badge turns blue (supports) / orange (opposes) / grey (neutral); four key facts as tiles (distance, income, cars, commute), the rest under "Show more"; one short footer line.
