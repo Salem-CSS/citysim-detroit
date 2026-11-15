@@ -65,6 +65,17 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · main: audit fixes + proposal pin
+- Distance dropdown labels say "of site"; picking a band now also switches the By district rows (from each district's groups, when the run reports them).
+- Top reasons: bars show share of all residents (not scaled to the biggest), in the accent colour, heading says so.
+- Light theme: text inputs have a white fill. Place placeholder shortened to "Pick on map or type streets".
+- District picker: a 5th district shakes and a toast says "Max 4 districts"; deselecting the last one says why it can't.
+- Compare opens on Support every time.
+- Build animations frame the whole shape (route, ring, street, crowd paths, drone curve) between whichever panels are open.
+- Settings hint no longer says Fast "reads too high".
+- New: a pin with the proposal's icon (bus, building, drone, road, event, rezoning) sits on top of the addition after the animation; clicking it flies back. Cleared with the animation on a new question.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · main: panel side tabs centred and wider
 - Hide/show tabs for both panels are now 36×72 px with bigger arrows, vertically centred on the panel edge (and on the screen edge when a panel is hidden).
 - Files: web/prototype/index.html only.
