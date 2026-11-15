@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 00:15 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Street snapping read only CARTO/OpenMapTiles road names, but the basemap is now Protomaps (`roads` layer, `kind`), so no streets were found and every walker was hidden. Now reads both schemas. Walkers with no clear stretch stand at the roadside instead of hiding; street search radius 300 m.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
 ### 2026-11-15 00:05 ET · Salem (AI) · Web (branch `salem/frontend-try`)
 **Did:** Walkers no longer walk into buildings. Each street-snapped path is checked against the building footprints in view (our tiles, 2.5 m clearance), trying sidewalk offsets 6 / 3.5 / 0 / -3.5 / -6 m, and keeps the longest clear stretch. No clear stretch → the figure stands still on the street; no street within 150 m → hidden at street level. Figures capped smaller (2.5–7× life size) and appear from zoom 15. Test: 90 walkers, 0 paths touching a building.
 **Files:** web/prototype/index.html, LOG.md (branch only)

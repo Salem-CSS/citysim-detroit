@@ -395,7 +395,10 @@ var mapView = (function () {
     r.pos = [r.p[0], r.p[1], 0]; r.hip = [r.p[0], r.p[1], 0]; r.ori = [0, 0, 0]; r.oriL = [0, 0, 0]; r.oriR = [0, 0, 0];
   }
   // Snap walkers to real streets from the basemap tiles (OpenMapTiles 'transportation'), walking on the sidewalk.
-  var WALK_CLASSES = { minor: 1, service: 1, tertiary: 1, secondary: 1, primary: 1, residential: 1, path: 1, track: 1, pedestrian: 1, living_street: 1 };
+  // Street kinds people can walk along. OpenMapTiles (CARTO) uses layer 'transportation' + 'class';
+  // Protomaps uses layer 'roads' + 'kind'. Freeways, rail, ferries and steps are excluded.
+  var WALK_CLASSES = { minor: 1, service: 1, tertiary: 1, secondary: 1, primary: 1, residential: 1, path: 1, track: 1, pedestrian: 1, living_street: 1,
+                       minor_road: 1, medium_road: 1, major_road: 1 };
   function basemapSource() {
     var src = map.getStyle() && map.getStyle().sources;
     for (var k in src) if (src[k].type === 'vector' && k !== 'bldg') return k;
@@ -403,11 +406,16 @@ var mapView = (function () {
   }
   function snapToStreets(list) {
     var srcId = basemapSource(); if (!srcId) return 0;
-    var feats; try { feats = map.querySourceFeatures(srcId, { sourceLayer: 'transportation' }); } catch (e) { return 0; }
+    var feats = [];
+    ['roads', 'transportation'].some(function (layer) {
+      try { feats = map.querySourceFeatures(srcId, { sourceLayer: layer }); } catch (e) { feats = []; }
+      return feats.length > 0;
+    });
     var c = map.getCenter(), lat0 = c.lat * Math.PI / 180, kx = 111320 * Math.cos(lat0), ky = 110540, CELL = 60, grid = {};
     var segs = [];
     feats.forEach(function (f) {
-      if (!WALK_CLASSES[f.properties['class']] || f.properties.brunnel === 'tunnel') return;
+      var pr = f.properties, kind = pr.kind || pr['class'];
+      if (!WALK_CLASSES[kind] || pr.kind_detail === 'steps' || pr.brunnel === 'tunnel' || pr.is_tunnel) return;
       var lines = f.geometry.type === 'LineString' ? [f.geometry.coordinates] : f.geometry.type === 'MultiLineString' ? f.geometry.coordinates : [];
       lines.forEach(function (ln) {
         for (var j = 0; j < ln.length - 1; j++) {
@@ -453,14 +461,14 @@ var mapView = (function () {
     var snapped = 0;
     list.forEach(function (r) {
       if (r.walk.onStreet) return;
-      var px = r.p[0] * kx, py = r.p[1] * ky, best = null, bestD = 150, gx0 = Math.floor(px / CELL), gy0 = Math.floor(py / CELL), seen = {};
-      for (var gx = gx0 - 2; gx <= gx0 + 2; gx++) for (var gy = gy0 - 2; gy <= gy0 + 2; gy++) (grid[gx + ',' + gy] || []).forEach(function (n) {
+      var px = r.p[0] * kx, py = r.p[1] * ky, best = null, bestD = 300, gx0 = Math.floor(px / CELL), gy0 = Math.floor(py / CELL), seen = {};
+      for (var gx = gx0 - 5; gx <= gx0 + 5; gx++) for (var gy = gy0 - 5; gy <= gy0 + 5; gy++) (grid[gx + ',' + gy] || []).forEach(function (n) {
         if (seen[n]) return; seen[n] = 1;
         var g = segs[n], dx = g[2] - g[0], dy = g[3] - g[1], L2 = dx * dx + dy * dy, t = Math.max(0, Math.min(1, ((px - g[0]) * dx + (py - g[1]) * dy) / L2));
         var qx = g[0] + t * dx, qy = g[1] + t * dy, d = Math.hypot(px - qx, py - qy);
         if (d < bestD) { bestD = d; best = { g: g, t: t, qx: qx, qy: qy }; }
       });
-      if (!best) return;                               // no street nearby: stays hidden at street level
+      if (!best) return;                               // no street within 300 m (rare): hidden at street level
       var g = best.g, dx = g[2] - g[0], dy = g[3] - g[1], len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
       var side = ((px - best.qx) * -uy + (py - best.qy) * ux) >= 0 ? 1 : -1, sc = best.t * len, want = 30 + 30 * r.u;
       var STEP = 2, n = Math.max(2, Math.ceil(len / STEP)), pick = null;
@@ -474,7 +482,7 @@ var mapView = (function () {
         var s0 = Math.max(lo * STEP, c * STEP - want), s1 = Math.min(Math.min(len, hi * STEP), c * STEP + want);
         if (!pick || s1 - s0 > pick.s1 - pick.s0 + 4) pick = { s0: s0, s1: s1, off: off };
       });
-      if (!pick) return;
+      if (!pick) pick = { s0: sc - 0.5, s1: sc + 0.5, off: 6 * side };   // no clear stretch: stand at the roadside
       var still = pick.s1 - pick.s0 < 6;
       if (still) { var mid = (pick.s0 + pick.s1) / 2; pick.s0 = mid - 0.5; pick.s1 = mid + 0.5; }
       var ox = -uy * pick.off, oy = ux * pick.off;
