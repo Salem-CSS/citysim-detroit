@@ -64,6 +64,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: results panel + compare revamp, traffic only along From→To, collapsible key
+- Traffic colours are drawn only on main-road pieces within ~450 m of the line between the picked From and To (map pick, typed coordinates, or backend-verified places). No route → unchanged.
+- Public approval: short headline ("Mostly neutral, leaning yes"), By district as big rows (support % / oppose % + bar), engine note is one bold line with Details, forecast note is a one-line expandable.
+- District card: Support / Oppose toggle for By group (Oppose disabled until the backend sends per-group oppose — Ammar's redeploy).
+- Compare: no descriptions or forecast text; Approval bars, By group table with Support/Oppose toggle, Who lives here table, Age mix.
+- Map key can be minimised (remembered).
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: grey roads back, sample drone corridor removed, pins clear on submit
 - Restored the grey 'all-roads' layer and road-name lookup from it (reverts the previous entry's removal).
 - Removed the blue sample drone route + noise band (and the Newlab hub marker): it showed for every drone question regardless of the user's own From/To.
