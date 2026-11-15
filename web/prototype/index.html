@@ -1020,9 +1020,14 @@ var mapView = (function () {
     ['roads', 'transportation'].forEach(function (sl) { try { map.querySourceFeatures(src, { sourceLayer: sl }).forEach(function (f) {
       var p = f.properties || {}; if (!want || norm(p.name) !== want) return;
       var g = f.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
-      lines.forEach(function (ln) { var cur = null; ln.forEach(function (q) {
-        var d = Math.hypot((q[0] - c[0]) * kx, (q[1] - c[1]) * ky);
-        if (d <= r) { if (!cur) { cur = []; out.push(cur); } cur.push(q); } else cur = null; }); });
+      lines.forEach(function (ln) { var cur = null, dense = [];
+        for (var i = 0; i < ln.length; i++) {                      // densify every ~15 m so long straight segments aren't dropped at the radius
+          if (i) { var p0 = ln[i - 1], p1 = ln[i], L = Math.hypot((p1[0] - p0[0]) * kx, (p1[1] - p0[1]) * ky), n = Math.max(1, Math.ceil(L / 15));
+            for (var j = 1; j < n; j++) dense.push([p0[0] + (p1[0] - p0[0]) * j / n, p0[1] + (p1[1] - p0[1]) * j / n]); }
+          dense.push(ln[i]); }
+        dense.forEach(function (q) {
+          var d = Math.hypot((q[0] - c[0]) * kx, (q[1] - c[1]) * ky);
+          if (d <= r) { if (!cur) { cur = []; out.push(cur); } cur.push(q); } else cur = null; }); });
     }); } catch (e) {} });
     return out.filter(function (l) { return l.length > 1; });
   }
