@@ -65,6 +65,12 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: rank-by menu, stance-coloured person badge, compact person card, run overlay
+- Compare > By group: "Rank by" menu (default order, average, or any district, high to low).
+- Person card: district badge turns blue (supports) / orange (opposes) / grey (neutral); four key facts as tiles (distance, income, cars, commute), the rest under "Show more"; one short footer line.
+- Run overlay on the map while a run is going: answered count of total, progress bar (live from GET /runs answered/total), residents per district, mode hint.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 04:11 ET · Partner (AI) · Residents (run-to-run variation measured) + Docs
 **Did:** Measured how much results move between two identical runs, in each mode (BACKEND_PLAN 15.1, P2). Proposal "Build a 120-unit apartment building at Michigan Ave and Trumbull", Districts 5 and 6, on `citysim-partner`. Fast: totals differ by 0.4 / 0.4 / 0.8 points (support / neutral / oppose); 22 of 983 residents changed answer. Accurate: 0.2 / 0.5 / 0.3 points; 8 of 943 changed. Updated the Status board and handoffs.
 **Files:** BACKEND_PLAN.md (15.1), LOG.md

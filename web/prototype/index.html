@@ -68,6 +68,21 @@
 .settings { position: absolute; top: 92px; right: 16px; z-index: 6; width: 260px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .settings[hidden] { display: none; }
 .settings h3 { margin: 0; font-size: 16px; }
+.runover { position: absolute; z-index: 7; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 340px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.app.has-blocks .runover { left: calc(50% + 180px); } .runover[hidden] { display: none; }
+.ro-top { display: flex; align-items: center; gap: 10px; font-size: 16px; }
+.ro-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(148,163,184,.3); border-top-color: var(--support); animation: rospin .8s linear infinite; }
+@keyframes rospin { to { transform: rotate(360deg); } }
+.ro-num { display: flex; align-items: baseline; gap: 8px; } .ro-num b { font-size: 40px; font-weight: 800; line-height: 1; } .ro-num span { color: var(--text-2); font-size: 15px; }
+.ro-bar { height: 8px; border-radius: 4px; background: rgba(148,163,184,.18); overflow: hidden; position: relative; }
+.ro-bar span { display: block; height: 100%; width: 0; border-radius: 4px; background: linear-gradient(90deg, var(--brand-a), var(--brand-b)); transition: width .6s ease; }
+.ro-bar.is-wait span { width: 30%; position: absolute; animation: rowait 1.4s ease-in-out infinite; }
+@keyframes rowait { 0% { left: -30%; } 100% { left: 100%; } }
+.ro-ds { display: flex; flex-wrap: wrap; gap: 6px; }
+.ro-ds span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--raised); font-size: 13px; font-weight: 600; }
+.ro-ds i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.ro-sub { font-size: 13px; color: var(--text-3); }
+@media (prefers-reduced-motion: reduce) { .ro-spin, .ro-bar.is-wait span { animation: none; } }
 .pickbar { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); z-index: 7; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; font-size: 15px; }
 .pickbar[hidden] { display: none; }
 .pickbar svg { color: var(--oppose); flex: 0 0 auto; }
@@ -326,6 +341,9 @@ button { cursor: pointer; }
 .gtoggle button:disabled { opacity: .4; cursor: not-allowed; }
 .hrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .hrow h3 { margin: 0 !important; }
+.hctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.gsort { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-3); }
+.gsort select { height: 32px; padding: 0 28px 0 10px; border-radius: 8px; border: 1px solid var(--panel-line); background-color: var(--raised); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .grow.m-oppose .split > span:first-child { background: var(--oppose); }
 .tile__name { display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .tile__pct { font-size: 26px; font-weight: 800; }
@@ -367,7 +385,16 @@ button { cursor: pointer; }
 .pcard dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 15px; }
 .pcard dt { color: var(--text-2); }
 .pcard dd { margin: 0; font-weight: 600; }
-.pcard .follow { font-size: 14px; color: var(--text-2); }
+.pcard .follow { font-size: 12px; color: var(--text-3); }
+.pkeys { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pkeys div { padding: 10px 12px; border-radius: var(--r-sm); background: var(--raised); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pkeys b { font-size: 17px; font-weight: 800; line-height: 1.2; }
+.pkeys span { font-size: 12px; color: var(--text-3); }
+.pmore summary { cursor: pointer; font-size: 14px; font-weight: 700; color: var(--accent); list-style: none; padding: 4px 0; }
+.pmore summary::-webkit-details-marker { display: none; }
+.pmore summary::after { content: " ▾"; } .pmore[open] summary::after { content: " ▴"; }
+.pmore[open] summary { margin-bottom: 8px; }
+.pcard .avatar { transition: background .2s; }
 .pcard .stance { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
 .pcard .stance i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
 .rcard { position: absolute; z-index: 4; width: 300px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
@@ -425,6 +452,14 @@ button { cursor: pointer; }
     <div class="seg" role="group" aria-label="How residents are asked"><button type="button" data-speed-set="fast" aria-pressed="true">Fast</button><button type="button" data-speed-set="accurate" aria-pressed="false">Accurate</button></div>
     <p class="credits" id="speedHint" style="font-size:12px"></p>
     <p class="credits">Map data © OpenStreetMap contributors · © CARTO · Buildings © Overture Maps Foundation (ODbL)</p>
+  </div>
+
+  <div class="runover panel" id="runOver" role="status" aria-live="polite" hidden>
+    <div class="ro-top"><span class="ro-spin" aria-hidden="true"></span><b id="roTitle">Asking 2,000 residents</b></div>
+    <div class="ro-num"><b class="num" id="roDone">0</b><span id="roOf">of 2,000 answered</span></div>
+    <div class="ro-bar"><span id="roBar"></span></div>
+    <div class="ro-ds" id="roDs"></div>
+    <div class="ro-sub" id="roSub">Fast mode · usually about a minute</div>
   </div>
 
   <div class="pickbar panel" id="pickBar" role="status" hidden>
@@ -502,9 +537,9 @@ button { cursor: pointer; }
     <div class="pcard__head"><span class="avatar" id="pcAvatar">R</span><div><b id="pcTitle">Resident</b><span class="muted" style="font-size:14px" id="pcSub"></span></div><button type="button" class="x" id="pcClose" aria-label="Close">×</button></div>
     <div class="stance" id="pcStance"></div>
     <p id="pcQuote" hidden style="margin:0;font-size:15px;line-height:1.45"></p>
-    <dl id="pcFacts"></dl>
-    <div class="follow" id="pcSource" style="font-size:12px">Simulated resident built from census records. Not a real person.</div>
-    <div class="follow" id="pcFollow">Camera is following this resident. Drag the map to stop.</div>
+    <div class="pkeys" id="pcKeys"></div>
+    <details class="pmore" id="pcMore"><summary>Show more</summary><dl id="pcFacts"></dl></details>
+    <div class="follow" id="pcFollow">Simulated from census records · camera following</div>
   </div>
   <div class="rcard panel" id="rcard" role="dialog" aria-label="Resident details" hidden>
     <div class="rcard__head"><span class="avatar" id="rcAvatar">H</span><div><b id="rcWho">Homeowner, 62</b><div class="muted" style="font-size:14px" id="rcWhere">Corktown · 28 years on this block</div></div><button type="button" class="icon-btn" aria-label="Close" id="rcClose"><svg class="icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
@@ -550,7 +585,7 @@ var mapView = (function () {
   } });
   map.on('zoomend', function () { render(); kick(); });
   map.on('idle', function () { if (ready && map.getZoom() >= PEOPLE_ZOOM && snapToStreets(residents.filter(function (r) { return on(r.d); }))) { snapRound++; render(); } });
-  map.on('dragstart', function () { if (followed) { followHold = false; followed = null; document.getElementById('pcFollow').textContent = 'Not following. Click the person again to follow.'; } });
+  map.on('dragstart', function () { if (followed) { followHold = false; followed = null; document.getElementById('pcFollow').textContent = 'Simulated from census records · click them to follow again'; } });
   document.addEventListener('visibilitychange', kick);
   var pickCb = null, pickPrev = null, pickKey = null, pins = {};
   function roadNamesAt(pt) {
@@ -842,16 +877,24 @@ var mapView = (function () {
     var col = stanceOf(r), lab = !st ? 'Not asked yet' : (col === STANCE.s ? 'Supports' : col === STANCE.o ? 'Opposes' : col === STANCE.n ? 'Neutral' : 'No answer');
     document.getElementById('pcTitle').textContent = r.t && r.t.age ? (r.t.tenure === 'owner' ? 'Homeowner' : r.t.tenure === 'renter' ? 'Renter' : 'Resident') + ', ' + r.t.age : 'Resident';
     document.getElementById('pcSub').textContent = 'District ' + r.d + (r.t && r.t.neighborhood ? ' · ' + r.t.neighborhood : x && x.area ? ' · ' + x.area : '');
-    document.getElementById('pcAvatar').textContent = String(r.d);
+    var av = document.getElementById('pcAvatar'); av.textContent = String(r.d);
+    var stc = st && lab === 'Supports' ? '#38BDF8' : st && lab === 'Opposes' ? '#F97316' : st && lab === 'Neutral' ? '#94A3B8' : '';
+    av.style.background = stc || ''; av.style.color = stc ? '#0B1220' : '';
     document.getElementById('pcStance').innerHTML = '<i style="background:rgb(' + col.join(',') + ')"></i>' + lab +
       (st && r.reason && r.reason !== 'none' ? ' · ' + (REASONS[r.reason] || r.reason) : '');
     var q = document.getElementById('pcQuote');
     q.hidden = !(st && r.quote); q.textContent = st && r.quote ? '\u201C' + r.quote + '\u201D' : '';
-    var dist = st && r.dist != null ? '<dt>Lives</dt><dd>' + miles(r.dist) + ' from the proposal</dd>' : '';
-    var rows = r.t ? FACTS.map(function (f) { var v = fmt(f[0], r.t[f[0]]); return v ? '<dt>' + f[1] + '</dt><dd>' + v + '</dd>' : ''; }).join('') : '';
-    document.getElementById('pcFacts').innerHTML = (rows ? dist + rows : '') ||
-      '<dt>Details</dt><dd style="font-weight:400">This figure is a placeholder. Real age, income, housing and commute appear once each resident\'s census record is exported to the map.</dd>';
-    document.getElementById('pcFollow').textContent = 'Camera is following this resident. Drag the map to stop.';
+    var KEY = ['hh_income', 'vehicles', 'commute_mode'], keys = [];
+    if (st && r.dist != null) keys.push([miles(r.dist), 'from the proposal']);
+    if (r.t) KEY.forEach(function (k) { var v = fmt(k, r.t[k]); if (v) keys.push([v, k === 'hh_income' ? 'household income' : k === 'vehicles' ? (String(r.t[k]) === '1' ? 'car' : 'cars') : 'to work']); });
+    if (keys.length < 4 && r.t) { var e = fmt('building_type', r.t.building_type); if (e) keys.push([e, 'home']); }
+    document.getElementById('pcKeys').innerHTML = keys.slice(0, 4).map(function (k) { return '<div><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'; }).join('');
+    var rows = r.t ? FACTS.filter(function (f) { return KEY.indexOf(f[0]) < 0 && f[0] !== 'age' && f[0] !== 'tenure'; })
+      .map(function (f) { var v = fmt(f[0], r.t[f[0]]); return v ? '<dt>' + f[1] + '</dt><dd>' + v + '</dd>' : ''; }).join('') : '';
+    var more = document.getElementById('pcMore'); more.hidden = !rows;
+    document.getElementById('pcFacts').innerHTML = rows;
+    if (!keys.length && !rows) document.getElementById('pcKeys').innerHTML = '<div style="grid-column:1/-1"><span>Census details not loaded for this resident.</span></div>';
+    document.getElementById('pcFollow').textContent = 'Simulated from census records · camera following';
     document.getElementById('pcard').hidden = false;
     document.getElementById('rcard').hidden = true;
   }
@@ -1105,7 +1148,7 @@ function groupRows(list, mode){
     return '<div class="grow m-'+mode+'"><span>'+esc(SHORT_G[l]||l)+'</span><div class="split" role="img" aria-label="'+v+'% '+mode+'"><span style="width:'+v+'%"></span></div><b class="num">'+v+'%</b></div>'; }).join('');
 }
 function hasOppose(list){ return (list||[]).some(function(g){ return g.oppose!=null; }); }
-var groupMode='support';
+var groupMode='support', groupSort='';
 function gToggle(canOppose){
   return '<div class="gtoggle" role="group" aria-label="Show support or oppose"><button type="button" data-m="support" aria-pressed="'+(groupMode==='support')+'">Support</button>'+
     '<button type="button" data-m="oppose" aria-pressed="'+(groupMode==='oppose')+'"'+(canOppose?'':' disabled title="Oppose by group needs the updated backend"')+'>Oppose</button></div>';
@@ -1182,8 +1225,15 @@ function openCompare(){
     var any=data.some(function(c){ return Object.keys(c.g).length; }), canOpp=data.some(function(c){ return Object.keys(c.g).some(function(k){ return c.g[k].oppose!=null; }); });
     if(groupMode==='oppose' && !canOpp) groupMode='support';
     var m=groupMode, color=m==='oppose'?'var(--oppose)':'var(--support)';
-    var gt=any ? table(GROUP_ORDER.map(function(l){ return [SHORT_G[l]||l, function(c){ return c.g[l] && c.g[l][m]!=null ? c.g[l][m] : null; }, pct, 100, function(){ return color; }]; })) : '';
-    if(gt) h+='<section><div class="hrow"><h3>By group</h3>'+gToggle(canOpp)+'</div>'+gt+'</section>';
+    if(groupSort && groupSort!=='avg' && !data.some(function(c){ return String(c.d)===groupSort; })) groupSort='';
+    var gv=function(l,c){ return c.g[l] && c.g[l][m]!=null ? c.g[l][m] : null; };
+    var key=function(l){ if(groupSort==='avg'){ var v=data.map(function(c){return gv(l,c);}).filter(function(v){return v!=null;}); return v.length?v.reduce(function(a,b){return a+b;},0)/v.length:-1; }
+      var c=data.filter(function(c){return String(c.d)===groupSort;})[0], v=c?gv(l,c):null; return v==null?-1:v; };
+    var order=GROUP_ORDER.slice(); if(groupSort) order.sort(function(a,b){ return key(b)-key(a); });
+    var gt=any ? table(order.map(function(l){ return [SHORT_G[l]||l, function(c){ return gv(l,c); }, pct, 100, function(){ return color; }]; })) : '';
+    var sortSel='<label class="gsort"><span>Rank by</span><select id="groupSort"><option value="">Default order</option><option value="avg"'+(groupSort==='avg'?' selected':'')+'>Average, high to low</option>'+
+      data.map(function(c){ return '<option value="'+c.d+'"'+(groupSort===String(c.d)?' selected':'')+'>District '+c.d+', high to low</option>'; }).join('')+'</select></label>';
+    if(gt) h+='<section><div class="hrow"><h3>By group</h3><div class="hctl">'+sortSel+gToggle(canOpp)+'</div></div>'+gt+'</section>';
   }
   if(data.some(function(c){return c.P;})){
     var maxInc=Math.ceil(Math.max.apply(null,data.map(function(c){return c.P&&c.P.median_income||0;}))/10000)*10000||60000;
@@ -1199,6 +1249,7 @@ function openCompare(){
   if(!state.asked) h+='<p class="muted" style="margin:0">Ask a question to compare approval.</p>';
   el.innerHTML=h; el.hidden=false;
   wireToggle(el, function(){ var b=document.querySelector('.results__body'), st=b.scrollTop; openCompare(); b.scrollTop=st; });
+  var gs=document.getElementById('groupSort'); if(gs) gs.addEventListener('change',function(){ groupSort=gs.value; var b=document.querySelector('.results__body'), st=b.scrollTop; openCompare(); b.scrollTop=st; });
   var res=document.getElementById('results'); res.classList.add('is-compare');
   var bt=document.getElementById('compareBtn'); bt.textContent='Close comparison'; bt.setAttribute('aria-expanded','true');
 }
@@ -1453,12 +1504,23 @@ function showResult(res){
   if(!PEOPLE.length) PEOPLE=[{who:'No quotes in this run',where:'',q:'',feel:'',w:'',z:''}];
   pi=0;
 }
+var runOver={
+  show:function(n, mode){ var o=document.getElementById('runOver'), ds=selected();
+    document.getElementById('roTitle').textContent='Asking '+n.toLocaleString()+' residents';
+    document.getElementById('roDs').innerHTML=ds.map(function(d){ return '<span><i style="--c:'+DISTRICTS[d].c+'"></i>District '+d+' · '+Math.round(n/ds.length)+'</span>'; }).join('');
+    document.getElementById('roSub').textContent=mode==='accurate'?'Accurate mode · one resident at a time, takes several minutes':mode==='sample'?'Sample data':'Fast mode · usually about a minute';
+    this.update(0,n); o.hidden=false; },
+  update:function(a,tot){ document.getElementById('roDone').textContent=Math.min(a,tot).toLocaleString();
+    document.getElementById('roOf').textContent='of '+tot.toLocaleString()+' answered';
+    var bar=document.getElementById('roBar'); bar.parentNode.classList.toggle('is-wait',!a); bar.style.width=a?Math.min(100,100*a/tot)+'%':''; },
+  hide:function(){ document.getElementById('runOver').hidden=true; }
+};
 function runLive(btn){
   var api=(window.CITYSIM_API||'').replace(/\/$/,''), spec=specWithEdits(), n=spec.districts.length*500;
   var mode=runSpeed(), t0=Date.now(), limit=(mode==='accurate'?25:4)*60*1000;      // accurate: 200 model calls a minute is the account's cap
   btn.disabled=true; btn.textContent='Asking '+n.toLocaleString()+' residents…';
-  mapView.setAnswers(null);
-  var fail=function(msg, j){ btn.disabled=false; setMode(state.asked);
+  mapView.setAnswers(null); runOver.show(n, mode);
+  var fail=function(msg, j){ runOver.hide(); btn.disabled=false; setMode(state.asked);
     if(j && j.spec && j.spec.questions){ openBlocks(state.question, j.spec); return; }
     body.insertAdjacentHTML('afterbegin','<div class="changed-note"><span>Could not run: '+String(msg).replace(/</g,'&lt;')+'</span></div>'); };
   fetch(api+'/runs',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({spec:spec, mode:mode})})
@@ -1466,11 +1528,12 @@ function runLive(btn){
     .then(function(id){ var errs=0; (function poll(){
       fetch(api+'/runs/'+id).then(function(r){return r.json();}).then(function(run){
         errs=0;
-        if(run.stage==='done' && run.result){ state.spec=spec; state.runId=id; showResult(run.result); finishRun(btn); syncRoute(); loadAnswers(api,id); }
+        if(run.stage==='done' && run.result){ runOver.hide(); state.spec=spec; state.runId=id; showResult(run.result); finishRun(btn); syncRoute(); loadAnswers(api,id); }
         else if(run.status==='failed') fail(run.error||'the run failed on the server');
         else if(Date.now()-t0>limit) fail('the run did not finish in time');
         else { var a=+run.answered||0, tot=+run.total||n;
           btn.textContent = a ? 'Asked '+Math.min(a,tot).toLocaleString()+' of '+tot.toLocaleString()+' residents…' : 'Asking '+tot.toLocaleString()+' residents…';
+          runOver.update(a,tot);
           setTimeout(poll, mode==='accurate'?4000:2000); }
       }).catch(function(e){ if(++errs>5) fail(e.message); else setTimeout(poll,4000); }); })(); })
     .catch(function(e){ fail(e.message, e.body); });
@@ -1498,8 +1561,9 @@ document.getElementById('runBtn').addEventListener('click',function(){
   var b=this;
   if(window.CITYSIM_API && state.spec && state.spec.actions.length){ runLive(b); return; }   // real residents
   b.disabled=true; b.textContent='Asking 2,000 residents…';
+  var N=selected().length*500; runOver.show(N,'sample'); setTimeout(function(){ runOver.update(Math.round(N*0.55),N); },500);
   setTimeout(function(){
-    state.asked=true; b.disabled=false; app.classList.add('has-results'); map.dataset.state='results'; mapView.update();
+    runOver.hide(); state.asked=true; b.disabled=false; app.classList.add('has-results'); map.dataset.state='results'; mapView.update();
     body.querySelectorAll('.block').forEach(function(x){x.classList.remove('is-changed');});
     var note=document.getElementById('changedNote'); if(note) note.remove();
     body.querySelectorAll('[data-k]').forEach(function(el){
