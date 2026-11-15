@@ -1219,7 +1219,8 @@ var mapView = (function () {
     followed = r;
     var x = window.DISTRICTS && DISTRICTS[r.d], st = el.dataset.state === 'results';
     var col = stanceOf(r), lab = !st ? 'Not asked yet' : (col === STANCE.s ? 'Supports' : col === STANCE.o ? 'Opposes' : col === STANCE.n ? 'Neutral' : 'No answer');
-    document.getElementById('pcTitle').textContent = r.t && r.t.age ? (r.t.tenure === 'owner' ? 'Homeowner' : r.t.tenure === 'renter' ? 'Renter' : 'Resident') + ', ' + r.t.age : 'Resident';
+    var sx = r.t && r.t.sex ? cap(r.t.sex) : 'Resident';
+    document.getElementById('pcTitle').textContent = r.t && r.t.age ? sx + ', ' + r.t.age : sx;
     document.getElementById('pcSub').textContent = 'District ' + r.d + (r.t && r.t.neighborhood ? ' · ' + r.t.neighborhood : x && x.area ? ' · ' + x.area : '');
     var av = document.getElementById('pcAvatar'); av.textContent = String(r.d);
     var stc = st && lab === 'Supports' ? '#38BDF8' : st && lab === 'Opposes' ? '#F97316' : st && lab === 'Neutral' ? '#94A3B8' : '';
@@ -1229,11 +1230,11 @@ var mapView = (function () {
     var q = document.getElementById('pcQuote');
     q.hidden = !(st && r.quote); q.textContent = st && r.quote ? '\u201C' + r.quote + '\u201D' : '';
     if (st && r.dist != null) document.getElementById('pcSub').textContent += ' · ' + miles(r.dist) + ' away';
-    var KEY = ['hh_income', 'vehicles', 'commute_mode'], keys = [];
-    if (r.t) KEY.forEach(function (k) { var v = shortFmt(k, r.t[k]); if (v) keys.push([v, k === 'hh_income' ? 'Income' : k === 'vehicles' ? (String(r.t[k]) === '1' ? 'Car' : 'Cars') : 'Commute']); });
+    var KEY = ['hh_income', 'vehicles', 'tenure'], keys = [];
+    if (r.t) KEY.forEach(function (k) { var v = shortFmt(k, r.t[k]); if (v) keys.push([v, k === 'hh_income' ? 'Income' : k === 'vehicles' ? (String(r.t[k]) === '1' ? 'Car' : 'Cars') : 'Home']); });
     document.getElementById('pcKeys').innerHTML = keys.map(function (k) { return '<div><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'; }).join('');
-    var SHORT_L = { building_type: 'Home', move_in_band: 'Moved in', hh_size: 'Household', children: 'Kids at home', employment: 'Work', commute_minutes: 'Commute time', education: 'Education', sex: 'Sex', years_in_home: 'Years in home' };
-    var rows = r.t ? FACTS.filter(function (f) { return KEY.indexOf(f[0]) < 0 && f[0] !== 'age' && f[0] !== 'tenure' && !(f[0] === 'years_in_home' && r.t.move_in_band); })
+    var SHORT_L = { building_type: 'Home type', move_in_band: 'Moved in', hh_size: 'Household', children: 'Kids at home', employment: 'Work', commute_mode: 'Commute', commute_minutes: 'Commute time', education: 'Education', years_in_home: 'Years in home' };
+    var rows = r.t ? FACTS.filter(function (f) { return KEY.indexOf(f[0]) < 0 && f[0] !== 'age' && f[0] !== 'sex' && !(f[0] === 'years_in_home' && r.t.move_in_band); })
       .map(function (f) { var v = shortFmt(f[0], r.t[f[0]]); return v ? '<div><span>' + (SHORT_L[f[0]] || f[1]) + '</span><b>' + v + '</b></div>' : ''; }).join('') : '';
     var more = document.getElementById('pcMore'); more.hidden = !rows;
     document.getElementById('pcFacts').innerHTML = rows;
