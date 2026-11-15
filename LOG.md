@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 23:15 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Created branch `salem/frontend-try` from main (8ea8879) for Salem's frontend experiments. Vercel builds a preview for it; production stays on `main`.
+**Files:** LOG.md (this branch only)
+**Contracts changed:** none
+**Decisions:** Nothing on this branch reaches `main` until Salem merges it.
+**Blocked / needs:** none
+**Next:** frontend edits on this branch.
+
 ### 2026-11-14 23:02 ET · Partner (AI) · Engine + Residents + Data
 **Did:** Each resident is now told how far the verified proposal is from their home. `engine/proximity.py` (pure Python) measures from the resident's home block interior point to the verified point, or to the straight line between a route's verified start and end (the line says so, since the real path is unknown). Personas gained `home_lon` / `home_lat` (block interior point, not an address); rebuilt with the same seed and re-uploaded. `infra/runs.plan_batches` passes the spec's verified places to each batch; `residents/batch.py` adds the distance line and stores `distance_m`; `aggregate.py` adds `exposure` groups (within a quarter mile / quarter mile to a mile / more than a mile). Deployed to both stacks.
 **Verified live (`citysim-partner`):** strip club at Trumbull St & Michigan Ave, District 6, 500 residents, 0 dropped, $0.06. By distance: within 1/4 mile (6 residents) 100% oppose; 1/4 to 1 mile (55) 100% oppose; 1 to 3 miles (208) 58% oppose, 41% neutral; over 3 miles (231) 2% oppose, 98% neutral. Overall 0.3% support / 63.4% neutral / 36.3% oppose. Distance check: Newlab to Michigan & Trumbull measures 782 m.
