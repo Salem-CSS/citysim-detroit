@@ -65,6 +65,12 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 12:58 ET · Salem (AI) · main: road-change and drone lines no longer flicker
+
+- `web/prototype/index.html`: road-change lines (glow, main line, green bike lane) now float 2-4 m above the street instead of sitting at ground level, where they z-fought the basemap roads and showed as orange/red/green stripes. Drone ground-shadow line raised and drawn on top; flight arc starts 3 m up.
+- Build animations now start ~0.9 s after a call when the camera is already framed (no move), instead of waiting for the 4 s fallback.
+- No contract changes.
+
 ### 2026-11-15 11:54 ET · Partner (AI) · Web (correction engine panel) + pre-submission checks
 **Did:** The correction engine panel (button left of Settings) now says plainly that the feature is a work in progress, with a "Where it stands" list: what works today and what is still being worked on. Pre-submission checks on the live site and backend: seven proposal types in Fast mode (apartment building, concert venue, bus route, drone route, road closure, rezoning, strip club) all ran clean in 8 to 20 s with 981 to 1,000 of 1,000 residents answering; the demo tour ran 9 of 9 steps on the live site with no page errors.
 **Files:** web/prototype/index.html (16 lines added, 3 of my own lines reworded, all inside the `.corrx` panel code)

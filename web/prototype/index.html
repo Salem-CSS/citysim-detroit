@@ -1179,10 +1179,10 @@ var mapView = (function () {
     var cxm = dx / 2 - dy / Lm * bow, cym = dy / 2 + dx / Lm * bow;            // control point, perpendicular to the straight line
     var N = 64, arc = []; for (var i = 0; i <= N; i++) { var f = i / N, up = Math.min(1, f / 0.12, (1 - f) / 0.12), u = 1 - f;
       var xm = 2 * u * f * cxm + f * f * dx, ym = 2 * u * f * cym + f * f * dy;
-      arc.push([a[0] + xm / kx, a[1] + ym / ky, alt * ease(up)]); }
+      arc.push([a[0] + xm / kx, a[1] + ym / ky, 3 + (alt - 3) * ease(up)]); }
     var pd = ease(t / DRAW), n = Math.max(1, Math.round(N * pd));
-    L.push(new deck.PathLayer({ id: 'd-ground', data: [{ p: arc.slice(0, n + 1).map(function (c) { return [c[0], c[1], 0]; }) }], getPath: function (d) { return d.p; },
-      widthUnits: 'pixels', getWidth: 2, getColor: [148, 163, 184, 140], updateTriggers: { getPath: n } }));
+    L.push(new deck.PathLayer({ id: 'd-ground', data: [{ p: arc.slice(0, n + 1).map(function (c) { return [c[0], c[1], 1.5]; }) }], getPath: function (d) { return d.p; },
+      widthUnits: 'pixels', getWidth: 2, getColor: [125, 211, 252, 110], parameters: { depthTest: false }, updateTriggers: { getPath: n } }));
     L.push(new deck.PathLayer({ id: 'd-route', data: [{ p: arc.slice(0, n + 1) }], getPath: function (d) { return d.p; },
       widthUnits: 'pixels', getWidth: 7, getColor: [56, 189, 248, 245], capRounded: true, jointRounded: true, updateTriggers: { getPath: n } }));
     var ends = [{ p: a, s: 0 }, { p: b, s: DRAW * 0.85 }];
@@ -1203,15 +1203,16 @@ var mapView = (function () {
   // ---- road change: the street stretch traces along the real road; bike lane draws inside it in green ----
   function roadLayers() {
     var t = performance.now() - build.t0, o = build.opts, lines = o.lines || [], pd = ease(t / 1600), L = [];
+    var lift = function (ln, z) { return ln.map(function (c) { return [c[0], c[1], z]; }); };   // float above the street so it never flickers against the basemap
     var heads = lines.map(function (ln) { return along(ln, pd).head; });
     var col = o.change === 'close' ? [239, 68, 68, 240] : o.change === 'bike_lane' ? [74, 222, 128, 240] : [249, 115, 22, 240];
-    L.push(new deck.PathLayer({ id: 'r-glow', data: heads, getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 26,
+    L.push(new deck.PathLayer({ id: 'r-glow', data: heads, getPath: function (d) { return lift(d, 2); }, parameters: { depthMask: false }, widthUnits: 'pixels', getWidth: 26,
       getColor: [col[0], col[1], col[2], 70], capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
-    L.push(new deck.PathLayer({ id: 'r-line', data: heads, getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 12,
+    L.push(new deck.PathLayer({ id: 'r-line', data: heads, getPath: function (d) { return lift(d, 3); }, widthUnits: 'pixels', getWidth: 12,
       getColor: col, capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
     if (o.bike && o.change !== 'bike_lane' && t > 900) { var bd = ease((t - 900) / 1400);
-      L.push(new deck.PathLayer({ id: 'r-bike', data: lines.map(function (ln) { return along(ln, bd).head; }), getPath: function (d) { return d; },
-        widthUnits: 'pixels', getWidth: 5, getColor: [22, 163, 74, 255], capRounded: true, parameters: { depthTest: false, depthCompare: 'always' }, jointRounded: true, updateTriggers: { getPath: bd } })); }
+      L.push(new deck.PathLayer({ id: 'r-bike', data: lines.map(function (ln) { return along(ln, bd).head; }), getPath: function (d) { return lift(d, 4); },
+        widthUnits: 'pixels', getWidth: 5, getColor: [22, 163, 74, 255], capRounded: true, jointRounded: true, updateTriggers: { getPath: bd } })); }
     var ends = []; lines.forEach(function (ln) { if (ln.length) { ends.push(ln[0]); } }); if (lines.length) { var last = lines[lines.length - 1]; ends.push(last[last.length - 1]); }
     if (o.change === 'close' && t > 1200) L.push(new deck.ScatterplotLayer({ id: 'r-ends', data: ends, getPosition: function (p) { return p; },
       radiusUnits: 'pixels', getRadius: 7 * ease((t - 1200) / 300), getFillColor: [239, 68, 68, 255], stroked: true, getLineColor: [248, 250, 252], lineWidthUnits: 'pixels', getLineWidth: 2, updateTriggers: { getRadius: t } }));
@@ -1556,6 +1557,7 @@ var mapView = (function () {
         dropMarker(kind, markerPoint(kind, B, opts));
         B.ready = true; B.t0 = performance.now(); };
       map.once('moveend', function () { map.once('idle', go); setTimeout(go, 2200); });   // wait for the framed view's street tiles (idle), with a cap
+      setTimeout(function () { if (!map.isMoving()) go(); }, 900);                           // camera didn't move (already framed): start now
       setTimeout(go, 4000);
       requestAnimationFrame(buildLoop);
       return 1300 + (kind === 'building' ? 2100 : kind === 'road' ? 2600 : kind === 'event' ? 3600 : kind === 'rezone' ? (b ? 2700 : 1900) : b ? DRAW + DRIVE : RISE + 300);
