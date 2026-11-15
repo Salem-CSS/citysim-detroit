@@ -5,7 +5,7 @@
     resolve("Woodward and 5th", [5]) ->
         {"status": "no_crossing", "message": "...", "alternatives": [...]}
 
-Order: coordinates (map pick) -> two streets -> street address -> landmark (Amazon Location place search, Detroit only).
+Order: coordinates (map pick) -> a stretch of one street between two cross streets -> two streets -> street address -> landmark (Amazon Location place search, Detroit only).
 The index comes from data/places/build_index.py (city road layer + official council districts).
 Statuses: ok | empty | unknown_street | no_crossing | no_address | ambiguous | not_found | error.
 """
@@ -187,6 +187,16 @@ def resolve(text: str, districts=None, index: dict | None = None, client=None) -
         return _ok(label or f"Point at {lat:.5f}, {lon:.5f}", "coordinates", lon, lat, districts, idx)
     core = re.sub(r"^(the )?(corner|intersection) of ", "", text, flags=re.I)
     core = re.sub(r"^(at|on|near|by|in) ", "", core, flags=re.I)
+    seg = re.match(r"^(.+?)\s+(?:between|from)\s+(.+?)\s+(?:and|&|to)\s+(.+)$", core, flags=re.I)
+    if seg and norm_street(seg.group(1)) in idx["streets"]:        # "Michigan Ave between Trumbull and 14th St": a stretch of one street
+        ends = [_crossing(seg.group(1), g, districts, idx) for g in seg.groups()[1:]]
+        bad = next((e for e in ends if e["status"] != "ok"), None)
+        if bad:
+            return bad                                   # says which cross street was not found; nothing is guessed
+        street = idx["streets"][norm_street(seg.group(1))]
+        other = [idx["streets"][norm_street(g)] for g in seg.groups()[1:]]
+        return _ok(f"{street} between {other[0]} and {other[1]}", "midpoint of two crossings",
+                   (ends[0]["lon"] + ends[1]["lon"]) / 2, (ends[0]["lat"] + ends[1]["lat"]) / 2, districts, idx)
     m = re.match(r"^(.+?)\s+(?:and|&|at|near|@|\+)\s+(.+)$", core, flags=re.I)
     if m:
         known = [norm_street(g) in idx["streets"] for g in m.groups()]

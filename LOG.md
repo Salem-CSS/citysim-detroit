@@ -64,6 +64,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 04:03 ET · Partner (AI) · Shared + Agent (demo check fixes)
+**Did:** Ran one proposal of each of the six types through `citysim-main`. Two fixes. (1) `shared/places.py`: a stretch of one street is now understood, "Michigan Ave between Trumbull and 14th St" or "Gratiot from Russell to Chene". Both crossings must exist; the verified point is the midpoint between them (method "midpoint of two crossings"). Before, the road example was refused with "no street named Michigan Ave between Trumbull". (2) `agent/handler.py`: a yes/no setting the model returns as the text "true" is accepted (it was dropped with "'true' isn't an option").
+**Files:** shared/places.py, shared/tests/test_places.py, agent/handler.py, agent/tests/test_handler.py, LOG.md
+**Contracts changed:** none (`resolved.method` can now be "midpoint of two crossings")
+**Decisions:** Deployed to `citysim-main`. Results of the six-type check (District 6, Fast): building, rezoning, event venue and road change ran (15 to 74 s, $0.08 to $0.11 each). The page's own example "expand the Newlab drone route to 200 flights a day" stops and asks for the route's start and end, as designed: a route needs both. A bus route to the Renaissance Center with only District 6 selected is refused because the Renaissance Center is in District 5, as designed.
+**Blocked / needs:** For Salem: the ask bar's placeholder example leads to two place questions. An example that runs straight through: "Build a 120-unit apartment building at Michigan Ave and Trumbull".
+**Next:** page-level check on Vercel.
+
 ### 2026-11-15 03:42 ET · Partner (AI) · Infra + Web (failed runs no longer hang)
 **Did:** GET /runs/{id} now checks the run's Step Functions execution while the run is still marked running; if it failed, timed out or was aborted, the response has `status: "failed"` and an `error` line. The page shows "Could not run: ..." and re-enables the button instead of waiting for its time limit. Settings hint for Accurate now reads "about 2 to 3 minutes per district" (measured: 108 s for one district, 631 s for four).
 **Files:** infra/runs.py, infra/template.yaml, infra/tests/test_runs.py, web/prototype/index.html, LOG.md
