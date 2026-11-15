@@ -473,3 +473,165 @@ Steps 4–5, 6, 7 and 10 can run in parallel once 2 and 3 are done.
 5. **K, D and lane capacity:** read the FDOT Quality/Level of Service tables directly for a citation, or keep them labelled as assumptions.
 6. **DMACS Wave 21 open microdata:** download from U-M Deep Blue if subgroup calibration is wanted.
 7. **Demo script:** the housing line "all counted streets stay green" and the drone line "van trips removed from Michigan Ave" both need rewording once real results exist (see 4.2 and 8.3).
+
+## 15. Correction engine (planned Nov 15, not built)
+
+**What it is for.** A proposal has been run and residents mostly said no. The correction engine works out why, proposes a changed version of the same proposal that should do better, runs it against the same residents, and repeats, for at most five reruns. Example: "a bus garage at X" comes back majority opposed; the engine tries other real sites for the same garage and reports the best one found, with every attempt shown.
+
+**What it is not.** It does not reword the proposal to make it sound better, it does not invent places, and it does not claim to have found the best possible answer. It reports the best of the versions it tried.
+
+### 15.1 Prerequisites (must be fixed first, or the engine chases noise)
+
+| # | Problem found on Nov 15 | Fix needed before building |
+| --- | --- | --- |
+| P1 | A resident's answer depends on who shares their batch of 25. Ten residents near a bus route all supported it when batched with far-away residents; 100 residents placed near the same route, batched together, split 20 support / 24 neutral / 56 oppose and split by vehicles. | Ask residents in batches that are alike in distance (sort by distance to the proposal before batching), or one at a time. Test both on the same residents and keep the one whose answers do not change when batch-mates change. |
+| P2 | The same proposal gives different totals on different runs (strip club, District 6: 12%, 0.3%, 2.9% and 2.5% support across four runs with different prompts). | Measure run-to-run spread: run the unchanged proposal twice. A changed version only counts as better if it beats the original by more than that spread. |
+| P3 | Only a handful of residents live near any one site (10 of 2,000 within a quarter mile). | Section 16, option C: draw extra residents from the blocks near the site so the near group is large enough to read. |
+
+### 15.2 The loop
+
+```
+run 0  the user's proposal, as run today                         (already exists)
+  │
+  ▼
+diagnose   who opposed, where, and why                           (15.3)
+  │
+  ├─ nothing to fix (support already ahead)            ──► stop: "no correction needed"
+  ├─ opposition does not depend on place or settings   ──► stop: "residents object to the thing itself"
+  ▼
+choose a lever   location, size, hours or another setting        (15.4)
+  ▼
+generate candidates   real, verified alternatives                (15.5)
+  ▼
+rank candidates   predicted support from the answers so far      (15.6)
+  ▼
+rerun k (k = 1..5)   best untried candidate, same residents      (15.7)
+  ▼
+compare with run 0   beyond the measured spread?                 (15.8)
+  │
+  ├─ target reached                                    ──► stop
+  ├─ 5 reruns used, or spending limit reached          ──► stop
+  ├─ no remaining candidate is predicted to beat the best so far ──► stop
+  └─ otherwise: add this run's answers to the evidence and go back to "rank candidates"
+```
+
+**Target** (chosen by the user, default the first): more support than oppose · support above 50% of all residents · support at or above two thirds.
+
+**Hard caps, enforced on the server, not by the model:** at most 5 reruns per correction; the existing run and day spending limits apply to every rerun; a correction stops the moment either is reached and reports what it had.
+
+### 15.3 Diagnose: why did they say no?
+
+All from data the first engine already stores for a run (stance, reason, distance, age, tenure, vehicles, district, block):
+
+1. **Is opposition local?** Oppose share within 1 mile against beyond 1 mile, and the full by-distance table. If opposition falls with distance, place matters and moving it can help. If opposition is the same at every distance, residents object to the thing itself and no site will fix it.
+2. **Who opposes?** Oppose share by tenure, age band, vehicles and district, against the same groups' share of all residents. A group that is strongly over-represented among opponents is named in the report (the user's example: "most opponents have no car").
+3. **Where do they cluster?** Blocks and neighborhoods with the highest opposition, and whether anything in the city data sits there (a school, a park, an existing facility of the same kind). This uses the neighborhood facts already computed per block; they are read by the engine, not shown to the model.
+4. **What would change their mind?** A sample of opponents (nearest first, up to 200) is asked the parked seven-question set (`residents/correction_questions.py`), in particular "What one change would make you more supportive?" with its fixed options: smaller · different location · limited hours · community benefits · nothing. The answers are counted. This is the only new model call in the diagnosis.
+
+Output: a diagnosis object (tables plus two or three plain sentences built from the numbers by template, not written freely by a model).
+
+### 15.4 Choose the lever
+
+| What opponents and the data say | Lever | Changes |
+| --- | --- | --- |
+| "different location" leads, and opposition is local | **Location** | the verified place (or a route's start or end) |
+| "smaller" leads | **Size** | homes, floors, floor area, flights a day, buses an hour |
+| "limited hours" leads | **Hours** | flying hours, event time, operating hours where the action has them |
+| "community benefits" leads | none available | reported to the user as what residents asked for; the engine cannot model it |
+| "nothing" leads, or opposition does not vary with distance | none | stop and say so |
+
+Only one lever is changed per rerun, so a gain can be attributed. If the first lever is exhausted without reaching the target and reruns remain, the next-ranked lever is tried.
+
+### 15.5 Generate candidates (location lever)
+
+Candidates are real places taken from city data, never free text from a model:
+
+- **Pool:** vacant parcels and Detroit Land Bank lots inside the selected districts (55,751 Land Bank properties, 377,940 parcels with size, zoning district and vacancy; both already downloaded).
+- **Fit to the proposal:** at least the lot area the proposal needs, when the user stated a size; in the **same zoning district as the original site**, read from the zoning layer. Whether a use is actually permitted in a zone is not something this project has sourced, so the report says "same zoning district as your site; permitted use not checked" and nothing stronger.
+- **Spread:** candidates are thinned so they are at least half a mile apart, and at least half a mile from the original site.
+- **Verification:** each candidate goes through the place resolver so it has a real name ("Lot at Trumbull St & Ash St"), a point and a district, exactly like a place the user typed.
+- For a **route**, candidates shift one end at a time to verified crossings along the same street.
+- For the **size** and **hours** levers, candidates are the other values the action already offers (its steps and options), nothing else.
+
+Typically a few hundred sites become 10 to 20 candidates.
+
+### 15.6 Rank candidates before spending a rerun
+
+This is the step the user described as "where the AI thinks they'll get more yeses". It is done with the residents' own answers, not by asking a model to guess:
+
+1. From all runs so far, tabulate P(support), P(neutral), P(oppose) by distance band and by the trait groups that mattered in the diagnosis.
+2. For each candidate, compute every resident's distance to it, look up their probabilities, and sum with census weights. That gives a predicted split for the candidate.
+3. Rank by the user's target. Break ties toward the candidate with fewer residents predicted to oppose within a quarter mile.
+
+After each rerun the table is rebuilt with the new answers, so predictions improve as the loop goes on. Each prediction is stored next to the real result of that rerun, so the report shows how good the predictions were.
+
+### 15.7 Rerun under identical conditions
+
+Same residents (the same persona ids), same model, same prompt template, same batching rule, same sentence share. Only the changed setting differs. The proposal sentence is rebuilt by the same template (`summary_line`), so the wording changes only where the place or value changed. The `what` text is never edited.
+
+### 15.8 Compare and stop
+
+- A rerun **beats** the best so far only if its support share exceeds it by more than the measured run-to-run spread (P2).
+- **Stop reasons**, one of which is always reported: target reached · five reruns used · spending limit reached · no remaining candidate predicted to beat the best so far · nothing to fix · not fixable by any lever.
+- The report always includes the original, every attempt (better or worse), and the best one.
+
+### 15.9 What the user gets back
+
+| Part | Content |
+| --- | --- |
+| Why they said no | the diagnosis tables and sentences (15.3) |
+| What was tried | one row per rerun: what changed, predicted split, real split, change against the original, whether it is beyond the spread |
+| Best version found | its proposal sentence, split, by-distance table, traffic numbers if any |
+| Who lives near each site | adults within a quarter mile and a mile, and their make-up (renters, no-car households, age) from census data |
+| Why it stopped | the stop reason |
+| Limits | "best of N tried, not the best possible"; forecast, not a poll; the accuracy figures of the model in use |
+
+**"Who lives near each site" is required, not optional.** The easiest way to get fewer objections is to move something to where fewer people live, or to where residents are less likely to object. That can shift a burden onto a neighborhood without anyone deciding to. Showing who lives near each candidate lets the user see that trade.
+
+### 15.10 How it is built
+
+| Piece | What it does |
+| --- | --- |
+| `correction/diagnose.py` | tables and template sentences from a run's stored answers; asks the opponent sample the parked questions |
+| `correction/candidates.py` | candidate sites from parcels, Land Bank lots and zoning (precomputed index in the bucket, like the place index) |
+| `correction/predict.py` | the lookup-table predictor (15.6) |
+| `correction/loop.py` | a second Step Functions state machine: diagnose → choose lever → candidates → [rank → rerun → compare] up to 5 times → report. The rerun step calls the existing run machine. The iteration counter lives in the state machine definition. |
+| API | `POST /corrections {run_id, target}` → `correction_id`; `GET /corrections/{id}` → progress and report |
+| Contracts | new `correction_result.schema.json`; the seven questions get their own response schema. No change to existing contracts. |
+| Site | the Compare button opens the report: attempts side by side, sites on the map |
+
+**Cost and time, from tonight's measured runs:** a 500-resident run is about $0.06 and 12 seconds; a 2,000-resident run about $0.25 to $0.31 and 40 seconds. A full correction (diagnosis, a repeat of the original for the spread, five reruns) is about seven runs: under $0.50 for one district, about $2 for four, and one to five minutes. All inside the existing $10 limits.
+
+### 15.11 Order of work
+
+1. P1 batching fix and P2 spread measurement (15.1). Without these nothing else is trustworthy.
+2. Diagnosis (15.3), shown on the site by itself. Useful even with no loop: it answers "why did they say no".
+3. Candidate index and predictor for the location lever (15.5, 15.6).
+4. The loop with its caps (15.2, 15.7, 15.8), then the report and the Compare view.
+5. Size and hours levers.
+
+### 15.12 Open questions
+
+- Is "more support than oppose" the right default target when most residents are neutral? An alternative is to count only residents within a set distance (section 16).
+- Zoning: a sourced table of which uses each district permits would let candidates be filtered properly. Not found yet.
+- Should the user be able to rule sites in or out before the loop starts (for example "not near a school")?
+
+## 16. Parked feature: weighting residents by distance (raised Nov 15, not decided)
+
+**The idea (Partner).** People close to a proposal should count for more in the result than people far from it. Raised after a bus route came back 81% neutral because the typical resident asked lived 5 miles away.
+
+**Why it matters.** With four districts selected, 1,909 of 2,000 residents lived more than a mile from the route. Their near-uniform "neutral" swamps the 91 who live close, where support was 84% to 100%.
+
+**Three ways to do it**
+
+| Option | How | For | Against |
+| --- | --- | --- | --- |
+| A. Affected-area headline | Report residents within a stated distance (for example 1 mile) as the main number, with the district-wide number beside it. No weights. | Nothing invented: it is a filter, and both numbers are shown. Easy to explain. | The cut-off distance is a choice; a different one gives a different headline. |
+| B. Distance-decay weights | Each resident's census weight is multiplied by a factor that falls with distance. | One number that reflects closeness smoothly. | The shape and steepness of the fall-off are not in any dataset. It is a value judgment about whose view counts, expressed as a formula. It must be labelled an assumption and shown next to the unweighted result. |
+| C. Oversample near the site | Draw extra residents from the blocks near the proposal, keeping census weights, so the near group is hundreds of people, not ten. | Fixes the real weakness (too few near residents to read) without changing whose view counts. | Costs more calls per run. Does not change the city-wide headline by itself. |
+
+**Recommendation to discuss:** A and C together. C makes the near group reliable; A puts it in front of the user without hiding the wider district. B only if the team agrees on a fall-off and is willing to label it.
+
+**Bearing on the rule in section 1:** A and C use only data. B needs a labelled assumption for the fall-off.
+
+**Status:** parked. To be raised with teammates before any of it is built (LOG.md, Open questions / handoffs).

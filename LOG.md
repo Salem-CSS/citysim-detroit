@@ -49,6 +49,9 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Open questions / handoffs
 
+- **For Partner (reminder, set Nov 15):** bring up **weighting residents by distance** with teammates before it is built. Three options and a recommendation are in BACKEND_PLAN.md section 16. Any assistant starting a session: remind Partner of this until it is decided.
+- **For both:** a resident's answer depends on who shares their batch of 25 (LOG entry of Nov 15, BACKEND_PLAN.md 15.1). Totals from runs so far are affected. Fix before building the correction engine.
+- **For Salem:** correction engine plan is BACKEND_PLAN.md section 15; the Compare button is its planned home on the site.
 - **For Partner:** read AWS_ACCESS.md. Salem adds your IAM user; you deploy your own `citysim-partner` stack with `./infra/deploy.sh partner`. Your lane: `residents/batch.py` + `aggregate.py` and `data/`/personas. The pipeline already calls them (see `infra/runs.py`).
 - **For Salem:** enable Bedrock model access (Nova Pro + Nova Lite) in us-east-1 and check the Free plan allows it; then `./infra/deploy.sh salem` (CloudShell works).
 - **For Partner:** after DATA_SETUP.md, rerun `python -m data.buildings.export_tiles --districts data/raw/detroit/council_districts_2026.geojson` so buildings carry their district.
@@ -140,6 +143,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 **Decisions:** Nothing on this branch reaches `main` until Salem merges it.
 **Blocked / needs:** none
 **Next:** frontend edits on this branch.
+
+### 2026-11-15 00:46 ET · Partner (AI) · Docs (plan only) + Residents (finding)
+**Did:** (1) Wrote the correction engine plan: BACKEND_PLAN.md section 15. (2) Wrote up and parked Partner's idea of weighting residents by distance: section 16. (3) Ran a temporary test, nothing stored: 100 real residents from Districts 5 and 6, split evenly by vehicles, each placed on a real block within a quarter mile of the bus route Hilton Garden Inn → Renaissance Center. Result: no vehicle 16 support / 3 neutral / 15 oppose; one vehicle 3 / 12 / 18; two or more 1 / 9 / 23. In the live run the 10 residents that near (7 with vehicles) all supported it.
+**Files:** BACKEND_PLAN.md (sections 15 and 16), LOG.md
+**Contracts changed:** none
+**Decisions:** Correction engine as planned: diagnose from stored answers plus the parked seven questions asked of opponents; change one lever at a time (location, size, hours); candidate sites come from parcels, Land Bank lots and zoning, never from a model; candidates are ranked by a lookup table built from the residents' own answers; reruns use the same residents and wording; at most 5 reruns, enforced on the server; a gain must exceed the measured run-to-run spread; every attempt is reported, with who lives near each site.
+**Blocked / needs:** **A resident's answer depends on who shares their batch of 25** (the test above). This affects every run and must be fixed before the correction engine is built (15.1, P1). Fix not yet tested: batch residents of similar distance together, or ask one at a time.
+**Next:** P1 and P2 from section 15.1, then the diagnosis step.
 
 ### 2026-11-15 00:12 ET · Partner (AI) · Residents (setting)
 **Did:** At Partner's request, redeployed `citysim-main` with `QuoteShare=0.5` (half of residents write a sentence; it was 0.1) and reran the bus route Hilton Garden Inn → Renaissance Center across Districts 4-7: 2,000 residents, 995 sentences, 162 calls, 46 s, $0.31, 0 dropped. 18.3% support / 80.6% neutral / 1.2% oppose.
