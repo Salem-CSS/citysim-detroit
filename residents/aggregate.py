@@ -58,6 +58,52 @@ def support_range(rows: list[dict]) -> list[float]:
     return [round(vals[int(0.05 * (len(vals) - 1))], 1), round(vals[int(0.95 * (len(vals) - 1))], 1)]
 
 
+GROUPS = (
+    ("tenure", "Renters", lambda r: r["tenure"] == "renter"),
+    ("tenure", "Homeowners", lambda r: r["tenure"] == "owner"),
+    ("age", "Under 35", lambda r: r["age"] < 35),
+    ("age", "35 to 64", lambda r: 35 <= r["age"] < 65),
+    ("age", "65 and over", lambda r: r["age"] >= 65),
+    ("vehicles", "No car", lambda r: r["vehicles"] == 0),
+    ("vehicles", "Has a car", lambda r: r["vehicles"] > 0),
+    ("exposure", "Within a quarter mile", lambda r: r.get("distance_m") is not None and r["distance_m"] <= 402),
+    ("exposure", "A quarter mile to a mile", lambda r: r.get("distance_m") is not None and 402 < r["distance_m"] <= 1609),
+    ("exposure", "More than a mile away", lambda r: r.get("distance_m") is not None and r["distance_m"] > 1609),
+)
+
+
+def group_splits(rows: list[dict]) -> list[dict]:
+    """Support / neutral / oppose for each group (age band, tenure, car, distance) among these rows."""
+    out = []
+    for dimension, label, keep in GROUPS:
+        g = [r for r in rows if keep(r)]
+        if g:
+            sp = split(g)
+            out.append({"dimension": dimension, "label": label, "support": sp["support"], "neutral": sp["neutral"],
+                        "oppose": sp["oppose"], "n": len(g)})
+    return out
+
+
+def profile(rows: list[dict]) -> dict:
+    """Who these residents are (weighted shares, %). Census-derived traits only."""
+    total = sum(r["weight"] for r in rows) or 1
+    share = lambda keep: pct(sum(r["weight"] for r in rows if keep(r)), total)
+    out = {"residents": len(rows),
+           "age": {"Under 35": share(lambda r: r["age"] < 35), "35 to 64": share(lambda r: 35 <= r["age"] < 65),
+                   "65 and over": share(lambda r: r["age"] >= 65)},
+           "renters": share(lambda r: r["tenure"] == "renter"),
+           "no_car": share(lambda r: r["vehicles"] == 0)}
+    incomes = sorted((r["hh_income"], r["weight"]) for r in rows if r.get("hh_income") is not None)
+    if incomes:
+        half, acc = sum(w for _, w in incomes) / 2, 0
+        for v, w in incomes:
+            acc += w
+            if acc >= half:
+                out["median_income"] = v
+                break
+    return out
+
+
 def who(r: dict) -> str:
     return f"{'Homeowner' if r['tenure'] == 'owner' else 'Renter'}, {r['age']}, District {r['district']}"
 
@@ -84,7 +130,8 @@ def main(rows: list[dict], spec: dict, stats: dict | None = None) -> dict:
     districts = []
     for d in sorted({r["district"] for r in rows}):
         g = [r for r in rows if r["district"] == d]
-        districts.append({"district": d, "split": split(g), "n": len(g), "top_reason": top_reason(g)})
+        districts.append({"district": d, "split": split(g), "n": len(g), "top_reason": top_reason(g),
+                          "groups": group_splits(g), "profile": profile(g)})
 
     total = sum(r["weight"] for r in rows)
     opp = [r for r in rows if r["stance"] == "oppose"]
@@ -93,22 +140,7 @@ def main(rows: list[dict], spec: dict, stats: dict | None = None) -> dict:
                 "share_among_oppose": pct(sum(r["weight"] for r in opp if r["reason"] == k), opp_total)} for k in REASONS]
     reasons = sorted((x for x in reasons if x["share"] > 0), key=lambda x: -x["share"])
 
-    def group(dimension, label, keep):
-        g = [r for r in rows if keep(r)]
-        return {"dimension": dimension, "label": label, "support": split(g)["support"], "n": len(g)} if g else None
-
-    groups = [g for g in (
-        group("tenure", "Renters", lambda r: r["tenure"] == "renter"),
-        group("tenure", "Homeowners", lambda r: r["tenure"] == "owner"),
-        group("age", "Under 35", lambda r: r["age"] < 35),
-        group("age", "35 to 64", lambda r: 35 <= r["age"] < 65),
-        group("age", "65 and over", lambda r: r["age"] >= 65),
-        group("vehicles", "No car", lambda r: r["vehicles"] == 0),
-        group("vehicles", "Has a car", lambda r: r["vehicles"] > 0),
-        group("exposure", "Within a quarter mile", lambda r: r.get("distance_m") is not None and r["distance_m"] <= 402),
-        group("exposure", "A quarter mile to a mile", lambda r: r.get("distance_m") is not None and 402 < r["distance_m"] <= 1609),
-        group("exposure", "More than a mile away", lambda r: r.get("distance_m") is not None and r["distance_m"] > 1609),
-    ) if g]
+    groups = group_splits(rows)
 
     quotes = [{"persona_id": r["persona_id"], "text": r["quote"], "stance": r["stance"], "reason": r["reason"],
                "who": who(r), "district": r["district"]} for r in rows if r.get("quote")]

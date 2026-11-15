@@ -64,6 +64,99 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: compact compare profile, no takeaway, no info button
+- Compare: "Who lives here" dot plots replaced with a small table (districts as columns, value + thin bar, highest bold). Takeaway line removed.
+- Map attribution (i) button removed; credits now in the Settings popover.
+- Files: web/prototype/index.html only. main untouched.
+
+### 2026-11-15 01:55 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** (1) Light mode changes the panels only; the map stays dark. (2) Comparison fully redesigned: a district key at top; "How they feel" as one 100% stacked bar per district (sorted by support, values inside segments); "Support by group" and "Who lives here" as dot plots, one shared 0–100 line per measure with one dot per district (district colour), a span line from lowest to highest, value strip under each line, gap on the right, shared axis; age mix as aligned stacked bars per district. (3) Removed the "Up to 4 districts" hover text. (4) Every road is drawn from the basemap's own road tiles (MapLibre line layer under the buildings), and everything outside the selected districts gets a dark tint, so their streets stand out. `within` couldn't clip them because Protomaps merges a tile's roads into a few MultiLineStrings. Small streets appear as you zoom in. Follows the Roads toggle. The 12 corridors still get traffic colours after a run.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
+### 2026-11-15 01:40 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** (1) Comparison "Age mix" bar shows each share inside its own segment (no misaligned numbers below), with three distinct indigo steps, kept apart from the stance colours. (2) Ask bar uses the app's panel style (it was white). (3) Settings (gear, top right) with Appearance: Dark / Light. Light theme sets the CSS variables, swaps the basemap to CARTO Positron while carrying our building layer across (`setStyle` + `transformStyle`), lightens building colours, and draws idle resident dots dark. Choice saved in localStorage and applied before first paint.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
+### 2026-11-15 01:20 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Comparison table redesigned: grouped sections (How they feel / Support by group / Who lives here); each % cell has a thin bar on a shared 0–100 scale; highest value per row bold, lowest dimmed; a Gap column (highest minus lowest); support shown big with a support/neutral/oppose stacked bar and a "highest" marker; the two age rows merged into one Age mix stacked bar; numbers in text colour (bars carry colour); a one-line takeaway (most/least supportive, biggest difference between districts); sticky district headers; hover titles on cells; legend for bar colours.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
+### 2026-11-15 01:05 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** (1) Walkers move only while zoomed in (walk clock pauses when zoomed out). City-view dots sit where each person stopped at the roadside, and a newly snapped person's dot jumps to their road. Residents in areas never zoomed into stay at home until their street loads, because the basemap only carries small streets at street level. (2) District picker label is now just "Max 4 districts" + chips. (3) Removed Share and Briefing. (4) "Compare districts" widens the results panel into a side-by-side table of all selected districts: support (highest outlined), oppose, neutral, top reason, support by group, and who lives here when available. The ask bar hides while comparing; "Close comparison" returns.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** For every dot to be roadside from the start, roadside positions should be precomputed offline (Overture street segments + building footprints) into the residents file; see Next.
+**Blocked / needs:** none
+**Next:** precompute roadside spots + walk stretches for all residents (needs a one-time street export from Athena).
+
+### 2026-11-15 00:50 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Resident dots show at the city view again before a run (white), as Salem asked. Radius 3.2 px.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
+### 2026-11-15 00:40 ET · Salem (AI) · Web + Residents (branch `salem/frontend-try`)
+**Did:** Design pass from the critique. (1) Map layers load on `style.load` instead of the basemap's full `load`, which took 15–30 s with Protomaps; main has the same bug. (2) Loading screen with the new logo and load steps. (3) New logo (gradient tile, three skyline bars, orange "voice" dot) + favicon. (4) "Civic Night" palette: one action colour (blue), sky = support, orange = oppose, slate = neutral; Briefing is now outlined; page background is dark (it was green on small screens). (5) Calmer city view: roads neutral grey until results, resident dots only after a run (smaller), traffic legend only with results. (6) Map refits the selected districts when a side panel opens. (7) Results panel fades at the bottom so it reads as scrollable. (8) District tiles are buttons and open a district view: split, top reason, support by group (age bands, renters vs owners, car vs none, distance), and "Who lives here" (renters, no car, median income, age). (9) Share copies a link (`?d=4,5&q=...`) that restores districts and question. (10) Unselected district labels dimmer, district pills more readable, credits collapse to an ⓘ button.
+**Files:** web/prototype/index.html, residents/aggregate.py, residents/tests/test_batch_aggregate.py, contracts/run_result.schema.json, fixtures/run_result.drone.json, LOG.md (branch only)
+**Contracts changed:** `run_result.schema.json`, additive only: `groups[]` items gain optional `neutral`, `oppose`; `districts[]` items gain optional `groups` (same shape, that district only) and `profile` {residents, age{band: %}, renters, no_car, median_income}. Fixture updated.
+**Decisions:** **Touched Partner's lane** (residents/aggregate.py): adds per-district `groups` and `profile`; existing keys unchanged; all 51 tests pass. Offline mode shows plausible sample numbers in the district view, labelled "Sample data". Live mode shows only what the run returns.
+**Blocked / needs:** For Partner, when merged: redeploy so runs return per-district groups/profile. `median_income` appears only if `hh_income` is kept on rows (batch.py KEEP).
+**Next:** —
+
+### 2026-11-15 00:15 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Street snapping read only CARTO/OpenMapTiles road names, but the basemap is now Protomaps (`roads` layer, `kind`), so no streets were found and every walker was hidden. Now reads both schemas. Walkers with no clear stretch stand at the roadside instead of hiding; street search radius 300 m.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
+### 2026-11-15 00:05 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Walkers no longer walk into buildings. Each street-snapped path is checked against the building footprints in view (our tiles, 2.5 m clearance), trying sidewalk offsets 6 / 3.5 / 0 / -3.5 / -6 m, and keeps the longest clear stretch. No clear stretch → the figure stands still on the street; no street within 150 m → hidden at street level. Figures capped smaller (2.5–7× life size) and appear from zoom 15. Test: 90 walkers, 0 paths touching a building.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
+### 2026-11-14 23:55 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Walkers stay on streets: at street level each figure snaps to the nearest real street in the basemap tiles (OpenMapTiles `transportation`, motorways/rail excluded) and paces the sidewalk on its home's side (6 m off the centerline). Click a figure → person card (district, stance, demographics) and the camera zooms in and follows them; drag the map, ×, or Esc stops it. Selected figure turns yellow.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** The card shows real demographics only when they exist. The map now loads `geo/residents.geojson` if present (else the demo file), so real residents drop in with no code change.
+**Blocked / needs:** **For Partner:** export `web/prototype/geo/residents.geojson`, one Point per persona at a home in its census block, with properties `persona_id, district, age, sex, hh_income, tenure, years_in_home, hh_size, vehicles, commute_mode`. Per-run `stance` / `reason` per persona_id from the run result would let each figure show its own answer.
+**Next:** —
+
+### 2026-11-14 23:40 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Residents walk. At zoom 14+ each resident is a small 3D figure (body + two swinging legs, deck.gl SimpleMeshLayer, mesh built in code) pacing a short stretch near their home, colored by stance after a run (white before). Zoomed out they stay dots. Figures scale with zoom (~8 px tall). Animation stops when zoomed out or the tab is hidden. Merged latest main into the branch first.
+**Files:** web/prototype/index.html, LOG.md (branch only, not on main)
+**Contracts changed:** none
+**Decisions:** One figure = one resident. Stance per figure is still drawn from the district split; runs don't return per-resident answers with locations yet.
+**Blocked / needs:** for real per-person cards: run result needs `residents: [{persona_id, block_geoid, stance, reason, age, tenure, vehicles}]` (Partner's lane, later).
+**Next:** —
+
+### 2026-11-14 23:15 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Created branch `salem/frontend-try` from main (8ea8879) for Salem's frontend experiments. Vercel builds a preview for it; production stays on `main`.
+**Files:** LOG.md (this branch only)
+**Contracts changed:** none
+**Decisions:** Nothing on this branch reaches `main` until Salem merges it.
+**Blocked / needs:** none
+**Next:** frontend edits on this branch.
+
 ### 2026-11-15 00:46 ET · Partner (AI) · Docs (plan only) + Residents (finding)
 **Did:** (1) Wrote the correction engine plan: BACKEND_PLAN.md section 15. (2) Wrote up and parked Partner's idea of weighting residents by distance: section 16. (3) Ran a temporary test, nothing stored: 100 real residents from Districts 5 and 6, split evenly by vehicles, each placed on a real block within a quarter mile of the bus route Hilton Garden Inn → Renaissance Center. Result: no vehicle 16 support / 3 neutral / 15 oppose; one vehicle 3 / 12 / 18; two or more 1 / 9 / 23. In the live run the 10 residents that near (7 with vehicles) all supported it.
 **Files:** BACKEND_PLAN.md (sections 15 and 16), LOG.md

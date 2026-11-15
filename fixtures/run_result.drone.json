@@ -69,7 +69,43 @@
         "oppose": 24
       },
       "n": 500,
-      "top_reason": "noise"
+      "top_reason": "noise",
+      "groups": [
+        {
+          "dimension": "age",
+          "label": "Under 35",
+          "support": 52.0,
+          "neutral": 20.0,
+          "oppose": 28.0,
+          "n": 120
+        },
+        {
+          "dimension": "age",
+          "label": "65 and over",
+          "support": 31.0,
+          "neutral": 24.0,
+          "oppose": 45.0,
+          "n": 95
+        },
+        {
+          "dimension": "tenure",
+          "label": "Renters",
+          "support": 51.0,
+          "neutral": 21.0,
+          "oppose": 28.0,
+          "n": 260
+        }
+      ],
+      "profile": {
+        "residents": 500,
+        "age": {
+          "Under 35": 33.0,
+          "35 to 64": 47.0,
+          "65 and over": 20.0
+        },
+        "renters": 52.0,
+        "no_car": 24.0
+      }
     },
     {
       "district": 5,
@@ -79,7 +115,43 @@
         "oppose": 29
       },
       "n": 500,
-      "top_reason": "noise"
+      "top_reason": "noise",
+      "groups": [
+        {
+          "dimension": "age",
+          "label": "Under 35",
+          "support": 52.0,
+          "neutral": 20.0,
+          "oppose": 28.0,
+          "n": 120
+        },
+        {
+          "dimension": "age",
+          "label": "65 and over",
+          "support": 31.0,
+          "neutral": 24.0,
+          "oppose": 45.0,
+          "n": 95
+        },
+        {
+          "dimension": "tenure",
+          "label": "Renters",
+          "support": 51.0,
+          "neutral": 21.0,
+          "oppose": 28.0,
+          "n": 260
+        }
+      ],
+      "profile": {
+        "residents": 500,
+        "age": {
+          "Under 35": 33.0,
+          "35 to 64": 47.0,
+          "65 and over": 20.0
+        },
+        "renters": 52.0,
+        "no_car": 24.0
+      }
     },
     {
       "district": 4,
@@ -89,7 +161,43 @@
         "oppose": 35
       },
       "n": 500,
-      "top_reason": "privacy"
+      "top_reason": "privacy",
+      "groups": [
+        {
+          "dimension": "age",
+          "label": "Under 35",
+          "support": 52.0,
+          "neutral": 20.0,
+          "oppose": 28.0,
+          "n": 120
+        },
+        {
+          "dimension": "age",
+          "label": "65 and over",
+          "support": 31.0,
+          "neutral": 24.0,
+          "oppose": 45.0,
+          "n": 95
+        },
+        {
+          "dimension": "tenure",
+          "label": "Renters",
+          "support": 51.0,
+          "neutral": 21.0,
+          "oppose": 28.0,
+          "n": 260
+        }
+      ],
+      "profile": {
+        "residents": 500,
+        "age": {
+          "Under 35": 33.0,
+          "35 to 64": 47.0,
+          "65 and over": 20.0
+        },
+        "renters": 52.0,
+        "no_car": 24.0
+      }
     },
     {
       "district": 7,
@@ -99,7 +207,43 @@
         "oppose": 30
       },
       "n": 500,
-      "top_reason": "safety"
+      "top_reason": "safety",
+      "groups": [
+        {
+          "dimension": "age",
+          "label": "Under 35",
+          "support": 52.0,
+          "neutral": 20.0,
+          "oppose": 28.0,
+          "n": 120
+        },
+        {
+          "dimension": "age",
+          "label": "65 and over",
+          "support": 31.0,
+          "neutral": 24.0,
+          "oppose": 45.0,
+          "n": 95
+        },
+        {
+          "dimension": "tenure",
+          "label": "Renters",
+          "support": 51.0,
+          "neutral": 21.0,
+          "oppose": 28.0,
+          "n": 260
+        }
+      ],
+      "profile": {
+        "residents": 500,
+        "age": {
+          "Under 35": 33.0,
+          "35 to 64": 47.0,
+          "65 and over": 20.0
+        },
+        "renters": 52.0,
+        "no_car": 24.0
+      }
     }
   ],
   "quotes": [
