@@ -37,8 +37,10 @@ def persona_line(p: dict) -> str:
 
 def census_details(p: dict) -> str:
     """More facts from the same census record (BACKEND_PLAN.md 7.1, Tier 1). Fixed order; a fact is listed only
-    when the record has it. Set PERSONA_CARD=base to leave these out (for the calibration comparison)."""
-    if os.environ.get("PERSONA_CARD", "tier1") == "base" or "education" not in p:
+    when the record has it. Used only when PERSONA_CARD=tier1. The default is the base card: in the Nov 14 accuracy
+    check (residents/calibration_results.json) Nova 2 Lite averaged 14.1 points of error with the base card and 19.5
+    with these added, so the plan's rule (keep a tier only if error drops) leaves them off."""
+    if os.environ.get("PERSONA_CARD", "base") != "tier1" or "education" not in p:
         return ""
     bits = []
     if p.get("race"):

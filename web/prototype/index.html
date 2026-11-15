@@ -270,7 +270,7 @@ button { cursor: pointer; }
         <div class="note note--ok" id="trafficNote"><svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg><div><b>Traffic: no problem.</b> Takes delivery vans off the road. No main street gets jammed.</div></div>
       </section>
       <section>
-        <div class="note"><svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7.5v3.5M8 5v.3"/></svg><div><b>A forecast, not a poll.</b> Simulated residents built from census data for these districts. The accuracy check against the Detroit survey hasn't been run yet.</div></div>
+        <div class="note"><svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7.5v3.5M8 5v.3"/></svg><div id="accuracyNote"><b>A forecast, not a poll.</b> Simulated residents built from census data for these districts. The accuracy check against the Detroit survey hasn't been run yet.</div></div>
       </section>
     </div>
     <div class="results__foot">
@@ -644,6 +644,11 @@ function showResult(res){
   }).join(''):'<p class="muted">No resident gave a main reason.</p>');
   document.getElementById('trafficNote').innerHTML='<div><b>Traffic: not calculated.</b> The traffic engine has not run for this proposal, so residents reacted to the proposal as described.'+
     (st.dropped?' '+st.dropped+' of '+st.residents+' residents gave no valid answer.':'')+(res.stopped?' The run stopped early: '+String(res.stopped[0]).replace(/</g,'&lt;'):'')+'</div>';
+  var cal=res.calibration;
+  document.getElementById('accuracyNote').innerHTML='<b>A forecast, not a poll.</b> Simulated residents built from census data for these districts. '+
+    (cal && cal.measured ? 'Accuracy check: on '+cal.checks.length+' questions from the Detroit resident survey, these residents were off by '+cal.avg_error_pts+' points on average ('+
+      cal.checks.map(function(c){return String(c.label).replace(/</g,'&lt;')+': real '+c.real+'%, simulated '+c.simulated+'%';}).join('; ')+').'
+     : "The accuracy check against the Detroit survey hasn't been run for this model.");
   PEOPLE=(res.quotes||[]).map(function(q){ return {who:(q.who||'').split(', ').slice(0,2).join(', '), where:'District '+q.district, q:q.text,
     feel:q.stance==='support'?'Supports':q.stance==='oppose'?'Opposes':'Neutral', w:REASON_LABEL[q.reason]||q.reason, z:'Not calculated'}; });
   if(!PEOPLE.length) PEOPLE=[{who:'No quotes in this run',where:'',q:'',feel:'',w:'',z:''}];
