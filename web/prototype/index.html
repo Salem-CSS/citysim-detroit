@@ -853,6 +853,45 @@ var mapView = (function () {
     });
     return out;
   }
+  // ---------- "added to the world" animation (illustration only; never feeds a number) ----------
+  var build = null;                        // { kind:'transit', a:[lon,lat], b:[lon,lat]|null, t0 }
+  var DRAW = 1400, RISE = 700, DRIVE = 1800;
+  function lerp(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
+  function ease(t) { t = Math.max(0, Math.min(1, t)); return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+  function buildLayers() {
+    if (!build) return [];
+    var t = performance.now() - build.t0, L = [], a = build.a, b = build.b || build.a, route = !!build.b;
+    var pd = route ? ease(t / DRAW) : 1;                                         // 1. the route draws itself
+    var head = lerp(a, b, pd);
+    if (route) L.push(new deck.PathLayer({ id: 'b-route', data: [{ p: [a, head] }], getPath: function (d) { return d.p; },
+      widthUnits: 'pixels', getWidth: 6, getColor: [56, 189, 248, 235], capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
+    var stops = route ? [{ p: a, s: 0 }, { p: b, s: DRAW * 0.85 }] : [{ p: a, s: 0 }];  // 2. stop poles rise, ripple out
+    L.push(new deck.ScatterplotLayer({ id: 'b-ripple', data: stops, getPosition: function (d) { return d.p; }, stroked: true, filled: false,
+      radiusUnits: 'meters', lineWidthUnits: 'pixels', getLineWidth: 3,
+      getRadius: function (d) { return 10 + 90 * ease((t - d.s) / 900); },
+      getLineColor: function (d) { var k = (t - d.s) / 900; return [56, 189, 248, k < 0 || k > 1 ? 0 : Math.round(255 * (1 - k))]; },
+      updateTriggers: { getRadius: t, getLineColor: t } }));
+    L.push(new deck.ColumnLayer({ id: 'b-pole', data: stops, diskResolution: 12, radius: 3, extruded: true, getPosition: function (d) { return d.p; },
+      getElevation: function (d) { return 26 * ease((t - d.s) / RISE); }, getFillColor: [248, 250, 252, 255], updateTriggers: { getElevation: t } }));
+    L.push(new deck.ColumnLayer({ id: 'b-sign', data: stops, diskResolution: 4, radius: 9, extruded: true, angle: 45,
+      getPosition: function (d) { return [d.p[0], d.p[1], 26 * ease((t - d.s) / RISE)]; },
+      getElevation: function (d) { return (t - d.s) > RISE * 0.6 ? 7 * ease((t - d.s - RISE * 0.6) / 300) : 0; }, getFillColor: [37, 99, 235, 255],
+      updateTriggers: { getPosition: t, getElevation: t } }));
+    if (route && t > DRAW) {                                                     // 3. a bus drives the route once
+      var k = ease((t - DRAW) / DRIVE), pos = lerp(a, b, k), ang = Math.atan2(b[1] - a[1], (b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180)) * 180 / Math.PI;
+      if (k < 1) L.push(new deck.SimpleMeshLayer({ id: 'b-bus', data: [pos], mesh: BUS, getPosition: function (p) { return [p[0], p[1], 0]; },
+        getOrientation: [0, -ang, 0], sizeScale: 1, getColor: [250, 204, 21], material: { ambient: .6, diffuse: .6 }, updateTriggers: { getPosition: k } }));
+    }
+    return L;
+  }
+  var BUS = (function () {                   // 12 m x 2.6 m x 3.2 m box, long axis = x
+    var x = 6, y = 1.3, z = 3.2, P = [], N = [];
+    function q(a, b, c, d, n) { [a, b, c, a, c, d].forEach(function (v) { P.push(v[0], v[1], v[2]); N.push(n[0], n[1], n[2]); }); }
+    var v = [[-x,-y,0],[x,-y,0],[x,y,0],[-x,y,0],[-x,-y,z],[x,-y,z],[x,y,z],[-x,y,z]];
+    q(v[4],v[5],v[6],v[7],[0,0,1]); q(v[0],v[1],v[5],v[4],[0,-1,0]); q(v[2],v[3],v[7],v[6],[0,1,0]); q(v[1],v[2],v[6],v[5],[1,0,0]); q(v[3],v[0],v[4],v[7],[-1,0,0]);
+    return { attributes: { positions: { value: new Float32Array(P), size: 3 }, normals: { value: new Float32Array(N), size: 3 } } };
+  })();
+  function buildLoop() { if (!build) return; render(); if (performance.now() - build.t0 < DRAW + DRIVE + 400) requestAnimationFrame(buildLoop); }
   function cached(name, key, fn) { if (memo[name] && memo[name].key === key) return memo[name].v; var v = fn(); memo[name] = { key: key, v: v }; return v; }
 
 
@@ -952,6 +991,7 @@ var mapView = (function () {
       layers.push(new deck.SimpleMeshLayer(Object.assign({ id: 'people-leg-r', mesh: LEG_R,
         getPosition: function (r) { return r.hip; }, getOrientation: function (r) { return r.oriR; } }, common)));
     }
+    layers = layers.concat(buildLayers());
     overlay.setProps({ layers: layers });
     if (hub) hub.getElement().style.display = 'none';      // no sample route/hub drawn; the user's own places are the pins
   }
@@ -1023,6 +1063,16 @@ var mapView = (function () {
     answerCounts: function () { var c = { support: 0, neutral: 0, oppose: 0 }; residents.forEach(function (r) { if (r.stance) c[r.stance]++; }); return c; },
     find: function (fn) { return residents.filter(function (r) { return on(r.d) && fn(r); }); },
     setRoute: function (a, b) { route = a && b ? [a, b] : null; render(); },
+    playBuild: function (kind, a, b) {        // returns ms until the animation's main beat is done
+      build = { kind: kind, a: a, b: b || null, t0: performance.now() + 700 };
+      var pts = b ? [a, b] : [a], lo = [Math.min.apply(null, pts.map(function (p) { return p[0]; })), Math.min.apply(null, pts.map(function (p) { return p[1]; }))],
+          hi = [Math.max.apply(null, pts.map(function (p) { return p[0]; })), Math.max.apply(null, pts.map(function (p) { return p[1]; }))];
+      var cam = map.cameraForBounds([lo, hi], { padding: 160, maxZoom: 16.5 }) || {};
+      map.easeTo({ center: cam.center || a, zoom: Math.min(cam.zoom || 16, 16.5), pitch: 55, bearing: map.getBearing(), duration: 700 });
+      requestAnimationFrame(buildLoop);
+      return 700 + (b ? DRAW + DRIVE : RISE + 300);
+    },
+    clearBuild: function () { build = null; render(); },
     pick: function (what, cb, key, near) {           // top-down view; next click on a road/intersection returns its name + point. near = [lon, lat] to look at
       if (pickCb) endPick(null);
       pickPrev = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(), duration: 600 };
@@ -1388,6 +1438,19 @@ function markChanged(el,v){
 // traffic is drawn only along the picked From -> To (map pick / typed coordinates, or places the backend verified)
 function coordsIn(t){ var m=String(t||'').match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*\)?\s*$/); if(!m) return null;
   var a=+m[1], b=+m[2]; return a>41&&a<43 ? [b,a] : [a,b]; }
+function placeOf(a,id){
+  var inp=body.querySelector('input[data-k="'+a.action_id+'.'+id+'"]'), c=(a.constraints||[]).filter(function(x){return x.id===id;})[0];
+  var p=inp&&coordsIn(inp.value); if(p) return p;
+  return c && c.resolved && c.resolved.lon!=null && (!inp || inp.value.trim()===String(c.value||'').trim()) ? [c.resolved.lon,c.resolved.lat] : null;
+}
+// play the "added to the world" animation for the proposal, if we know where it goes; returns its length in ms (0 = none)
+function playProposal(){
+  var a=(state.spec?state.spec.actions:[]).filter(function(x){ return x.type==='change_transit'; })[0]; if(!a) return 0;
+  var f=placeOf(a,'from'), t=placeOf(a,'to'), w=placeOf(a,'where');
+  if(f&&t) return mapView.playBuild('transit',f,t);
+  if(f||t||w) return mapView.playBuild('transit',f||t||w,null);
+  return 0;
+}
 function syncRoute(){
   var pts=null;
   (state.spec?state.spec.actions:[]).forEach(function(a){ if(pts) return;
@@ -1445,7 +1508,7 @@ function setMode(asked){
 
 // Ask
 document.getElementById('askForm').addEventListener('submit',function(e){
-  mapView.cancelPick(); mapView.clearPins();
+  mapView.cancelPick(); mapView.clearPins(); mapView.clearBuild();
   e.preventDefault(); var i=document.getElementById('ask'), q=i.value.trim(); if(!q) return;
   state.asked=false; app.classList.remove('has-results'); document.getElementById('rcard').hidden=true; map.dataset.state='idle';
   i.value=''; i.placeholder='Ask a follow-up, like: What if flights only run after 8 AM?'; renderTiles();
@@ -1516,7 +1579,9 @@ function showResult(res){
   pi=0;
 }
 var runOver={
-  show:function(n, mode){ var o=document.getElementById('runOver'), ds=selected();
+  show:function(n, mode, wait){ var self=this; clearTimeout(this.timer);
+    if(wait){ this.timer=setTimeout(function(){ self.show(n, mode, 0); }, wait); return; }
+    var o=document.getElementById('runOver'), ds=selected();
     document.getElementById('roTitle').textContent='Asking '+n.toLocaleString()+' residents';
     document.getElementById('roDs').innerHTML=ds.map(function(d){ return '<span><i style="--c:'+DISTRICTS[d].c+'"></i>District '+d+' · '+Math.round(n/ds.length)+'</span>'; }).join('');
     document.getElementById('roSub').textContent=mode==='accurate'?'Accurate mode · one resident at a time, takes several minutes':mode==='sample'?'Sample data':'Fast mode · usually about a minute';
@@ -1529,13 +1594,13 @@ var runOver={
     var bar=document.getElementById('roBar'); bar.parentNode.classList.toggle('is-wait',!a); bar.style.width=a?Math.min(100,100*a/tot)+'%':'';
     var g=document.getElementById('roGrid'), dots=g.children, lit=Math.round(dots.length*Math.min(1,a/tot)); g.classList.toggle('is-wait',!a);
     (this.order||[]).forEach(function(i,j){ if(dots[i]) dots[i].classList.toggle('on', j<lit); }); },
-  hide:function(){ document.getElementById('runOver').hidden=true; document.getElementById('runScrim').hidden=true; }
+  hide:function(){ clearTimeout(this.timer); document.getElementById('runOver').hidden=true; document.getElementById('runScrim').hidden=true; }
 };
-function runLive(btn){
+function runLive(btn, wait){
   var api=(window.CITYSIM_API||'').replace(/\/$/,''), spec=specWithEdits(), n=spec.districts.length*500;
   var mode=runSpeed(), t0=Date.now(), limit=(mode==='accurate'?25:4)*60*1000;      // accurate: 200 model calls a minute is the account's cap
   btn.disabled=true; btn.textContent='Asking '+n.toLocaleString()+' residents…';
-  mapView.setAnswers(null); runOver.show(n, mode);
+  mapView.setAnswers(null); runOver.show(n, mode, wait);
   var fail=function(msg, j){ runOver.hide(); btn.disabled=false; setMode(state.asked);
     if(j && j.spec && j.spec.questions){ openBlocks(state.question, j.spec); return; }
     body.insertAdjacentHTML('afterbegin','<div class="changed-note"><span>Could not run: '+String(msg).replace(/</g,'&lt;')+'</span></div>'); };
@@ -1574,10 +1639,10 @@ function finishRun(b){
 // Run
 document.getElementById('runBtn').addEventListener('click',function(){
   mapView.cancelPick(); mapView.clearPins();
-  var b=this;
-  if(window.CITYSIM_API && state.spec && state.spec.actions.length){ runLive(b); return; }   // real residents
+  var b=this, wait=playProposal();
+  if(window.CITYSIM_API && state.spec && state.spec.actions.length){ runLive(b, wait); return; }   // real residents
   b.disabled=true; b.textContent='Asking 2,000 residents…';
-  var N=selected().length*500; runOver.show(N,'sample'); [300,700,1000,1300].forEach(function(t,i){ setTimeout(function(){ runOver.update(Math.round(N*[.2,.5,.8,1][i]),N); },t); });
+  var N=selected().length*500; runOver.show(N,'sample',wait); [300,700,1000,1300].forEach(function(t,i){ setTimeout(function(){ runOver.update(Math.round(N*[.2,.5,.8,1][i]),N); },wait+t); });
   setTimeout(function(){
     runOver.hide(); state.asked=true; b.disabled=false; app.classList.add('has-results'); map.dataset.state='results'; mapView.update();
     body.querySelectorAll('.block').forEach(function(x){x.classList.remove('is-changed');});
@@ -1588,7 +1653,7 @@ document.getElementById('runBtn').addEventListener('click',function(){
       else if(el.classList.contains('stepper')) state.defaults[el.dataset.k]=el.querySelector('output').dataset.v;
     });
     setMode(true); renderTiles();
-  },1600);
+  },wait+1600);
 });
 document.getElementById('resetBtn').addEventListener('click',function(){ if(state.question) openBlocks(state.question, state.spec); });
 
