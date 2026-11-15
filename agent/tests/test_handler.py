@@ -73,3 +73,26 @@ def test_yes_no_option_given_as_text_is_accepted():
     from agent import handler
     values, notes = handler.clean_values("modify_road", {"bike_lane": "true", "change": "remove_lanes"})
     assert values["bike_lane"] is True and notes == []
+
+
+def test_a_street_name_left_out_of_the_place_is_taken_back_from_the_question():
+    from agent import handler
+    spec = {"prompt": "Close Livernois Ave between W 7 Mile and W 8 Mile", "districts": [2], "actions": [{
+        "action_id": "a1", "type": "modify_road", "title": "Road change", "constraints": [
+            {"id": "what", "label": "What", "type": "text", "value": "Close Livernois Ave", "source": "from_question"},
+            {"id": "where", "label": "Where", "type": "text", "value": "between W 7 Mile and W 8 Mile", "source": "from_question"}]}]}
+    seen = []
+
+    def resolve(text, districts):
+        seen.append(text)
+        if text == "Livernois Ave between W 7 Mile and W 8 Mile":
+            return {"status": "ok", "in_selected": True, "name": "Livernois between W 7 Mile Rd and W 8 Mile Rd", "method": "midpoint of two crossings", "lon": -83.14, "lat": 42.44, "district": 2}
+        return {"status": "not_found", "message": "There is no street named that.", "alternatives": []}
+
+    out = handler.check_places(spec, resolve)
+    where = out["actions"][0]["constraints"][1]
+    assert out.get("status") != "needs_info" and where["value"] == "Livernois Ave between W 7 Mile and W 8 Mile" and where["resolved"]["district"] == 2
+    assert seen[:3] == ["between W 7 Mile and W 8 Mile", "Ave between W 7 Mile and W 8 Mile", "Livernois Ave between W 7 Mile and W 8 Mile"]
+    spec["prompt"] = "Close it between W 7 Mile and W 8 Mile"          # no street in the question: still asks, nothing is guessed
+    spec["actions"][0]["constraints"][1]["value"] = "between W 7 Mile and W 8 Mile"
+    assert handler.check_places(spec, resolve)["status"] == "needs_info"

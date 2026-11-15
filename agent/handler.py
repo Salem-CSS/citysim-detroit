@@ -205,6 +205,17 @@ def check_places(spec: dict, resolve=None) -> dict:
                 questions.append({"id": qid, "label": c["label"], "text": ASK[cid], "options": []})
                 continue
             r = resolve(text, spec.get("districts"))
+            if r["status"] != "ok" and re.match(r"^(between|from)\s", text, flags=re.I):
+                # The street name was left out of the place ("between W 7 Mile and W 8 Mile"). Take it back from the
+                # user's own words just before that phrase: the shortest run of words that makes a real place.
+                before = re.split(re.escape(text), str(spec.get("prompt") or ""), maxsplit=1, flags=re.I)
+                words = before[0].split() if len(before) == 2 else []
+                for n in range(1, min(4, len(words)) + 1):
+                    fuller = " ".join(words[-n:]) + " " + text
+                    again = resolve(fuller, spec.get("districts"))
+                    if again["status"] == "ok":
+                        r, text, c["value"] = again, fuller, fuller
+                        break
             if r["status"] == "ok" and r["in_selected"]:
                 c["resolved"] = {k: r[k] for k in ("name", "method", "lon", "lat", "district")}
             elif r["status"] == "ok":
