@@ -41,9 +41,9 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 | --- | --- | --- | --- |
 | Data (census, LODES, Detroit open data → S3) | Partner | **In S3:** `s3://citysim-data-707604458164/raw/` (us-east-2), 35 files, 2.07 GB. Processing not started | 11-14 20:41 |
 | Buildings (Overture → tiles) | Salem + Partner | 335,338 bldgs; tiles tagged with **official 2026 districts**; table rebuilt with DuckDB and stored in `s3://citysim-data-707604458164/processed/buildings/` | 11-14 21:04 |
-| Engine (traffic Lambda) | — | Load, trips, impact lines work; 6 actions are stubs taking v2 `values` | 11-14 19:05 |
-| Residents (Bedrock) | Partner | **Working end to end**: 3,500 personas, batch + totals deployed in us-east-2 on Nova 2 Lite; not calibrated | 11-14 22:15 |
-| Agent + Infra (AWS stack) | Salem | `infra/` SAM stack written (not deployed yet). `POST /scenario` works in tests (Bedrock → validated v2 spec); run pipeline wired with stubs | 11-14 20:35 |
+| Engine (traffic Lambda) | Partner | Buildings (trips, one-street load) and bus route reach computed and deployed; other types not built | 11-15 |
+| Residents (Bedrock) | Partner | **Working end to end** on Nova 2 Lite, base card; accuracy check 13.1 pts average error; distance to proposal included | 11-15 |
+| Agent + Infra (scenario step, AWS stack) | Salem + Partner | Live in account 707604458164, us-east-2: free input, place verification with questions, $10 run / day limits | 11-15 |
 | Web (Next.js + deck.gl) | Salem | Prototype now on a real 3D Detroit map (MapLibre + deck.gl overlays); Next.js not started | 11-14 20:00 |
 | Deploy (Vercel) | Salem | **Live: https://citysim-detroit.vercel.app** (auto-deploys from `main`) | 11-14 17:58 |
 
@@ -100,6 +100,26 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 **Decisions:** Nothing on this branch reaches `main` until Salem merges it.
 **Blocked / needs:** none
 **Next:** frontend edits on this branch.
+
+### 2026-11-14 23:46 ET · Partner (AI) · Web (live test)
+**Did:** Tested the live Vercel site (citysim-detroit.vercel.app) against `citysim-main` with real clicks and typing. (1) "Build a 400 unit apartment building at Michigan Ave and 14th St": place verified, 1,999 of 2,000 residents answered in about 40 s, 9% support / 83% neutral / 8% oppose, traffic sentence showed Michigan Ave 8,347 → 9,972 vehicles a day, accuracy sentence showed 13.1 points. (2) "I want a bus route from the Hilton hotel to the Renaissance Center" typed while the first proposal was open: replaced it, asked which Hilton with three buttons, run button disabled; clicking "Hilton Garden Inn" verified both ends. (3) Running it: 2,000 residents, 19% / 77% / 4%, 1,966 adults within a quarter mile of the line. No console errors. Then fixed three wording problems the test showed.
+**Files:** web/prototype/index.html, LOG.md
+**Contracts changed:** none
+**Decisions:** A mostly-neutral result now reads "Most residents are neutral…" (it said "Leaning yes" at 9% support and 83% neutral). District tiles say "Top reason" for live results, since the top reason can be why people support (access, for a bus route). The bus headline shows the line's length and no longer repeats the adults sentence.
+**Blocked / needs:** With four districts selected most residents live miles from the site and answer neutral, so city-wide totals look flat; the by-distance view is where the signal is, and the site does not show it yet.
+**Next:** correction engine; map marker.
+
+### 2026-11-14 23:29 ET · Partner (AI) · Engine + Infra + Web
+**Did:** Traffic engine for buildings and a first bus-route result, deployed to `citysim-partner` and `citysim-main`. `engine/handler.py` (pure Python, reads `s3://citysim-data-707604458164/processed/engine/engine_data.json` built by `data/engine_data.py`: 14,243 blocks, 272 tracts, 1,427 counted segments, 5,101 stops).
+- **add_building**, when the homes (or a grocery's floor area) were stated: trips from `data/ite_rates.csv`; Detroit adjustment by the site tract's no-vehicle household share (ACS B25044); all adjusted trips placed on the busiest counted street at the verified site; load before and after. Any other use returns no trips and says why.
+- **change_transit** with a verified start and end: adults within a quarter mile of the straight line (2020 block counts) and existing DDOT stops and routes in that band. No ridership or traffic forecast.
+- Residents within half a mile of the affected street get the added-trips line; the run result carries `segments`, `trips`, `transit`, `engine_notes`; the prototype's traffic note shows them.
+**Verified live:** 400 homes at Michigan Ave & 14th St → 1,816 trips a day, 156 in the evening peak (the plan's 8.3 check values), 1,625 after the 11% no-vehicle adjustment; Michigan Ave (I-75 to Rosa Parks) 8,347 → 9,972 vehicles a day, load 0.26 → 0.31 (8,347 and 0.26 are the plan's check values). Bus route Michigan & Trumbull to Woodward & Warren → 6,959 adults within a quarter mile, 72 existing stops; support 64% within a quarter mile and 80% from a quarter mile to a mile, against 17% beyond a mile. Strip club → "no published trip rate", nothing computed. On a local copy of the site against `citysim-main`: the apartment run showed the traffic sentence, the accuracy sentence and "Live · 488 residents" (12 of 500 gave no valid answer).
+**Files:** engine/handler.py (rewritten), engine/proximity.py (`street_lines`), engine/tests/test_engine.py (new), data/engine_data.py (new), infra/{runs.py,deploy.sh}, residents/batch.py, web/prototype/index.html (traffic note), LOG.md
+**Contracts changed:** none. Run result gains `transit` and `engine_notes` beside the existing `segments` and `trips`; `engine_status` is `computed` or `nothing_computed`.
+**Decisions (labelled assumptions, all repeated in `engine_notes`):** every added trip goes on one street, so that street's figure is an upper bound; through lanes per direction = half the counted lanes rounded down; K 0.09, D 0.55 and 800 vehicles per lane per hour are planning defaults, not measurements. `engine/actions/*.py` stubs are no longer called.
+**Blocked / needs:** Not built: spreading trips over the network with LODES flows, road changes, rezoning, event venues, drone routes, bus frequency changes, any ridership forecast. Route lists in `transit` repeat some combined entries as the city's stop layer writes them (for example "1, 29 Vernor, Linwood"). The rate table has only housing and supermarkets.
+**Next:** Salem: Compare and Briefing buttons, a map marker for verified places. Backend: relative (not raw) neighborhood facts, more trip rates, network assignment.
 
 ### 2026-11-14 23:23 ET · Partner (AI) · Data (personas) + Residents
 **Did:** Neighborhood facts (Tier 2) built for every resident and tested. `data/personas/context.py` computes, for each of the 2,656 home blocks, facts within a quarter mile or to the nearest feature: neighborhood name; crimes reported in 2026 and the most common kinds (74,094 incidents); vacant Land Bank lots (53,860); active liquor licenses (1,712); nearest park, school and bus stop with route; vehicles a day on the nearest counted street; most common 311 requests in the past 12 months (84,494); share of adults in fair or poor health in the tract (CDC PLACES 2023). Stored on every persona row as `context` lines plus numbers; uploaded to `s3://citysim-data-707604458164/personas/`. Five new downloads added to `data/download/detroit.py`.

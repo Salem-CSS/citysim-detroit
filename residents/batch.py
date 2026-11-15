@@ -121,6 +121,7 @@ def main(event: dict, context=None, client=None, table=None) -> dict:
     dist = {}
     for p in personas:
         near, d = proximity.lines_for(p, event.get("places") or [])
+        near = near + proximity.street_lines(p, event.get("street_effects") or [])
         if near:
             lines[p["persona_id"]] = lines.get(p["persona_id"], []) + near
             dist[p["persona_id"]] = round(d)

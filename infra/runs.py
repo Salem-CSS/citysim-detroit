@@ -72,12 +72,10 @@ def get_run(event, context=None):
 # ---------- state machine steps ----------
 def engine_step(event, context=None):
     from engine.handler import handler as engine
-    try:
-        impacts, status = engine(event["spec"]), "ok"
-    except NotImplementedError as e:
-        impacts, status = {"lines": {}}, f"not_implemented: {e}"
+    out = engine({**event["spec"], "status": "confirmed"})
+    status = out["status"]
     _update(event["run_id"], stage="residents", engine_status=status)
-    return {**event, "impacts": impacts, "engine_status": status}
+    return {**event, "engine": out, "engine_status": status}
 
 
 def plan_batches(event, context=None):
@@ -87,9 +85,9 @@ def plan_batches(event, context=None):
     from engine import proximity
     spec = {"spec_id": event["spec"]["spec_id"], "summary": event["spec"]["summary"]}
     places = proximity.places_of(event["spec"])
-    computed = event.get("engine_status") == "ok"
-    lines = (event.get("impacts") or {}).get("lines") or {}
-    batches = [{"run_id": event["run_id"], "batch": n, "spec": spec, "persona_ids": ids[i:i + BATCH], "places": places,
+    computed, lines = False, {}       # per-resident lines are built in the batch from places and street effects
+    effects = (event.get("engine") or {}).get("street_effects") or []
+    batches = [{"run_id": event["run_id"], "batch": n, "spec": spec, "persona_ids": ids[i:i + BATCH], "places": places, "street_effects": effects,
                 "impacts_computed": computed, "impact_lines": {p: lines[p] for p in ids[i:i + BATCH] if p in lines}}
                for n, i in enumerate(range(0, len(ids), BATCH))]
     return {**event, "batches": batches}
@@ -113,6 +111,12 @@ def aggregate_step(event, context=None):
              "seconds": int(time.time()) - int(event.get("started", time.time()))}
     result = aggregate.main(rows, event["spec"], stats)
     stopped = sorted({b["status"] for b in results if str(b.get("status", "")).startswith("stopped")})
+    eng = event.get("engine") or {}
+    result["segments"] = eng.get("segments", [])
+    for k in ("trips", "transit"):
+        if k in eng:
+            result[k] = eng[k]
+    result["engine_notes"] = eng.get("notes", [])
     result.update(run_id=run_id, status="done", engine_status=event.get("engine_status"),
                   created_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     if stopped:
