@@ -70,7 +70,7 @@ Checked live from this session on Nov 14, 2026: endpoints were queried, field li
 | --- | --- |
 | Nova 2 Lite | ID `amazon.nova-2-lite-v1:0` is right, but us-east-1 has no in-region on-demand. Call `us.amazon.nova-2-lite-v1:0`. No manual model-access step. Quotas vary by account: read them in Service Quotas. |
 | JSON from Nova | Bedrock "structured outputs" is not supported for it. Use a tool schema with `toolChoice: {"tool": {...}}`, and wrap the array in an object. |
-| Chat-agent model | `us.anthropic.claude-haiku-5-5` (structured output supported) or `amazon.nova-pro-v1:0`. There is no Nova 2 Pro. |
+| Claude Haiku 5.5 | `us.anthropic.claude-haiku-5-5`, structured output supported. Used for residents and the chat agent (5.1). Needs the one-time AWS Marketplace subscribe permission on first use. There is no Nova 2 Pro. |
 | Strands | `strands-agents` 1.65 on PyPI. Official Lambda layer exists (`…:layer:strands-agents-py3_12-x86_64:2`, an older 1.40). Structured output via `structured_output_model`. Sessions via `S3SessionManager`. |
 | Step Functions | Inline Map: 40 concurrent iterations. 256 KB per state payload. |
 | API Gateway HTTP API | 30-second hard timeout. A run cannot be synchronous. |
@@ -166,7 +166,7 @@ POST /chat ──► chat Lambda (Strands, Haiku 5.5) ──► spec saved to Dy
 POST /run  ──► start Step Functions (Standard), return run_id at once
                  1. engine Lambda        spec → segments, trips, per-tract and per-persona impacts → S3
                  2. plan Lambda          touched districts → list of 25-persona batches (S3 keys only)
-                 3. inline Map (max 20)  residents_batch Lambda → Nova 2 Lite → batch result to S3
+                 3. inline Map (max 20)  residents_batch Lambda → Haiku 5.5 → batch result to S3
                  4. aggregate Lambda     weights, splits, groups, quotes, range → run_result to S3
                  5. DynamoDB             status = done, pointer to the S3 result
 GET /run/{id}       status + batches done / total; result when done
@@ -182,7 +182,7 @@ Decisions, each forced by a verified limit:
 - **`run_result` lives in S3**; DynamoDB holds status and the pointer (400 KB item limit).
 - **No geopandas or osmnx in any Lambda.** All geometry work happens offline in `data/`. Lambdas load small Parquet and NumPy files, so the engine fits a zip with the pandas layer. Shortest paths use a plain Dijkstra over the 38,000-edge graph.
 - **Chat is the one synchronous call.** If the agent with tool calls runs past 20 seconds in testing, move `/chat` to a Lambda function URL.
-- **Map concurrency starts at 20**, raised only after reading the account's Nova quota.
+- **Map concurrency starts at 20**, raised only after reading the account's Haiku 5.5 quota.
 
 DynamoDB tables stay as in `infra/README.md`: `scenarios`, `runs`, `calibration`.
 
@@ -193,7 +193,7 @@ DynamoDB tables stay as in `infra/README.md`: `scenarios`, `runs`, `calibration`
 | **Infrastructure as code: SAM** | One `infra/template.yaml`, deployed with `sam build && sam deploy`. No console-built resources, so either teammate (or a Claude Code session) can redeploy. |
 | **Services in use** | S3, DynamoDB, Lambda, Step Functions, Bedrock, API Gateway (HTTP API), Location Service, Budgets, plus CloudWatch and IAM. |
 | **Budgets first** | Create a spending alert before the first Bedrock call. |
-| **Resident model** | `us.amazon.nova-2-lite-v1:0`, read from `BEDROCK_RESIDENT_MODEL` so it can be swapped. The bare ID in `.env.example` fails in us-east-1. Confirm the choice with the calibration comparison in section 10. |
+| **Resident model** | Claude Haiku 5.5, `us.anthropic.claude-haiku-5-5`, read from `BEDROCK_RESIDENT_MODEL` (decided Nov 15). Listed at $0.10 in / $0.50 out per million tokens on Anthropic's own API, below third-party listings for Nova 2 Lite ($0.30 / $2.50); confirm both on the Bedrock pricing page. Set effort to `low` or disable thinking: it thinks by default and thinking is billed as output. Nova 2 Lite (`us.amazon.nova-2-lite-v1:0`) stays as the comparison model in section 10. |
 | **Agent model** | `us.anthropic.claude-haiku-5-5`, read from `BEDROCK_AGENT_MODEL`. Runs in a plain Lambda, not AgentCore (SCOPE.md says AgentCore; BUILD.md is right). |
 | **Every resident batch is a Lambda** | No direct Step Functions–Bedrock integration: each batch must build the prompt, validate answers and retry. |
 | **Athena: not used** | Data prep runs in Python on a laptop; Overture buildings come from the `overturemaps` CLI. |
@@ -246,6 +246,55 @@ Run on a laptop. Output goes to `s3://$DATA_BUCKET/processed/` and `personas/`.
 
 **Known limit to state:** LODES work tracts and PUMS commute minutes come from different sources and will not always agree for one persona.
 
+### 7.1 Richer personas (researched Nov 15, not yet built)
+
+Goal: give each resident more real information so reactions differ for real reasons. The rule still holds: every added field comes from a census record or a public dataset joined by where the resident lives. Survey answers stay out of personas and are used only to check them.
+
+**Tier 1: more fields from the same census record.** No new downloads; all confirmed present in PUMS 2024.
+
+| Trait | PUMS field | Why it should change answers |
+| --- | --- | --- |
+| Race and Hispanic origin | `RAC1P`, `HISP` | The strongest backstory field in the published silicon-sampling research |
+| Education | `SCHL` | |
+| Work status, occupation and industry group, hours | `ESR`, `OCCP`, `INDP`, `WKHP` | Jobs and construction proposals; delivery drivers on a drone route |
+| Leaves for work at | `JWDP` | Peak-hour traffic and early-morning noise |
+| Rent or owner cost as a share of income; monthly rent; home value | `GRPIP`, `OCPIP`, `GRNTP`, `VALP` | Housing and displacement proposals |
+| Building type and age | `BLD`, `YRBLT` | Apartment dwellers vs single-family owners |
+| Household type, multigenerational, grandparent raising grandchildren, anyone 65+ | `HHT2`, `MULTG`, `GCR`, `R65` | Safety and school-related concerns |
+| Disability, including difficulty walking | `DIS`, `DPHY` | Transit cuts, road and sidewalk changes |
+| Language at home, English ability, born abroad | `HHL`, `ENG`, `NATIVITY` | Southwest Detroit especially |
+| Income-to-poverty ratio, SNAP | `POVPIP`, `FS` | Grocery and cost-of-living proposals |
+| Internet access | `ACCESSINET` | Delivery proposals |
+| Veteran | `MIL` | |
+
+**Tier 2: what is around their home.** Joined by home block or tract from layers confirmed live.
+
+| Context line | Source | Confirmed |
+| --- | --- | --- |
+| Neighborhood name | Neighborhoods layer (205) | Yes |
+| Reported crimes near home this year, by category | `RMS_Crime_Incidents_2026`: 74,166 incidents, carries the 2020 block id | Yes |
+| What neighbors complain about (top 311 request types nearby) | Improve Detroit, 765,518 points | Yes |
+| Vacant lots and blight on the block | Current parcels (vacant classes); `blight_tickets` (913,837); vacant property registrations (1,517) | Yes |
+| Crashes on the nearest main street | Crash layers 2011–2024 | Yes |
+| Nearest bus stop: distance, route, how often it comes, boardings | DDOT routes and stop ridership | Yes (ridership period unstated) |
+| Nearest counted street: vehicles per day, speed limit | 2024 traffic volumes | Yes |
+| Distance to nearest park | `city_parks` (302) | Yes |
+| Near a rail line; in a flood zone | Railroads layer; parcel `fema_flood_zone` | Layer exists; fields not inspected |
+| Inside Michigan Central's 3-mile aerial region | Computed from the published radius | Yes |
+| Tract health and hardship (for example utility shut-off threat, food stamp use, disability) | CDC PLACES, 40 measures per tract, 2023 | Yes (tract 5214 returned data) |
+
+Drop owner and taxpayer name columns from parcels and blight tickets on download. Context is always a count or a distance for an area, never a record about a person.
+
+**How it reaches the model.** One fixed resident card: the same fields in the same order for every resident, Tier 1 then Tier 2, about 12 lines. No field is left out for some residents and included for others, so differences in answers come from the values.
+
+**How we know it helps.** More detail is not automatically better: it can push a small model toward stereotypes. Test it on the calibration questions before adopting it:
+
+1. Run calibration with the current 10-field card, then with the Tier 1 card, then Tier 1 + Tier 2.
+2. Keep a tier only if average error drops. Record all three results.
+3. A direct test of Tier 2: residents on high-crime blocks should feel less safe walking than residents on low-crime blocks. If the answers do not move with the data, the context is not being used.
+
+**Not checked:** `Plan_Detroit_Participants_Public_View` (2,784 points with a notes field, edited Nov 13) may hold real resident comments from the city's master-plan engagement. If it does, it is calibration material, not persona input.
+
 ## 8. Traffic engine (`engine/`)
 
 ### 8.1 Shared path
@@ -278,7 +327,7 @@ Run on a laptop. Output goes to `s3://$DATA_BUCKET/processed/` and `personas/`.
 
 ## 9. Residents (`residents/`)
 
-- **Call:** Converse on `us.amazon.nova-2-lite-v1:0`, 25 personas per call, forced tool `submit_reactions` whose schema is `{items: [{persona_id, support 1–5, top_concern enum, reaction}]}`.
+- **Call:** Converse on `us.anthropic.claude-haiku-5-5` (effort `low`), 25 personas per call, forced tool `submit_reactions` whose schema is `{items: [{persona_id, support 1–5, top_concern enum, reaction}]}`.
 - **Prompt:** persona traits + scenario summary + that persona's computed impact lines. Impact lines are built only from engine output; a persona with no computed change gets "no direct change".
 - **Checks:** as in SCOPE (validate, retry failed personas once, drop, flag above 5%).
 - **Aggregate:** weighted by the persona `weight`. Outputs: overall and per-district split, worries, groups (exposure, tenure, age, vehicles), tract-level support with `n`, quotes.
@@ -313,7 +362,7 @@ Fixed alongside it: the resident description uses the same census fields in the 
 
 - Ask each question with the survey's own wording and answer options (copy them from the topline PDFs), so "don't know" and the 7-point satisfaction scale are handled the same way as the real survey.
 - Report simulated %, real %, error in points, and the average. Store with seed and prompt version. Show it whatever it is.
-- **Model comparison (once):** run the calibration questions for one district's 500 residents on Nova 2 Lite and on Claude Haiku 5.5. Keep the model with the lower average error unless its cost or speed rules it out, and record both results. Store the model ID with every calibration record.
+- **Model comparison (once):** run the calibration questions for one district's 500 residents on Nova 2 Lite and on Claude Haiku 5.5. Haiku 5.5 is the default; switch to Nova only if its average error is clearly lower, and record both results. Store the model ID with every calibration record.
 - Drone polls stay as bounds (23% to 87%), plus the US Postal Service OIG 2016 national figure (44% like the idea, 65% of millennials, 24% of boomers) as a third reference. None is a Detroit result.
 - `run_result.calibration.measured` stays `false` until this has run.
 
@@ -346,7 +395,7 @@ Not applied. Each needs the frontend lane's agreement and a fixture update.
 
 | # | Step | Owner | Done when |
 | --- | --- | --- | --- |
-| 1 | Census key, AWS account, read Nova quota | Human | `converse` returns from `us.amazon.nova-2-lite-v1:0` |
+| 1 | Census key, AWS account, read Haiku 5.5 quota | Human | `converse` returns from `us.anthropic.claude-haiku-5-5` |
 | 2 | Fix the download scripts (section 3) and download | Data | every file in the manifest, no HTML saved as data |
 | 3 | Agree the contract changes (section 12) | All lanes | schemas and fixtures updated together |
 | 4 | Processed artifacts (6.1) | Data | 6.3 passes |
