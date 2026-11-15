@@ -45,6 +45,8 @@ def start_run(event, context=None):
     cap = int(os.environ["MAX_RESIDENTS_PER_RUN"])
     if residents > cap:
         return _resp(400, {"error": f"this run would ask {residents} residents; the limit is {cap}"})
+    from contracts.spec import summary_line
+    spec["summary"] = summary_line(spec)            # the panel may have edited values; residents read the rebuilt sentence
     spec["status"] = "confirmed"
     run_id = f"run-{uuid.uuid4().hex[:10]}"
     _table().put_item(Item={"run_id": run_id, "spec_id": spec["spec_id"], "spec_version": spec["version"],

@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 22:49 ET · Partner (AI) · Web + Infra
+**Did:** The prototype's "Ask residents" button now runs real residents when `CITYSIM_API` is set and a live spec is open: it sends the spec with the panel's edits to `POST /runs`, polls `GET /runs/{id}` every 2 s, and draws the real result (overall split and range, district tiles and map dots, top three reasons, quotes in the resident card, a "Live · N residents" badge). Without a backend or spec it still plays the mock. Partner approved this web change. Verified on a local copy against `citysim-main`: strip club across Districts 4-7, 2,000 residents, 17% support / 23% neutral / 60% oppose; a What box edited to "a strip club with a rooftop bar" arrived in the spec as `edited`.
+**Files:** web/prototype/index.html (ids on the result elements; `specWithEdits`, `showResult`, `runLive`, `finishRun`; run handler branches to live), infra/runs.py, LOG.md
+**Contracts changed:** none. `start_run` now rebuilds `spec.summary` with `summary_line` so residents read the edited proposal.
+**Decisions:** The traffic note says "not calculated" until the engine returns numbers; it no longer claims "no problem". "Lives in noise zone" in the resident card shows "Not calculated".
+**Blocked / needs:** Salem: Compare and Briefing buttons are untouched. The green check styling on the traffic note is left as is.
+**Next:** place resolver (BACKEND_PLAN.md 11.2).
+
 ### 2026-11-14 22:15 ET · Partner (AI) · Residents + Infra
 **Did:** Residents now answer. `residents/batch.py` asks 25 residents per Bedrock call behind the spending limit, checks every answer, asks invalid ones once more, then drops and counts them. `residents/aggregate.py` builds the run result (census-weighted overall split with bootstrap range, per district, reasons, groups by tenure / age / vehicles, quotes, per block, run stats). Wired into `infra/runs.py`; deployed to `citysim-partner` and `citysim-main` (us-east-2) with `ResidentModelId=us.amazon.nova-2-lite-v1:0`. Real runs on `citysim-partner`: strip club, District 6: 500 residents, 37 calls, 13 s, $0.06, 0 dropped, 12.3% support / 25.4% neutral / 62.3% oppose. 120-unit apartment building, Districts 5 and 6: 1,000 residents, 88 calls, 20 s, $0.13, 8 dropped, 18.0 / 25.8 / 56.1.
 **Files:** residents/batch.py, residents/aggregate.py, residents/prompt.py, residents/tests/test_batch_aggregate.py (new), infra/runs.py, data/personas/build.py (also writes `district_{n}.json`), LOG.md

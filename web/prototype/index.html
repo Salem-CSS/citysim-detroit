@@ -244,30 +244,30 @@ button { cursor: pointer; }
   <aside class="results panel" id="results" aria-label="What residents think" aria-live="polite">
     <div class="results__body">
       <section>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2>Public approval</h2><span class="badge" data-show="results">Sample data</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2>Public approval</h2><span class="badge" data-show="results" id="ovBadge">Sample data</span></div>
         <div data-show="empty" class="results__empty" style="margin-top:12px" id="emptyMsg">Ask a question in the bar below to see what residents think. Example: "What if we expand the Newlab drone route to 200 flights a day?"</div>
         <div data-show="results">
           <div class="approval__nums">
-            <div><b class="num" style="color:#93C5FD">45%</b><span>support</span></div>
-            <div><b class="num">25%</b><span>neutral</span></div>
-            <div><b class="num" style="color:#FDBA74">30%</b><span>oppose</span></div>
+            <div><b class="num" style="color:#93C5FD" id="ovS">45%</b><span>support</span></div>
+            <div><b class="num" id="ovN">25%</b><span>neutral</span></div>
+            <div><b class="num" style="color:#FDBA74" id="ovO">30%</b><span>oppose</span></div>
           </div>
-          <div class="split" style="height:14px;border-radius:7px" role="img" aria-label="45% support, 25% neutral, 30% oppose"><span style="width:45%"></span><span style="width:25%"></span><span style="width:30%"></span></div>
-          <p style="margin:10px 0 0" class="muted">Leaning yes. No majority either way.</p>
+          <div class="split" id="ovBar" style="height:14px;border-radius:7px" role="img" aria-label="45% support, 25% neutral, 30% oppose"><span style="width:45%"></span><span style="width:25%"></span><span style="width:30%"></span></div>
+          <p style="margin:10px 0 0" class="muted" id="ovLean">Leaning yes. No majority either way.</p>
         </div>
       </section>
       <section>
         <h3>By district</h3>
         <div class="tiles" id="tiles"></div>
       </section>
-      <section data-show="results">
+      <section data-show="results" id="worries">
         <h3>Top worries</h3>
         <div class="worry"><div class="worry__row"><span>Noise over homes</span><b class="num">34%</b></div><div class="meter"><span style="width:68%"></span></div></div>
         <div class="worry"><div class="worry__row"><span>Privacy and cameras</span><b class="num">21%</b></div><div class="meter"><span style="width:42%"></span></div></div>
         <div class="worry"><div class="worry__row"><span>Safety if one falls</span><b class="num">18%</b></div><div class="meter"><span style="width:36%"></span></div></div>
       </section>
       <section data-show="results">
-        <div class="note note--ok"><svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg><div><b>Traffic: no problem.</b> Takes delivery vans off the road. No main street gets jammed.</div></div>
+        <div class="note note--ok" id="trafficNote"><svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg><div><b>Traffic: no problem.</b> Takes delivery vans off the road. No main street gets jammed.</div></div>
       </section>
       <section>
         <div class="note"><svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7.5v3.5M8 5v.3"/></svg><div><b>A forecast, not a poll.</b> Simulated residents built from census data for these districts. The accuracy check against the Detroit survey hasn't been run yet.</div></div>
@@ -588,9 +588,78 @@ document.getElementById('askForm').addEventListener('submit',function(e){
 });
 document.querySelectorAll('.pill[data-q]').forEach(function(p){ p.addEventListener('click',function(){ document.getElementById('ask').value=p.dataset.q; document.getElementById('ask').focus(); }); });
 
+
+// ---------- Live run: POST /runs with the edited spec, poll GET /runs/{id}, draw the real result ----------
+function specWithEdits(){
+  var spec=JSON.parse(JSON.stringify(state.spec)); spec.districts=selected();
+  spec.actions.forEach(function(a){ a.constraints.forEach(function(c){
+    var el=body.querySelector('[data-k="'+a.action_id+'.'+c.id+'"]:not(.block)'); if(!el) return;
+    var v;
+    if(el.tagName==='INPUT') v=el.value.trim();
+    else if(el.classList.contains('stepper')) v=+el.querySelector('output').dataset.v;
+    else { var label = el.tagName==='SELECT' ? el.value : el.querySelector('[aria-pressed="true"]').textContent;
+           var m=(c.options||[]).filter(function(o){return o.label===label;})[0]; if(!m) return; v=m.value; }
+    if(String(v)!==String(c.value==null?'':c.value)){ c.value=v; c.source='edited'; }
+  }); });
+  return spec;
+}
+var REASON_LABEL={traffic:'Traffic',noise:'Noise',safety:'Safety',privacy:'Privacy',rent:'Rent and housing costs',jobs:'Jobs',access:'Access',none:'No main reason'};
+function showResult(res){
+  var o=res.overall, r=function(x){return Math.round(x);};
+  document.getElementById('ovS').textContent=r(o.support)+'%'; document.getElementById('ovN').textContent=r(o.neutral)+'%'; document.getElementById('ovO').textContent=r(o.oppose)+'%';
+  var bar=document.getElementById('ovBar'); bar.setAttribute('aria-label',r(o.support)+'% support, '+r(o.neutral)+'% neutral, '+r(o.oppose)+'% oppose');
+  bar.children[0].style.width=o.support+'%'; bar.children[1].style.width=o.neutral+'%'; bar.children[2].style.width=o.oppose+'%';
+  var lean = o.support>50?'A majority supports this.':o.oppose>50?'A majority opposes this.':o.support>o.oppose?'Leaning yes. No majority either way.':o.oppose>o.support?'Leaning no. No majority either way.':'Evenly split.';
+  var range = o.support_range ? ' Support range '+o.support_range[0]+'% to '+o.support_range[1]+'% (sampling spread only).' : '';
+  document.getElementById('ovLean').textContent=lean+range;
+  var st=res.run_stats||{};
+  document.getElementById('ovBadge').textContent='Live · '+(st.valid||0).toLocaleString()+' residents';
+  Object.keys(DISTRICTS).forEach(function(d){ delete DISTRICTS[d].s; delete DISTRICTS[d].n; delete DISTRICTS[d].o; delete DISTRICTS[d].w; });
+  (res.districts||[]).forEach(function(d){ var x=DISTRICTS[d.district]; if(!x) return;
+    x.s=r(d.split.support); x.n=r(d.split.neutral); x.o=100-x.s-r(d.split.neutral); x.w=REASON_LABEL[d.top_reason]||d.top_reason; });
+  var top=(res.reasons||[]).filter(function(x){return x.reason!=='none';}).slice(0,3), max=top.length?top[0].share:1;
+  document.getElementById('worries').innerHTML='<h3>Top reasons</h3>'+(top.length?top.map(function(x){
+    return '<div class="worry"><div class="worry__row"><span>'+(REASON_LABEL[x.reason]||x.reason)+'</span><b class="num">'+r(x.share)+'%</b></div><div class="meter"><span style="width:'+Math.round(100*x.share/max)+'%"></span></div></div>';
+  }).join(''):'<p class="muted">No resident gave a main reason.</p>');
+  document.getElementById('trafficNote').innerHTML='<div><b>Traffic: not calculated.</b> The traffic engine has not run for this proposal, so residents reacted to the proposal as described.'+
+    (st.dropped?' '+st.dropped+' of '+st.residents+' residents gave no valid answer.':'')+(res.stopped?' The run stopped early: '+String(res.stopped[0]).replace(/</g,'&lt;'):'')+'</div>';
+  PEOPLE=(res.quotes||[]).map(function(q){ return {who:(q.who||'').split(', ').slice(0,2).join(', '), where:'District '+q.district, q:q.text,
+    feel:q.stance==='support'?'Supports':q.stance==='oppose'?'Opposes':'Neutral', w:REASON_LABEL[q.reason]||q.reason, z:'Not calculated'}; });
+  if(!PEOPLE.length) PEOPLE=[{who:'No quotes in this run',where:'',q:'',feel:'',w:'',z:''}];
+  pi=0;
+}
+function runLive(btn){
+  var api=(window.CITYSIM_API||'').replace(/\/$/,''), spec=specWithEdits(), n=spec.districts.length*500;
+  btn.disabled=true; btn.textContent='Asking '+n.toLocaleString()+' residents…';
+  var fail=function(msg){ btn.disabled=false; setMode(state.asked);
+    body.insertAdjacentHTML('afterbegin','<div class="changed-note"><span>Could not run: '+String(msg).replace(/</g,'&lt;')+'</span></div>'); };
+  fetch(api+'/runs',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({spec:spec})})
+    .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.error||r.status); return j.run_id; }); })
+    .then(function(id){ var tries=0; (function poll(){
+      fetch(api+'/runs/'+id).then(function(r){return r.json();}).then(function(run){
+        if(run.stage==='done' && run.result){ state.spec=spec; showResult(run.result); finishRun(btn); }
+        else if(++tries>90) fail('the run did not finish in time');
+        else setTimeout(poll,2000);
+      }).catch(function(e){ fail(e.message); }); })(); })
+    .catch(function(e){ fail(e.message); });
+}
+function finishRun(b){
+    state.asked=true; b.disabled=false; app.classList.add('has-results'); map.dataset.state='results'; mapView.update();
+    body.querySelectorAll('.block').forEach(function(x){x.classList.remove('is-changed');});
+    var note=document.getElementById('changedNote'); if(note) note.remove();
+    body.querySelectorAll('[data-k]').forEach(function(el){
+      if(el.tagName==='SELECT' || el.tagName==='INPUT') state.defaults[el.dataset.k]=el.value;
+      else if(el.classList.contains('seg')) state.defaults[el.dataset.k]=el.querySelector('[aria-pressed="true"]').textContent;
+      else if(el.classList.contains('stepper')) state.defaults[el.dataset.k]=el.querySelector('output').dataset.v;
+    });
+    setMode(true); renderTiles();
+}
+
 // Run
 document.getElementById('runBtn').addEventListener('click',function(){
-  var b=this; b.disabled=true; b.textContent='Asking 2,000 residents…';
+  var b=this;
+  if(window.CITYSIM_API && state.spec && state.spec.actions.length){ runLive(b); return; }   // real residents
+  b.disabled=true; b.textContent='Asking 2,000 residents…';
   setTimeout(function(){
     state.asked=true; b.disabled=false; app.classList.add('has-results'); map.dataset.state='results'; mapView.update();
     body.querySelectorAll('.block').forEach(function(x){x.classList.remove('is-changed');});
