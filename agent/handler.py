@@ -119,11 +119,13 @@ def build_spec(tool_input: dict, question: str, districts: list[int], parent: di
 
 # ---------- Bedrock ----------
 def ask_model(question: str, parent: dict | None, client=None) -> dict:
+    from shared import budget
     from shared.aws import bedrock_runtime
     client = client or bedrock_runtime()      # may borrow a role in another account (BEDROCK_ROLE_ARN)
     user = question if not parent else (
         f"Current proposal (edit it, keep what the user doesn't change):\n{json.dumps(parent['actions'])}\n\nFollow-up: {question}")
-    resp = client.converse(
+    resp = budget.converse(            # refuses when the daily spending limit is reached
+        client,
         modelId=MODEL_ID,
         system=[{"text": SYSTEM + "\n\nActions and their fields (use these ids and option values exactly):\n" + catalog()
                  + "\n\nCall submit_actions exactly once. Fill only values the user stated or clearly implied; the rest get defaults."}],

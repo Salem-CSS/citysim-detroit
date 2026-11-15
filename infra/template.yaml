@@ -31,7 +31,20 @@ Parameters:
     Default: citysim-detroit
   BedrockRegion:
     Type: String
-    Default: us-east-1
+    Default: ""
+    Description: Region for Bedrock calls. Empty = the stack's own region.
+  MaxRunUsd:
+    Type: Number
+    Default: 10
+    Description: Hard limit on model spend for one run, in US dollars (shared/budget.py)
+  MaxDayUsd:
+    Type: Number
+    Default: 10
+    Description: Hard limit on model spend per UTC day for this stack, in US dollars
+  MaxResidentsPerRun:
+    Type: Number
+    Default: 2000
+    Description: POST /runs is refused when districts x PersonasPerDistrict is above this
 
 Conditions:
   HasDataBucket: !Not [!Equals [!Ref DataBucket, ""]]
@@ -55,6 +68,9 @@ Globals:
         BEDROCK_ROLE_ARN: !Ref BedrockRoleArn
         BEDROCK_EXTERNAL_ID: !Ref BedrockExternalId
         BEDROCK_REGION: !Ref BedrockRegion
+        MAX_RUN_USD: !Ref MaxRunUsd
+        MAX_DAY_USD: !Ref MaxDayUsd
+        MAX_RESIDENTS_PER_RUN: !Ref MaxResidentsPerRun
 
 Resources:
   Api:
@@ -81,6 +97,7 @@ Resources:
       Handler: agent.handler.handler
       Timeout: 60
       Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref RunsTable}   # spend counters
         - Statement:
             - Effect: Allow
               Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
@@ -138,6 +155,7 @@ Resources:
       Handler: infra.runs.resident_batch
       Timeout: 120
       Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref RunsTable}   # spend counters
         - Statement:
             - Effect: Allow
               Action: [bedrock:InvokeModel]

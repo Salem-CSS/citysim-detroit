@@ -7,7 +7,7 @@
 set -euo pipefail
 STAGE="${1:?usage: deploy.sh <salem|partner|main> [extra sam args]}"; shift || true
 cd "$(dirname "$0")/.."
-REGION="${AWS_REGION:-us-east-1}"
+REGION="${AWS_REGION:-us-east-1}"   # set AWS_REGION=us-east-2 for account 707604458164 (it refuses us-east-1)
 
 # Package only the backend code (keeps the web tiles out of the Lambda zip).
 rm -rf infra/.build && mkdir -p infra/.build/src

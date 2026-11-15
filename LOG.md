@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 20:50 ET · Partner (AI) · Agent+Infra
+**Did:** Deployed `citysim-partner` in account 707604458164, **us-east-2**: `https://6dxcfjf4tg.execute-api.us-east-2.amazonaws.com`. `POST /scenario` returned a valid drone spec from a real Nova Pro call in that account (no second account needed); `POST /runs` → `GET /runs/{id}` completes through the stubs. Added a hard spending limit for every Bedrock call.
+**Files:** shared/budget.py (new), shared/bedrock_prices.json (new), shared/tests/test_budget.py (new), agent/handler.py (model call goes through `budget.converse`), infra/template.yaml (MaxRunUsd, MaxDayUsd, MaxResidentsPerRun; BedrockRegion default is now the stack's region; spend-counter table access), infra/runs.py (resident cap in `start_run`), infra/deploy.sh (comment)
+**Contracts changed:** none
+**Decisions:** All Bedrock calls must use `shared.budget.converse(client, run_id, modelId=..., inferenceConfig={"maxTokens": ...})`. It refuses a call when the run or the UTC day has reached its limit ($10 each by default), when `maxTokens` is missing, or when the model has no price in `shared/bedrock_prices.json` (prices come from the AWS Price List API for us-east-2; Haiku 5.5 is not listed there yet, so it is refused until a sourced price is added). Spend is stored in the runs table under `spend#...` keys. Deploy here with `AWS_REGION=us-east-2 ./infra/deploy.sh <stage> DataBucket=citysim-data-707604458164`.
+**Blocked / needs:** Salem: this touched your `agent/handler.py` and `infra/` files; shout if the BedrockRegion default change affects your stack (empty now means the stack's own region). No budget email alert yet.
+**Next:** personas and `residents/batch.py`.
+
 ### 2026-11-14 20:41 ET · Partner (AI) · Data + Infra
 **Did:** Created the data bucket and uploaded all raw data: `s3://citysim-data-707604458164/raw/` in **us-east-2**, 35 objects, 2.07 GB (byte count matches the laptop). Merged `main` (backend skeleton, dual-account Bedrock) into `claude/confident-ritchie-ccwiqs`; 19 tests pass. Parcels (377,940 rows) and city building footprints (380,076 rows) are complete after a downloader fix.
 **Files:** data/download/_arcgis.py, LOG.md

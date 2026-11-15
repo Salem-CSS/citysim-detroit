@@ -1,0 +1,10 @@
+{
+  "source": "AWS Price List API (aws pricing get-products --service-code AmazonBedrock), region us-east-2, on-demand standard tier, publication date 2026-11-11, read 2026-11-14",
+  "unit": "USD per 1,000,000 tokens",
+  "note": "A model that is not listed here has no sourced price, so shared/budget.py refuses to call it. Add the model with its source before using it.",
+  "models": {
+    "amazon.nova-lite-v1:0": {"input": 0.06, "output": 0.24, "usagetype": "USE2-NovaLite-input-tokens / -output-tokens"},
+    "amazon.nova-pro-v1:0": {"input": 0.80, "output": 3.20, "usagetype": "USE2-NovaPro-input-tokens / -output-tokens"},
+    "amazon.nova-2-lite-v1:0": {"input": 0.33, "output": 2.75, "usagetype": "USE2-Nova2.0Lite-input-tokens / -output-tokens"}
+  }
+}
