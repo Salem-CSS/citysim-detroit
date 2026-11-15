@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CitySim Detroit · 3D buildings</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+  :root { --bg:#0B1220; --panel:rgba(15,23,42,.92); --line:#1E293B; --text:#F8FAFC; --text-2:#CBD5E1; --accent:#60A5FA; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text);
+    font:15px/1.4 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #map { position:absolute; inset:0; }
+  .card { position:absolute; background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; backdrop-filter:blur(6px); }
+  #info { top:16px; left:16px; width:300px; }
+  #info h1 { font-size:18px; margin:0 0 4px; }
+  #info .big { font-size:15px; color:var(--text-2); margin:0 0 12px; }
+  .seg { display:flex; gap:6px; margin:6px 0 12px; }
+  .seg button { flex:1; font:inherit; font-size:14px; padding:7px 0; border-radius:8px; cursor:pointer;
+    background:#111827; color:var(--text-2); border:1px solid var(--line); }
+  .seg button.on { background:#1D4ED8; color:#fff; border-color:#1D4ED8; }
+  .legend { display:grid; grid-template-columns:18px 1fr; gap:6px 10px; align-items:center; font-size:14px; color:var(--text-2); }
+  .sw { width:18px; height:12px; border-radius:3px; }
+  #status { font-size:13px; color:var(--text-2); margin-top:12px; }
+  #pick { bottom:28px; left:16px; display:none; font-size:15px; }
+  #pick b { font-size:20px; display:block; }
+  #empty { top:50%; left:50%; transform:translate(-50%,-50%); width:440px; display:none; }
+  #empty code { font-size:13px; background:#111827; padding:2px 6px; border-radius:4px; }
+  .maplibregl-ctrl-attrib { font-size:13px !important; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="info" class="card">
+  <h1>Detroit, building by building</h1>
+  <p class="big" id="count">Loading…</p>
+  <div>Color by</div>
+  <div class="seg">
+    <button id="byHeight" class="on">Height</button>
+    <button id="bySource">Height source</button>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div id="status"></div>
+</div>
+
+<div id="pick" class="card"></div>
+
+<div id="empty" class="card">
+  <h1 style="font-size:18px;margin:0 0 8px">No building tiles yet</h1>
+  <p>Build them once, then reload:</p>
+  <p><code>python -m data.buildings.athena_build --bucket &lt;bucket&gt;</code><br>
+     <code>python -m data.buildings.export_mvt</code></p>
+  <p>Or point this page at hosted tiles: <code>map3d.html?src=https://…/tiles/</code></p>
+</div>
+
+<script>
+var params = new URLSearchParams(location.search);
+var BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
+var SRC = (params.get('src') || BASE + 'tiles/').replace(/\/?$/, '/');
+var STYLE = params.get('style') === 'none'
+  ? { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0B1220' } }] }
+  : 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
+var HEIGHT_STOPS = [[0, '#475569'], [8, '#64748B'], [15, '#60A5FA'], [40, '#A78BFA'], [100, '#FB923C'], [200, '#FACC15']];
+var SOURCE_COLORS = ['#60A5FA', '#34D399', '#FB923C'];
+var SOURCE_NAMES = ['Measured (Overture / lidar)', 'From floor count', 'Estimated by type'];
+var index = null, colorMode = 'height';
+
+var COLOR = {
+  height: ['interpolate', ['linear'], ['get', 'h']].concat([].concat.apply([], HEIGHT_STOPS)),
+  source: ['match', ['get', 's'], 0, SOURCE_COLORS[0], 1, SOURCE_COLORS[1], SOURCE_COLORS[2]]
+};
+
+var map = new maplibregl.Map({
+  container: 'map', style: STYLE, center: [-83.0458, 42.3314], zoom: 14.2, pitch: 55, bearing: -28, maxPitch: 75,
+  minZoom: 10, maxBounds: [[-83.6, 42.1], [-82.6, 42.6]], attributionControl: false
+});
+map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+map.addControl(new maplibregl.AttributionControl({ compact: false,
+  customAttribution: 'Buildings © Overture Maps Foundation (ODbL) · Basemap © CARTO, © OpenStreetMap contributors' }));
+
+map.on('load', function () {
+  fetch(SRC + 'index.json').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (idx) {
+    index = idx;
+    map.addSource('bldg', { type: 'vector', tiles: [SRC + '{z}/{x}/{y}.pbf'], minzoom: idx.minzoom, maxzoom: idx.maxzoom, bounds: idx.bounds });
+    map.addLayer({ id: 'buildings', type: 'fill-extrusion', source: 'bldg', 'source-layer': idx.layer, paint: {
+      'fill-extrusion-color': COLOR.height, 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': 0,
+      'fill-extrusion-opacity': 0.95, 'fill-extrusion-vertical-gradient': true } });
+    document.getElementById('count').textContent = idx.stats.buildings.toLocaleString() + ' buildings inside city limits · tallest ' + idx.stats.max_m + ' m';
+    document.getElementById('status').textContent = 'Zoom out for the whole city; small buildings appear as you zoom in.';
+    legend();
+  }).catch(function () {
+    document.getElementById('empty').style.display = 'block';
+    document.getElementById('count').textContent = 'No tiles found at ' + SRC;
+  });
+});
+
+map.on('click', 'buildings', function (e) {
+  var d = e.features[0].properties, el = document.getElementById('pick'), floors = Math.max(1, Math.round(d.h / 3.5));
+  el.innerHTML = '<b>' + (+d.h).toFixed(1) + ' m tall</b>about ' + floors + ' floor' + (floors > 1 ? 's' : '') + ' · ' + SOURCE_NAMES[d.s].toLowerCase();
+  el.style.display = 'block';
+});
+map.on('mouseenter', 'buildings', function () { map.getCanvas().style.cursor = 'pointer'; });
+map.on('mouseleave', 'buildings', function () { map.getCanvas().style.cursor = ''; });
+
+function legend() {
+  var html = '';
+  if (colorMode === 'height') {
+    [['Under 8 m', '#475569'], ['8–15 m (2–4 floors)', '#64748B'], ['15–40 m', '#60A5FA'], ['40–100 m', '#A78BFA'], ['100 m+', '#FB923C']]
+      .forEach(function (r) { html += '<span class="sw" style="background:' + r[1] + '"></span><span>' + r[0] + '</span>'; });
+  } else {
+    var c = index ? index.stats.by_source : null;
+    SOURCE_NAMES.forEach(function (name, i) {
+      html += '<span class="sw" style="background:' + SOURCE_COLORS[i] + '"></span><span>' + name + (c ? ' · ' + c[i].toLocaleString() : '') + '</span>';
+    });
+  }
+  document.getElementById('legend').innerHTML = html;
+}
+document.getElementById('byHeight').onclick = function () { setMode('height', this); };
+document.getElementById('bySource').onclick = function () { setMode('source', this); };
+function setMode(m, btn) {
+  colorMode = m;
+  document.querySelectorAll('.seg button').forEach(function (b) { b.classList.toggle('on', b === btn); });
+  if (map.getLayer('buildings')) map.setPaintProperty('buildings', 'fill-extrusion-color', COLOR[m]);
+  legend();
+}
+legend();
+</script>
+</body>
+</html>
