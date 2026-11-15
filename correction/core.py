@@ -26,6 +26,8 @@ TARGETS = {"more_support_than_oppose": "more residents support than oppose",
            "two_thirds": "at least two thirds of residents support"}
 MAX_RERUNS = 5                       # hard cap, enforced by correction/loop.py on the server
 MIN_SPREAD_MI = 0.5                  # candidate sites are at least this far apart and from the original site (a choice)
+FOLLOW_UP_SAMPLE = 60                # residents per group asked the follow-up question after a rerun (a choice)
+LEVER_CHANGE = {"location": "different location", "size": "smaller", "hours": "limited hours"}
 MIN_CELL = 5                         # a predictor cell with fewer residents falls back to the wider group (a choice)
 Z = 1.96                             # two-sided 95% for "differs from": the usual convention
 SIZE_IDS = {"add_drone_route": "flights_per_day", "add_building": "homes", "add_event_surge": "seats", "change_transit": "buses_per_hour"}
@@ -195,18 +197,49 @@ def site_name(s: list) -> str:
     return s[5] + (f", between {s[6]} and {s[7]}" if s[6] and s[7] else "")
 
 
-def location_candidates(spec: dict, index: dict, limit: int = 12) -> tuple[list[dict], dict]:
+def adults_near(points: list[tuple[float, float]], blocks: list[list]) -> list[tuple[int, int]]:
+    """Adults (2020 census blocks) within a mile and within a quarter mile of each point. Blocks are filed in a grid
+    so thousands of lots can be counted quickly."""
+    cell, grid = 0.01, {}
+    for b in blocks:
+        grid.setdefault((int(b[0] // cell), int(b[1] // cell)), []).append(b)
+    out = []
+    for lon, lat in points:
+        k, m, q = math.cos(math.radians(lat)), 0, 0
+        cx, cy = int(lon // cell), int(lat // cell)
+        for i in range(cx - 3, cx + 4):
+            for j in range(cy - 2, cy + 3):
+                for b in grid.get((i, j), ()):
+                    d = math.sqrt(((b[0] - lon) * k) ** 2 + (b[1] - lat) ** 2) * proximity.M_PER_DEG_LAT
+                    if d <= MILE_M:
+                        m += b[2]
+                        if d <= QUARTER_MILE_M:
+                            q += b[2]
+        out.append((m, q))
+    return out
+
+
+def location_candidates(spec: dict, index: dict, limit: int = 12, blocks: list[list] | None = None) -> tuple[list[dict], dict]:
     """Land Bank lots in the selected districts, in the same zoning district as the original site, at least half a
-    mile apart and half a mile from the original. Largest lots first."""
+    mile apart and half a mile from the original. With `blocks`: lots at least as large as the pool's median lot,
+    fewest adults living within a mile first (opposition follows the site, BACKEND_PLAN 15.14). Without: largest first."""
     action = next(a for a in spec["actions"] if _where(a) and _where(a).get("resolved"))
     here = _where(action)["resolved"]
     zone, zdist = zoning_at(here["lon"], here["lat"], index)
     zi = index["zoning"].index(zone) if zone else None
     pool = [s for s in index["sites"] if s[4] in spec["districts"] and s[3] == zi]
     pool.sort(key=lambda s: -s[2])
+    order = "largest first"
+    if blocks and pool:
+        big = pool[:(len(pool) + 1) // 2]                # at least the median lot size
+        near = adults_near([(s[0], s[1]) for s in big], blocks)
+        pool_ranked = [s for _, s in sorted(zip(near, big), key=lambda t: (t[0][0], t[0][1], -t[1][2]))]
+        order = "lots at least as large as the median lot in that pool, fewest adults living within a mile first"
+    else:
+        pool_ranked = pool
     origin = {"kind": "point", "lon": here["lon"], "lat": here["lat"]}
     chosen = []
-    for s in pool:
+    for s in pool_ranked:
         if proximity.distance_m(s[0], s[1], origin) < MIN_SPREAD_MI * MILE_M:
             continue
         if any(proximity.distance_m(s[0], s[1], {"kind": "point", "lon": c["lon"], "lat": c["lat"]}) < MIN_SPREAD_MI * MILE_M for c in chosen):
@@ -217,7 +250,7 @@ def location_candidates(spec: dict, index: dict, limit: int = 12) -> tuple[list[
         if len(chosen) == limit:
             break
     note = {"original_zoning": zone, "nearest_parcel_m": round(zdist), "lots_in_pool": len(pool),
-            "rule": f"Land Bank lots in the selected districts in zoning district {zone}, at least {MIN_SPREAD_MI} miles apart and from the original site, largest first. "
+            "rule": f"Land Bank lots in the selected districts in zoning district {zone}, at least {MIN_SPREAD_MI} miles apart and from the original site, {order}. "
                     "Same zoning district as your site; whether the use is permitted there was not checked."}
     return chosen, note
 
@@ -263,6 +296,70 @@ def apply_candidate(spec: dict, cand: dict) -> dict:
         c["value"], c["source"] = cand["value"], "edited"
     new["version"] = int(new.get("version", 1)) + 1
     return new
+
+
+# ---------- what residents asked for, and what they did after it was changed ----------
+def asked_outcome(asked: list[dict], rows: list[dict], lever: str) -> dict:
+    """For each answer to "what one change would make you more supportive": how those residents answered the rerun.
+    `asked` is the opponents' seven answers (one per resident); `rows` the rerun's answers. Counts of residents."""
+    by = {r["persona_id"]: r["stance"] for r in rows}
+    table = {}
+    for c in asked:
+        t = table.setdefault(c["one_change"], {"change": c["one_change"], "asked_for_it": 0, "answered_rerun": 0, "support": 0, "neutral": 0, "oppose": 0})
+        t["asked_for_it"] += 1
+        if c["persona_id"] in by:
+            t["answered_rerun"] += 1
+            t[by[c["persona_id"]]] += 1
+    made = LEVER_CHANGE[lever]
+    return {"change_made": made, "by_request": sorted(table.values(), key=lambda t: (t["change"] != made, -t["asked_for_it"]))}
+
+
+def follow_up_targets(asked: list[dict], original: list[dict], rerun: list[dict], lever: str, cap: int = FOLLOW_UP_SAMPLE) -> list[dict]:
+    """Who gets the follow-up question after a rerun, nearest to the proposal's new place first, up to `cap` each:
+    'asked_for_it': asked for the change that was made, and still oppose;
+    'new_opponent': did not oppose the original version, and oppose this one."""
+    want = {c["persona_id"]: c["one_change"] for c in asked}
+    before = {r["persona_id"]: r for r in original}
+    near = lambda r: (r.get("distance_m") is None, r.get("distance_m") or 0, r["persona_id"])
+    groups = {"asked_for_it": [], "new_opponent": []}
+    for r in sorted((r for r in rerun if r["stance"] == "oppose"), key=near):
+        b = before.get(r["persona_id"])
+        if b is None:
+            continue
+        if b["stance"] == "oppose" and want.get(r["persona_id"]) == LEVER_CHANGE[lever]:
+            g = "asked_for_it"
+        elif b["stance"] != "oppose":
+            g = "new_opponent"
+        else:
+            continue
+        if len(groups[g]) < cap:
+            groups[g].append({"persona_id": r["persona_id"], "group": g, "before": b["stance"], "before_reason": b.get("reason"),
+                              "after_reason": r["reason"], "asked_for": want.get(r["persona_id"]), "distance_m": r.get("distance_m")})
+    return groups["asked_for_it"] + groups["new_opponent"]
+
+
+def follow_up_summary(targets: list[dict], answers: dict, fields: dict) -> dict:
+    """Counts per wording and per group, plus sample sentences. `answers`: {variant: [items]}; `fields`: {variant:
+    (free-text field, [option fields])}. No model writes this: it is a tally."""
+    group = {t["persona_id"]: t["group"] for t in targets}
+    out = {"asked": {g: sum(t["group"] == g for t in targets) for g in ("asked_for_it", "new_opponent")}, "wordings": {}}
+    for variant, items in answers.items():
+        text, options = fields[variant]
+        v = {"answered": len(items), "average_characters": round(sum(len(i[text]) for i in items) / len(items)) if items else 0,
+             "distinct_sentences": len({i[text].strip().lower() for i in items})}
+        for f in options:
+            v[f] = {}
+            for g in ("asked_for_it", "new_opponent", "all"):
+                count = {}
+                for i in items:
+                    if g == "all" or group.get(i["persona_id"]) == g:
+                        count[i[f]] = count.get(i[f], 0) + 1
+                v[f][g] = dict(sorted(count.items(), key=lambda kv: -kv[1]))
+        v["sentences"] = []
+        for g in ("asked_for_it", "new_opponent"):
+            v["sentences"] += [{"group": g, "text": i[text]} for i in items if group.get(i["persona_id"]) == g][:4]
+        out["wordings"][variant] = v
+    return out
 
 
 # ---------- predictor ----------

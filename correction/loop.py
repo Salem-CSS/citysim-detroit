@@ -29,6 +29,7 @@ import uuid
 from correction import core
 from infra import runs
 
+FOLLOW_UP_CHOICES = ("both", "change", "stance", "none")
 _index: dict = {}
 _blocks: list = []
 
@@ -82,22 +83,41 @@ def personas_for(districts: list[int]) -> dict:
 def start(event, context=None):
     body = json.loads(event.get("body") or "{}")
     run_id, target = body.get("run_id"), body.get("target") or "more_support_than_oppose"
+    follow = body.get("follow_up") or "both"
     if target not in core.TARGETS:
         return runs._resp(400, {"error": f"target must be one of {', '.join(core.TARGETS)}"})
+    if follow not in FOLLOW_UP_CHOICES:
+        return runs._resp(400, {"error": f"follow_up must be one of {', '.join(FOLLOW_UP_CHOICES)}"})
     item = _table().get_item(Key={"run_id": str(run_id)}).get("Item") if run_id else None
     if not item or item.get("status") != "done" or "spec_json" not in item:
         return runs._resp(400, {"error": "run_id must be a finished run started after the correction engine was deployed"})
     cid = f"corr-{uuid.uuid4().hex[:10]}"
     save({"correction_id": cid, "status": "running", "stage": "diagnosing", "target": target, "target_text": core.TARGETS[target],
           "original_run_id": run_id, "mode": item.get("mode") or runs.default_mode(), "max_reruns": core.MAX_RERUNS,
-          "reruns_used": 0, "attempts": [], "created": int(time.time())})
+          "reruns_used": 0, "attempts": [], "created": int(time.time()), "follow_up": follow})
     invoke({"correction_id": cid, "start": True})
     return runs._resp(202, {"correction_id": cid})
 
 
 def get(event, context=None):
-    state = load((event.get("pathParameters") or {}).get("id") or "")
-    return runs._resp(200, state) if state else runs._resp(404, {"error": "no such correction"})
+    """The report. With ?answers=1 it also carries every resident's own answers to the extra questions."""
+    cid = (event.get("pathParameters") or {}).get("id") or ""
+    state = load(cid)
+    if not state:
+        return runs._resp(404, {"error": "no such correction"})
+    if (event.get("queryStringParameters") or {}).get("answers"):
+        state["asked_answers"] = load_extra(cid, "asked")
+        state["follow_up_answers"] = {str(a["rerun"]): load_extra(cid, f"followup#{a['rerun']}") for a in state["attempts"]}
+    return runs._resp(200, state)
+
+
+def save_extra(cid: str, name: str, data) -> None:
+    _table().put_item(Item={"run_id": f"corr#{cid}#{name}", "state_json": json.dumps(data)})
+
+
+def load_extra(cid: str, name: str):
+    item = _table().get_item(Key={"run_id": f"corr#{cid}#{name}"}, ConsistentRead=True).get("Item")
+    return json.loads(item["state_json"]) if item else None
 
 
 def invoke(payload: dict) -> None:
@@ -136,6 +156,7 @@ def first_step(state: dict, ask=None) -> None:
         per_call = runs.MODES.get(state["mode"], 1)
         fn = ask or (lambda *args: ask_mod.ask_opponents(*args, at_once=8 if per_call == 1 else 2))
         changes = fn(rows, people, spec, places, f"{state['correction_id']}-ask", per_call)
+        save_extra(state["correction_id"], "asked", changes)          # each opponent's own seven answers
     diag = core.diagnose(rows, changes, state["target"])
     state["diagnosis"] = diag
     state["original"] = {"run_id": state["original_run_id"], "split": diag["overall"], "score": core.score(diag["overall"], state["target"]),
@@ -160,7 +181,7 @@ def build_candidates(state: dict, people: dict) -> None:
     while state["lever_at"] < len(state["levers"]):
         lever = state["levers"][state["lever_at"]]
         if lever == "location":
-            cands, note = core.location_candidates(spec, site_index())
+            cands, note = core.location_candidates(spec, site_index(), blocks=blocks())
             state["site_rule"] = note
             for c in cands:
                 c["who_lives_near"] = core.near_profile({"kind": "point", "lon": c["lon"], "lat": c["lat"]}, list(people.values()), blocks())
@@ -223,7 +244,35 @@ def best_place(state: dict) -> dict | None:
     return places[0] if places and places[0]["kind"] == "point" else None
 
 
-def run_finished(state: dict, run_id: str) -> None:
+def ask_follow_up(state: dict, attempt: dict, cand: dict, rows: list[dict], spec: dict, people: dict, ask=None) -> None:
+    """After a rerun: what the residents who asked for this change did, and why those who still oppose (or newly
+    oppose) say they do. A failure here is recorded and never stops the correction."""
+    asked = load_extra(state["correction_id"], "asked") or []
+    if not asked:
+        return
+    attempt["asked_then"] = core.asked_outcome(asked, rows, cand["lever"])
+    variants = {"both": ["change", "stance"], "change": ["change"], "stance": ["stance"]}.get(state.get("follow_up") or "none", [])
+    if not variants:
+        return
+    try:
+        from correction import ask as ask_mod
+        from engine import proximity
+        targets = core.follow_up_targets(asked, run_rows(state["original_run_id"])[1], rows, cand["lever"])
+        if not targets:
+            return
+        per_call = runs.MODES.get(state["mode"], 1)
+        fn = ask or (lambda v, *args: ask_mod.follow_up(v, *args, at_once=8 if per_call == 1 else 2))
+        answers = {v: fn(v, targets, people, spec, proximity.places_of(spec), cand["label"],
+                         f"{state['correction_id']}-followup{attempt['rerun']}-{v}", per_call) for v in variants}
+        save_extra(state["correction_id"], f"followup#{attempt['rerun']}", {"targets": targets, "answers": answers})
+        fields = {v: (ask_mod.FOLLOW_UPS[v][0][0], [f for f, _, o in ask_mod.FOLLOW_UPS[v] if isinstance(o, list)]) for v in variants}
+        attempt["follow_up"] = core.follow_up_summary(targets, answers, fields)
+        attempt["follow_up"]["questions"] = {v: [q for _, q, _ in ask_mod.FOLLOW_UPS[v]] for v in variants}
+    except Exception as e:
+        attempt["follow_up"] = {"error": f"{type(e).__name__}: {e}"[:300]}
+
+
+def run_finished(state: dict, run_id: str, ask=None) -> None:
     waiting = state.get("waiting") or {}
     if waiting.get("run_id") != run_id:
         return
@@ -255,6 +304,7 @@ def run_finished(state: dict, run_id: str) -> None:
                    "beats_best_beyond_spread": sc - best["score"] > state["spread_pts"], "meets_target": core.met(sp, state["target"]),
                    "cost_usd": (result.get("run_stats") or {}).get("model_cost_usd"), "seconds": (result.get("run_stats") or {}).get("seconds")}
         state["attempts"].append(attempt)
+        ask_follow_up(state, attempt, cand, rows, json.loads(item["spec_json"]), people, ask)
         if cand.get("predicted_score") is not None:      # how far off the prediction for this site was, in points
             attempt["prediction_error"] = state["last_prediction_error"] = round(abs(sc - cand["predicted_score"]), 1)
         if attempt["beats_best_beyond_spread"]:          # later levers build on the best version, not on the original

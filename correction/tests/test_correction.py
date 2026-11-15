@@ -270,3 +270,91 @@ def test_report_matches_the_contract(world):
     from contracts.validate import validate
     assert validate("correction_result", drive(world, said("different location"))) == []
     assert validate("correction_result", json.load(open("fixtures/correction_result.busgarage.json", encoding="utf-8"))) == []
+
+
+# ---------- what residents asked for, the follow-up question, and sites with few neighbours ----------
+def test_sites_with_the_fewest_adults_within_a_mile_come_first():
+    blocks = [[ORIGIN[0], ORIGIN[1] + m * DEG_PER_MILE_LAT, n] for m, n in ((6, 900), (8, 50), (12, 400), (15.5, 0), (18, 10))]
+    assert core.adults_near([(ORIGIN[0], ORIGIN[1] + 6.2 * DEG_PER_MILE_LAT)], blocks) == [(900, 900)]
+    assert core.adults_near([(ORIGIN[0], ORIGIN[1] + 6.5 * DEG_PER_MILE_LAT)], blocks) == [(900, 0)]
+    cands, note = core.location_candidates(spec(), index(), blocks=blocks)
+    assert [c["name"].split(" ")[0] for c in cands] == ["1550", "1800", "800", "1200", "600"]      # the five largest lots, emptiest first
+    assert "fewest adults living within a mile first" in note["rule"]
+
+
+def test_what_those_who_asked_for_a_change_did_after_it_was_made():
+    asked = [{"persona_id": f"p{i}", "one_change": "limited hours" if i < 6 else "different location"} for i in range(10)]
+    rerun = [{"persona_id": f"p{i}", "stance": "oppose" if i < 5 else "neutral", "reason": "noise", "distance_m": 100 * i} for i in range(9)]
+    out = core.asked_outcome(asked, rerun, "hours")
+    assert out["change_made"] == "limited hours"
+    assert out["by_request"][0] == {"change": "limited hours", "asked_for_it": 6, "answered_rerun": 6, "support": 0, "neutral": 1, "oppose": 5}
+    assert out["by_request"][1] == {"change": "different location", "asked_for_it": 4, "answered_rerun": 3, "support": 0, "neutral": 3, "oppose": 0}
+
+
+def test_follow_up_goes_to_those_who_got_what_they_asked_for_and_to_new_opponents():
+    asked = [{"persona_id": "a", "one_change": "limited hours"}, {"persona_id": "b", "one_change": "different location"}, {"persona_id": "c", "one_change": "limited hours"}]
+    row = lambda i, s, d=500: {"persona_id": i, "stance": s, "reason": "noise", "distance_m": d}
+    original = [row("a", "oppose"), row("b", "oppose"), row("c", "oppose"), row("d", "neutral"), row("e", "support")]
+    rerun = [row("a", "oppose", 900), row("b", "oppose"), row("c", "neutral"), row("d", "oppose", 300), row("e", "oppose", 200), row("z", "oppose")]
+    t = core.follow_up_targets(asked, original, rerun, "hours")
+    assert [(x["persona_id"], x["group"]) for x in t] == [("a", "asked_for_it"), ("e", "new_opponent"), ("d", "new_opponent")]
+    assert t[0]["asked_for"] == "limited hours" and t[1]["before"] == "support"
+    assert len(core.follow_up_targets(asked, original, rerun, "hours", cap=1)) == 2
+    answers = {"change": [{"persona_id": "a", "why": "Still loud.", "would_change": "nothing"}, {"persona_id": "d", "why": "Now it is near me.", "would_change": "different location"}]}
+    s = core.follow_up_summary(t, answers, {"change": ("why", ["would_change"])})
+    assert s["asked"] == {"asked_for_it": 1, "new_opponent": 2} and s["wordings"]["change"]["answered"] == 2
+    assert s["wordings"]["change"]["would_change"]["asked_for_it"] == {"nothing": 1} and s["wordings"]["change"]["distinct_sentences"] == 2
+    assert s["wordings"]["change"]["sentences"][0] == {"group": "asked_for_it", "text": "Still loud."}
+
+
+def test_follow_up_wordings_and_their_checks():
+    from correction import ask
+    ppl = {p["persona_id"]: {**p, "sex": "F", "hh_income": 30000, "years_in_home": 5, "hh_size": 2, "children": 0, "commute_mode": "car",
+                             "employment": "employed", "education": "hs", "building_type": "single"} for p in people()[:2]}
+    t = [{"persona_id": "d6-0000", "group": "asked_for_it", "before": "oppose", "before_reason": "noise", "after_reason": "noise", "asked_for": "limited hours"}]
+    text = ask.follow_up_message("stance", t, ppl, spec(), proximity.places_of(spec()), "Change event time to Afternoon")
+    assert "What was changed from the original version: Change event time to Afternoon" in text and "said: limited hours" in text
+    assert "-> explanation" in text and "-> scope" in text and "-> acceptable_version" in text
+    ok = {"persona_id": "d6-0000", "explanation": "I object to the noise.", "scope": "only near my home", "acceptable_version": "yes"}
+    assert ask.check_follow_up("stance", ok, {"d6-0000"}) is None
+    assert ask.check_follow_up("stance", {**ok, "scope": "maybe"}, {"d6-0000"}) == "scope not in list"
+    assert ask.check_follow_up("stance", {**ok, "explanation": "x" * 500}, {"d6-0000"}) == "explanation missing or too long"
+    assert ask.check_follow_up("change", {"persona_id": "d6-0000", "why": "Too loud.", "would_change": "nothing"}, {"d6-0000"}) is None
+    assert ask.check_follow_up("change", {"persona_id": "nope", "why": "Too loud.", "would_change": "nothing"}, {"d6-0000"}) == "unknown persona_id"
+
+
+def test_loop_saves_each_opponents_answers_and_asks_the_follow_up_after_a_rerun(world):
+    nobody_supports(world)
+    rows = json.loads(world["table"].items["resp#run-0#0"]["rows"])
+    changes = [{"persona_id": r["persona_id"], "one_change": "different location", "reaction": "Too close."} for r in rows if r["stance"] == "oppose"][:40]
+    calls = []
+
+    def fake(variant, targets, people, sp, places, change, run_id, per_call):
+        calls.append((variant, len(targets), change))
+        if variant == "change":
+            return [{"persona_id": t["persona_id"], "why": "It is near me now.", "would_change": "nothing"} for t in targets]
+        return [{"persona_id": t["persona_id"], "explanation": "I do not want it near homes.", "scope": "only near my home", "acceptable_version": "yes"} for t in targets]
+
+    state = {"correction_id": "c1", "status": "running", "stage": "diagnosing", "target": "majority", "target_text": core.TARGETS["majority"],
+             "original_run_id": "run-0", "mode": "fast", "max_reruns": core.MAX_RERUNS, "reruns_used": 0, "attempts": [], "created": 0, "follow_up": "both"}
+    loop.save(state)
+    loop.first_step(state, ask=lambda *a, **k: changes)
+    assert len(loop.load_extra("c1", "asked")) == 40
+    for _ in range(10):
+        state = loop.load("c1")
+        if state["status"] != "running":
+            break
+        loop.run_finished(state, state["waiting"]["run_id"], ask=fake)
+    out = loop.load("c1")
+    a = out["attempts"][0]
+    assert a["asked_then"]["change_made"] == "different location" and a["asked_then"]["by_request"][0]["asked_for_it"] == 40
+    assert a["asked_then"]["by_request"][0]["oppose"] == 0            # the site moved away from everyone who asked
+    assert a["follow_up"]["asked"]["asked_for_it"] == 0 and a["follow_up"]["asked"]["new_opponent"] > 0
+    assert set(a["follow_up"]["wordings"]) == {"change", "stance"} and a["follow_up"]["wordings"]["stance"]["scope"]["all"] == {"only near my home": a["follow_up"]["asked"]["new_opponent"]}
+    assert {c[0] for c in calls} == {"change", "stance"} and calls[0][2].startswith("Move it to the Land Bank lot")
+    saved = loop.load_extra("c1", "followup#1")
+    assert len(saved["targets"]) == a["follow_up"]["asked"]["new_opponent"] and set(saved["answers"]) == {"change", "stance"}
+    got = json.loads(loop.get({"pathParameters": {"id": "c1"}, "queryStringParameters": {"answers": "1"}})["body"])
+    assert len(got["asked_answers"]) == 40 and "1" in got["follow_up_answers"]
+    from contracts.validate import validate
+    assert validate("correction_result", out) == []
