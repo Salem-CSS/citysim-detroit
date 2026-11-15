@@ -30,6 +30,12 @@ LAYERS = {
     "parcels": ("parcel_file_current/FeatureServer/0",
                 ("taxpayer_1", "taxpayer_2", "taxpayer_address", "taxpayer_city", "taxpayer_state", "taxpayer_zip_code")),
     "building_footprints": ("Detroit_Building_Footprints_(Public_Safety)/FeatureServer/0", ()),
+    # Neighborhood context for residents (BACKEND_PLAN.md 7.1, Tier 2). Owner / person name columns are dropped.
+    "crime_incidents_2026": ("RMS_Crime_Incidents_2026/FeatureServer/0", ()),
+    "dlba_owned_properties": ("DLBA_Owned_Properties/FeatureServer/0", ("name",)),
+    "liquor_licenses": ("Liquor_Licenses/FeatureServer/0", ()),
+    "city_parks": ("city_parks/FeatureServer/0", ()),
+    "schools": ("Primary_and_Secondary_Schools/FeatureServer/0", ()),
     "improve_detroit_311": ("improve_detroit/FeatureServer/0", ()),
 }
 TRAFFIC_SERVICE = "yearly_traffic_volume_layers/FeatureServer"

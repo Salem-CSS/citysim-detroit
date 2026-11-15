@@ -36,8 +36,8 @@ Parameters:
   PersonaCard:
     Type: String
     Default: base
-    AllowedValues: [base, tier1]
-    Description: Resident profile sent to the model. base = core census traits; tier1 adds more census fields (measured less accurate on Nov 14)
+    AllowedValues: [base, tier1, tier2, all]
+    Description: Resident profile sent to the model. base = core census traits; tier1 adds more census fields; tier2 adds facts around the home; all = both. See residents/calibration_results.json
   QuoteShare:
     Type: Number
     Default: 0.1
