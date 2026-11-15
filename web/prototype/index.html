@@ -506,14 +506,15 @@ var mapView = (function () {
     return names.roads ? 'roads' : names.transportation ? 'transportation' : null;
   }
   function paintAllRoads() {
-    if (!districts || !map.isStyleLoaded()) return;
+    if (!districts) return;
     var src = basemapSource(), layer = src && roadLayerName(src);
-    if (!layer) return;
+    if (!layer) { map.once('idle', paintAllRoads); return; }
     var area = { type: 'FeatureCollection', features: districts.features.filter(function (f) { return on(f.properties.n); }) };
     var kind = ['coalesce', ['get', 'kind'], ['get', 'class']];
     var filter = ['all', ['==', ['geometry-type'], 'LineString'],
       ['match', kind, ['highway', 'motorway', 'trunk', 'major_road', 'primary', 'secondary', 'tertiary', 'medium_road', 'minor_road', 'minor', 'residential', 'service', 'living_street'], true, false],
       ['within', area]];
+    try {
     if (!map.getLayer('all-roads')) {
       map.addLayer({ id: 'all-roads', type: 'line', source: src, 'source-layer': layer, filter: filter,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -525,6 +526,7 @@ var mapView = (function () {
         } }, map.getLayer('buildings') ? 'buildings' : undefined);
     } else map.setFilter('all-roads', filter);
     map.setLayoutProperty('all-roads', 'visibility', roadsOn ? 'visible' : 'none');
+    } catch (e) { map.once('idle', paintAllRoads); }
   }
   function paintBuildings() {
     if (!map.getLayer('buildings') || !sel.length) return;
