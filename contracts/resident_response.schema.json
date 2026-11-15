@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "resident_response.schema.json",
+  "title": "Resident response",
+  "description": "What each AI resident returns. Stance and reason are required for everyone. A quote is returned only by residents picked for the quote sample (about 1 in 10) and must be omitted otherwise.",
+  "type": "object",
+  "required": [
+    "persona_id",
+    "stance",
+    "reason"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "persona_id": {
+      "type": "string"
+    },
+    "stance": {
+      "enum": [
+        "support",
+        "neutral",
+        "oppose"
+      ]
+    },
+    "reason": {
+      "enum": [
+        "traffic",
+        "noise",
+        "safety",
+        "privacy",
+        "rent",
+        "jobs",
+        "access",
+        "none"
+      ],
+      "description": "The main reason for the stance. 'none' only allowed with neutral."
+    },
+    "quote": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    }
+  }
+}

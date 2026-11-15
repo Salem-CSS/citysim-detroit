@@ -5,19 +5,25 @@
       "id": "safe_walking",
       "label": "Feel safe walking in their neighborhood",
       "real_pct": 70,
-      "question": "How safe do you feel walking in your neighborhood?"
+      "question": "How safe do you feel walking in your neighborhood?",
+      "statement": "I feel safe walking in my neighborhood.",
+      "compare": "support share (agree) vs real_pct"
     },
     {
       "id": "neighborhood_satisfied",
       "label": "Satisfied with their neighborhood",
       "real_pct": 67,
-      "question": "How satisfied are you with your neighborhood as a place to live?"
+      "question": "How satisfied are you with your neighborhood as a place to live?",
+      "statement": "I am satisfied with my neighborhood as a place to live.",
+      "compare": "support share (agree) vs real_pct"
     },
     {
       "id": "right_direction",
       "label": "Detroit headed in the right direction",
       "real_pct": 55,
-      "question": "Is Detroit generally headed in the right direction?"
+      "question": "Is Detroit generally headed in the right direction?",
+      "statement": "Detroit is generally headed in the right direction.",
+      "compare": "support share (agree) vs real_pct"
     }
   ],
   "sanity": [
@@ -37,5 +43,6 @@
       "pct": 87,
       "source": "Christiansburg, VA (Nelsen, Guthrie, Vinsel 2021)"
     }
-  }
+  },
+  "answer_format": "Residents answer support / neutral / oppose; for calibration statements support = agree, oppose = disagree."
 }

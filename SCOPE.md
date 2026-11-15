@@ -75,27 +75,32 @@ Users don't pick from preset scenarios. They type what they want to happen, and 
 
 1. **User types a request:** "Turn the vacant lot at Michigan and 14th into a 6-story apartment building with a ground-floor grocery."
 2. **Agent parses it with tools:** `geocode` (Amazon Location), `find_parcels`, `lookup_trip_rate` (ITE table), and action tools: `add_building`, `modify_road`, `close_street`, `change_transit`, `add_drone_route`, `rezone`.
-3. **Agent writes a scenario spec** (actions, location, districts, assumptions, confidence).
-4. **Confirmation card in the chat:** "Here's what I understood: 180 apartments + 15,000 sq ft grocery on parcel X." Buttons: Edit, Run. This catches misreadings before a run, and shows judges the AI's reasoning.
+3. **Agent writes a scenario spec** in the standard format: actions, each with its **constraints** (the editable blocks), districts, confidence, and one neutral summary sentence.
+4. **Constraint blocks in the left panel:** one block per constraint (site, apartments, floors, ground floor...), each editable, with assumed values tagged. Button: Ask residents. This catches misreadings before a run, and shows judges the AI's reasoning.
 5. **Run:** traffic engine → street loads → each resident's personal impact → sentiment → map and results update.
 6. **Follow-ups edit the spec:** "make it 4 stories," "also cut a lane on Michigan," "compare with the first version."
 
 ```json
 {
-  "actions": [
-    {"type": "add_building", "parcel": "<parcel id>", "uses": [
-      {"use": "apartments", "ite_code": 221, "units": 180},
-      {"use": "grocery", "ite_code": 850, "sqft": 15000}]}
-  ],
-  "districts": [6],
-  "assumptions": ["unit count inferred from 6 floors x lot size"],
-  "confidence": "medium"
+  "spec_id": "spec-123", "version": 1, "status": "draft",
+  "prompt": "Turn the vacant lot at Michigan and 14th into a 6-story apartment building with a ground-floor grocery.",
+  "summary": "Proposal: New building (site: Vacant lot at Michigan and 14th, apartments: 180 homes, floors: 6 floors, ground floor: Grocery, ...) in District 6.",
+  "districts": [6], "confidence": "medium",
+  "actions": [{ "action_id": "add_building-a1", "type": "add_building", "title": "New building",
+    "constraints": [
+      { "id": "floors", "label": "Floors", "type": "number", "value": 6, "unit": "floors", "min": 1, "max": 40, "step": 1, "source": "from_question" },
+      { "id": "homes", "label": "Apartments", "type": "number", "value": 180, "unit": "homes", "source": "assumed", "note": "6 floors x lot size" },
+      { "id": "ground_floor", "label": "Ground floor", "type": "select", "value": "grocery", "options": [...], "source": "from_question" }
+    ]}]
 }
 ```
 
+Each **constraint is one editable block** in the left panel. `source` says where the value came from: `from_question`, `assumed` (shown with an "assumed" tag) or `edited` (the user changed it). Every action type and its constraints are defined once in `contracts/actions.json`, so the agent, the UI and the engine agree.
+
 **Rules that keep it credible**
 
-- A use with no trip rate in the table (a skate park, a mural) gets the nearest code, a **low confidence** label, and its assumption listed.
+- A use with no trip rate in the table (a skate park, a mural) gets the nearest code, a **low confidence** label, and a note on that constraint.
+- Residents are never shown the raw question. They're asked about the spec's neutral `summary` plus their own computed impact, so edits to the blocks count and loaded wording can't sway them.
 - Every scenario spec is saved to DynamoDB, so any run can be replayed and compared.
 - Off-topic or unsafe requests get a polite refusal.
 - Before the demo, write and test **3 demo prompts** end to end (drone, housing, one combined prompt), matched to the demo script. If the agent misreads live, fall back to one of them.
@@ -183,7 +188,7 @@ Sentiment comes from AI residents who are built to match real Detroit demographi
 
 1. **Build residents.** Each district's residents come from its own census data. Start with real anonymized household records from the Census Bureau's ACS microdata (PUMS) for Detroit. Then re-weight them with iterative proportional fitting so they match each district's census-tract totals for age, income, renter or owner, cars, and household size. Draw 500 residents per district, give each a home block, and attach a job location from LODES.
 2. **Give each one their own impact.** Not "a building is proposed" but "your street gets 180 more cars a day," "a drone route passes 200 ft from your house," "your bus now comes every 30 minutes instead of 15." These numbers come straight from the traffic model.
-3. **Ask in a fixed format.** Each resident returns a 1–5 support score, their top concern from a fixed list (traffic, noise, safety, privacy, rent, jobs, access), and a one-sentence quote.
+3. **Ask in a fixed format.** Each resident answers only **support, neutral or oppose**, plus the **one main reason** from a fixed list (traffic, noise, safety, privacy, rent, jobs, access, none). About 1 in 10 residents, picked at random but fixed per proposal, also give a one-sentence quote for the Voices tab.
 4. **Weight and add up.** Post-stratify to census totals so the mix matches the real district. Report support / neutral / oppose, with a range from rerunning with different persona samples.
 5. **Hearing view (stretch).** Re-weight toward the groups that tend to show up at public hearings, and show the gap between "the neighborhood" and "the room."
 
@@ -202,21 +207,29 @@ Census data says who each resident is; the AI decides what that person thinks. S
 | Work location | LODES | Works in Dearborn |
 | Home block | Fitted to the district's census tracts | Links the persona to their street's traffic and noise |
 
-**Resident prompt template** (sent in batches of 25 personas per Bedrock call)
+**Resident prompt** (sent in batches of 25 residents per Bedrock call; code in `residents/prompt.py`)
 
 ```
-You are a Detroit resident: {age}, {tenure} for {years_in_home} years, {vehicles},
-{commute}, household income {income}, lives {distance} from {nearest_arterial} in District {district}.
+SYSTEM: You simulate Detroit residents reacting to a proposed change in their city. Answer separately for each
+resident, as that specific person would, based only on their traits and their personal impact. For each resident give:
+stance (support, neutral or oppose) and the single main reason from the allowed list. Only residents marked
+'quote: yes' also give one short first-person sentence. Do not invent facts or numbers. Return a JSON array only.
 
-Proposed change: {scenario_summary}
-Your personal impact (computed): {impact_lines}
+USER:
+Proposed change: {spec.summary}
 
-Answer as this person, in JSON:
-{"support": 1-5, "top_concern": one of [traffic, noise, safety, privacy, rent, jobs, access, none],
- "reaction": one sentence}
+Residents:
+- [d6-0031] 62-year-old female, owner, 28 years in their home, 1 car, commute: drive_alone, household income $34,000, lives in District 6
+  Personal impact: A drone route passes about 200 ft from your home; 12 fewer cars or vans a day on Michigan Ave
+  quote: yes
+- ...
+
+Allowed stances: support, neutral, oppose
+Allowed reasons: traffic, noise, safety, privacy, rent, jobs, access, none (use 'none' only with neutral)
+Reply: [{"persona_id": "...", "stance": "...", "reason": "..."}]  plus "quote" ONLY when quote is yes
 ```
 
-The `{impact_lines}` come from the traffic engine for that person's block (for example "+60 cars/day on your street, new grocery 0.3 mi away, no change to your bus"). The pipeline: census → persona → personal impact → AI reaction → weighted total by district → calibration check.
+The impact lines come from the traffic engine for that resident's block (`contracts/impacts.schema.json`), written by fixed templates in `engine/impact_lines.py`, not by an AI. The pipeline: question → spec with constraints → user edits → confirmed spec → engine impacts → per-resident impact lines → stance + reason (+ quote) → weighted totals by district → calibration check.
 
 **Calibration: the step that makes it predictive**
 
@@ -322,23 +335,23 @@ The traffic engine's per-block impacts feed the sentiment run, so sentiment alwa
 
 ### Output checks for resident responses
 
-1. Every response is parsed as JSON and validated against the schema: `support` integer 1–5, `top_concern` from the fixed list, `reaction` a string under 200 characters, `persona_id` matching the batch.
+1. Every response is parsed as JSON and validated against `contracts/resident_response.schema.json`: `stance` is support / neutral / oppose, `reason` is from the fixed list (`none` only with neutral), `quote` present (under 200 characters) only for residents in the quote sample, `persona_id` matching the batch.
 2. Any invalid or missing item is retried once (the failed personas only, in a smaller batch).
 3. Still invalid after one retry: dropped from the totals.
 4. Every run logs `responses_valid`, `responses_retried`, `responses_dropped` and the **drop rate**, shown in the Method tab. If the drop rate passes 5%, the run is flagged as unreliable.
 
 ### Calibration plan
 
-Ask all 3,500 residents the same questions DMACS asked real Detroiters, then compare. Source: [DMACS Wave 22, Aug 6 – Oct 1, 2025](https://detroitsurvey.umich.edu).
+Ask all 3,500 residents the same things DMACS asked real Detroiters, then compare. Source: [DMACS Wave 22, Aug 6 – Oct 1, 2025](https://detroitsurvey.umich.edu). Residents still answer only support / neutral / oppose, so each question is asked as a statement where **support = agree**.
 
-| Check | Real Detroit answer | Question asked to residents |
+| Check | Real Detroit answer | Statement put to residents |
 | --- | --- | --- |
-| Feel safe walking in their neighborhood | 70% somewhat or very safe | "How safe do you feel walking in your neighborhood?" |
-| Satisfied with their neighborhood | 67% somewhat, mostly or very satisfied | "How satisfied are you with your neighborhood as a place to live?" |
-| Detroit headed in the right direction | 55% | "Is Detroit generally headed in the right direction?" |
+| Feel safe walking in their neighborhood | 70% somewhat or very safe | "I feel safe walking in my neighborhood." |
+| Satisfied with their neighborhood | 67% somewhat, mostly or very satisfied | "I am satisfied with my neighborhood as a place to live." |
+| Detroit headed in the right direction | 55% | "Detroit is generally headed in the right direction." |
 | Persona sanity check (demographic, not opinion) | 78% have lived in Detroit 20+ years | Computed directly from persona traits |
 
-- **Error measure:** absolute difference in percentage points between the residents' answer and the real one, per check, plus the average across the 3 opinion checks.
+- **Error measure:** absolute difference in percentage points between the residents' support (agree) share and the real share, per check, plus the average across the 3 opinion checks. DMACS has no neutral option, so report the neutral share too.
 - **Target:** average error under 10 points. Shown on screen whatever the result.
 - **When it runs:** once after personas are generated (Saturday night), and again after any prompt change. Results stored in DynamoDB with the persona seed and prompt version.
 

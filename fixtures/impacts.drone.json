@@ -1,0 +1,79 @@
+{
+  "spec_id": "spec-demo-drone",
+  "spec_version": 1,
+  "blocks": [
+    {
+      "block_geoid": "261635214001000",
+      "district": 6,
+      "nearest_street": "Michigan Ave",
+      "cars_per_day_delta": -12,
+      "street_full_before_pct": 32,
+      "street_full_after_pct": 32,
+      "distance_to_site_m": 350,
+      "in_noise_zone": true,
+      "distance_to_flight_path_ft": 200,
+      "bus_wait_min_before": null,
+      "bus_wait_min_after": null
+    },
+    {
+      "block_geoid": "261635108002004",
+      "district": 5,
+      "nearest_street": "Woodward Ave",
+      "cars_per_day_delta": -5,
+      "street_full_before_pct": 41,
+      "street_full_after_pct": 41,
+      "distance_to_site_m": 2400,
+      "in_noise_zone": true,
+      "distance_to_flight_path_ft": 450,
+      "bus_wait_min_before": null,
+      "bus_wait_min_after": null
+    },
+    {
+      "block_geoid": "261635456001012",
+      "district": 7,
+      "nearest_street": "Grand River Ave",
+      "cars_per_day_delta": 0,
+      "street_full_before_pct": 44,
+      "street_full_after_pct": 44,
+      "distance_to_site_m": 6100,
+      "in_noise_zone": false,
+      "distance_to_flight_path_ft": null,
+      "bus_wait_min_before": null,
+      "bus_wait_min_after": null
+    }
+  ],
+  "persona_impacts": [
+    {
+      "persona_id": "d6-0031",
+      "block_geoid": "261635214001000",
+      "lines": [
+        "A drone route passes about 200 ft from your home",
+        "12 fewer delivery vans a day on Michigan Ave"
+      ],
+      "flags": {
+        "in_noise_zone": true
+      }
+    },
+    {
+      "persona_id": "d5-0112",
+      "block_geoid": "261635108002004",
+      "lines": [
+        "A drone route passes about 450 ft from your home",
+        "Drone deliveries available in your area"
+      ],
+      "flags": {
+        "in_noise_zone": true
+      }
+    },
+    {
+      "persona_id": "d7-0207",
+      "block_geoid": "261635456001012",
+      "lines": [
+        "No direct change near your home"
+      ],
+      "flags": {
+        "in_noise_zone": false
+      }
+    }
+  ]
+}

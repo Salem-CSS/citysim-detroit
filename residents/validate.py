@@ -1,19 +1,25 @@
-"""Output checks for resident responses (SCOPE.md, Implementation rules)."""
-from residents.prompt import CONCERNS
+"""Output checks for resident responses (contracts/resident_response.schema.json)."""
+from contracts.spec import REASONS, STANCES
 
-def check(item: dict, expected_ids: set[str]) -> str | None:
-    """Return None if valid, else the reason."""
+def check(item: dict, expected_ids: set[str], wants_quote: bool) -> str | None:
+    """Return None if valid, else why. Strips a quote that wasn't asked for (does not fail)."""
+    if not isinstance(item, dict):
+        return "not an object"
     if item.get("persona_id") not in expected_ids:
         return "unknown persona_id"
-    s = item.get("support")
-    if not isinstance(s, int) or not 1 <= s <= 5:
-        return "support not an integer 1-5"
-    if item.get("top_concern") not in CONCERNS:
-        return "top_concern not in list"
-    r = item.get("reaction")
-    if not isinstance(r, str) or not r or len(r) >= 200:
-        return "reaction missing or 200+ chars"
+    if item.get("stance") not in STANCES:
+        return "stance not support/neutral/oppose"
+    if item.get("reason") not in REASONS:
+        return "reason not in list"
+    if item["reason"] == "none" and item["stance"] != "neutral":
+        return "reason 'none' only allowed with neutral"
+    q = item.get("quote")
+    if wants_quote:
+        if not isinstance(q, str) or not q.strip() or len(q) > 200:
+            return "quote missing or over 200 chars"
+    elif q is not None:
+        item.pop("quote")
+    extra = set(item) - {"persona_id", "stance", "reason", "quote"}
+    for k in extra:
+        item.pop(k)
     return None
-
-def stance(support: int) -> str:
-    return "support" if support >= 4 else "neutral" if support == 3 else "oppose"

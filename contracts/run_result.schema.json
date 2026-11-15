@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "run_result.schema.json",
   "title": "Run result",
-  "description": "Everything the frontend shows after a run. Percentages are 0-100. Load is volume/capacity (0-1+); the UI shows it as '% full'.",
+  "description": "Everything the frontend shows after a run. Residents answer only support / neutral / oppose plus one reason (and a quote for a ~10% sample). Percentages are 0-100. Load is volume/capacity; the UI shows it as '% full'.",
   "type": "object",
   "required": [
     "spec_id",
     "run_id",
     "status",
     "overall",
-    "worries",
+    "reasons",
     "districts",
     "segments",
     "run_stats"
@@ -67,34 +67,6 @@
       ],
       "description": "Census-weighted across all selected districts."
     },
-    "worries": {
-      "type": "array",
-      "description": "Share of residents naming each top concern, sorted desc.",
-      "items": {
-        "type": "object",
-        "required": [
-          "concern",
-          "share"
-        ],
-        "properties": {
-          "concern": {
-            "enum": [
-              "traffic",
-              "noise",
-              "safety",
-              "privacy",
-              "rent",
-              "jobs",
-              "access",
-              "none"
-            ]
-          },
-          "share": {
-            "type": "number"
-          }
-        }
-      }
-    },
     "groups": {
       "type": "array",
       "description": "Support by resident group (Who tab).",
@@ -133,7 +105,7 @@
         "required": [
           "district",
           "split",
-          "top_concern"
+          "top_reason"
         ],
         "properties": {
           "district": {
@@ -166,7 +138,10 @@
               }
             }
           },
-          "top_concern": {
+          "n": {
+            "type": "integer"
+          },
+          "top_reason": {
             "enum": [
               "traffic",
               "noise",
@@ -177,9 +152,6 @@
               "access",
               "none"
             ]
-          },
-          "n": {
-            "type": "integer"
           }
         }
       }
@@ -191,7 +163,8 @@
         "required": [
           "persona_id",
           "text",
-          "stance"
+          "stance",
+          "reason"
         ],
         "properties": {
           "persona_id": {
@@ -214,6 +187,18 @@
           },
           "district": {
             "type": "integer"
+          },
+          "reason": {
+            "enum": [
+              "traffic",
+              "noise",
+              "safety",
+              "privacy",
+              "rent",
+              "jobs",
+              "access",
+              "none"
+            ]
           }
         }
       }
@@ -287,7 +272,13 @@
           "support": {
             "type": "number"
           },
-          "top_concern": {
+          "n": {
+            "type": "integer"
+          },
+          "in_noise_band": {
+            "type": "boolean"
+          },
+          "top_reason": {
             "enum": [
               "traffic",
               "noise",
@@ -298,12 +289,6 @@
               "access",
               "none"
             ]
-          },
-          "n": {
-            "type": "integer"
-          },
-          "in_noise_band": {
-            "type": "boolean"
           }
         }
       }
@@ -378,8 +363,46 @@
         },
         "seconds": {
           "type": "number"
+        },
+        "quotes_requested": {
+          "type": "integer"
         }
       }
+    },
+    "reasons": {
+      "type": "array",
+      "description": "Share of all residents giving each reason (any stance), sorted desc.",
+      "items": {
+        "type": "object",
+        "required": [
+          "reason",
+          "share"
+        ],
+        "properties": {
+          "reason": {
+            "enum": [
+              "traffic",
+              "noise",
+              "safety",
+              "privacy",
+              "rent",
+              "jobs",
+              "access",
+              "none"
+            ]
+          },
+          "share": {
+            "type": "number"
+          },
+          "share_among_oppose": {
+            "type": "number",
+            "description": "Share of opposing residents giving this reason."
+          }
+        }
+      }
+    },
+    "spec_version": {
+      "type": "integer"
     }
   }
 }

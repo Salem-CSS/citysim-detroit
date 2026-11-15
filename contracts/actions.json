@@ -1,0 +1,451 @@
+{
+  "version": "2",
+  "description": "Every engine action and the constraints (editable blocks) it carries. The agent fills values; the UI draws one block per constraint with show='panel'; the engine reads values by id.",
+  "reasons": [
+    "traffic",
+    "noise",
+    "safety",
+    "privacy",
+    "rent",
+    "jobs",
+    "access",
+    "none"
+  ],
+  "stances": [
+    "support",
+    "neutral",
+    "oppose"
+  ],
+  "actions": [
+    {
+      "type": "add_drone_route",
+      "title": "Drone delivery route",
+      "icon": "drone",
+      "constraints": [
+        {
+          "id": "hub",
+          "label": "Takes off from",
+          "type": "select",
+          "options": [
+            {
+              "value": "newlab",
+              "label": "Newlab rooftop"
+            },
+            {
+              "value": "mc_garage",
+              "label": "Michigan Central garage"
+            },
+            {
+              "value": "bagley_lot",
+              "label": "Corktown lot on Bagley"
+            }
+          ],
+          "default": "newlab",
+          "engine_hint": "hub location"
+        },
+        {
+          "id": "flights_per_day",
+          "label": "Flights a day",
+          "type": "number",
+          "default": 200,
+          "unit": "flights",
+          "min": 0,
+          "max": 1000,
+          "step": 25
+        },
+        {
+          "id": "altitude_ft",
+          "label": "Flying height",
+          "type": "select",
+          "options": [
+            {
+              "value": 200,
+              "label": "200 ft"
+            },
+            {
+              "value": 300,
+              "label": "300 ft"
+            },
+            {
+              "value": 400,
+              "label": "400 ft"
+            }
+          ],
+          "default": 200,
+          "ui": "segmented",
+          "engine_hint": "narrows the noise zone as it rises"
+        },
+        {
+          "id": "flying_hours",
+          "label": "Flying hours",
+          "type": "select",
+          "options": [
+            {
+              "value": "7-21",
+              "label": "7 AM to 9 PM"
+            },
+            {
+              "value": "8-20",
+              "label": "8 AM to 8 PM"
+            },
+            {
+              "value": "0-24",
+              "label": "24 hours"
+            }
+          ],
+          "default": "7-21"
+        },
+        {
+          "id": "van_share_replaced",
+          "label": "Delivery vans it replaces",
+          "type": "select",
+          "options": [
+            {
+              "value": 0.1,
+              "label": "1 in 10"
+            },
+            {
+              "value": 0.2,
+              "label": "1 in 5"
+            },
+            {
+              "value": 0.33,
+              "label": "1 in 3"
+            }
+          ],
+          "default": 0.2
+        },
+        {
+          "id": "path",
+          "label": "Flight path",
+          "type": "path",
+          "default": null,
+          "show": "map"
+        }
+      ]
+    },
+    {
+      "type": "add_building",
+      "title": "New building",
+      "icon": "building",
+      "constraints": [
+        {
+          "id": "site",
+          "label": "Site",
+          "type": "select",
+          "options": [
+            {
+              "value": "michigan_14th",
+              "label": "Vacant lot at Michigan and 14th"
+            },
+            {
+              "value": "bagley_16th",
+              "label": "Lot on Bagley at 16th"
+            },
+            {
+              "value": "trumbull_lot",
+              "label": "Parking lot on Trumbull"
+            }
+          ],
+          "default": "michigan_14th",
+          "engine_hint": "parcel"
+        },
+        {
+          "id": "homes",
+          "label": "Apartments",
+          "type": "number",
+          "default": 400,
+          "unit": "homes",
+          "min": 0,
+          "max": 2000,
+          "step": 25,
+          "engine_hint": "ITE 221"
+        },
+        {
+          "id": "floors",
+          "label": "Floors",
+          "type": "number",
+          "default": 7,
+          "unit": "floors",
+          "min": 1,
+          "max": 40,
+          "step": 1
+        },
+        {
+          "id": "ground_floor",
+          "label": "Ground floor",
+          "type": "select",
+          "options": [
+            {
+              "value": "homes",
+              "label": "Homes"
+            },
+            {
+              "value": "shops",
+              "label": "Shops"
+            },
+            {
+              "value": "grocery",
+              "label": "Grocery"
+            }
+          ],
+          "default": "homes",
+          "ui": "segmented",
+          "engine_hint": "shops ITE 820, grocery ITE 850"
+        },
+        {
+          "id": "retail_sqft",
+          "label": "Ground-floor shop space",
+          "type": "number",
+          "default": 0,
+          "unit": "sq ft",
+          "min": 0,
+          "max": 100000,
+          "step": 1000,
+          "show_if": {
+            "ground_floor": [
+              "shops",
+              "grocery"
+            ]
+          }
+        },
+        {
+          "id": "parking_per_home",
+          "label": "Parking spaces per home",
+          "type": "select",
+          "options": [
+            {
+              "value": 0,
+              "label": "None"
+            },
+            {
+              "value": 0.5,
+              "label": "0.5"
+            },
+            {
+              "value": 1,
+              "label": "1"
+            }
+          ],
+          "default": 0.5
+        }
+      ]
+    },
+    {
+      "type": "modify_road",
+      "title": "Road change",
+      "icon": "road",
+      "constraints": [
+        {
+          "id": "street",
+          "label": "Street",
+          "type": "select",
+          "options": [
+            {
+              "value": "michigan_trumbull_14th",
+              "label": "Michigan Ave (Trumbull to 14th)"
+            },
+            {
+              "value": "vernor_w",
+              "label": "W Vernor Hwy"
+            },
+            {
+              "value": "trumbull",
+              "label": "Trumbull Ave"
+            }
+          ],
+          "default": "michigan_trumbull_14th",
+          "engine_hint": "segment ids"
+        },
+        {
+          "id": "change",
+          "label": "Change",
+          "type": "select",
+          "options": [
+            {
+              "value": "remove_lanes",
+              "label": "Remove car lanes"
+            },
+            {
+              "value": "close",
+              "label": "Close to cars"
+            },
+            {
+              "value": "bike_lane",
+              "label": "Add bike lane only"
+            }
+          ],
+          "default": "remove_lanes"
+        },
+        {
+          "id": "lanes_removed",
+          "label": "Car lanes removed",
+          "type": "number",
+          "default": 1,
+          "unit": "each way",
+          "min": 0,
+          "max": 3,
+          "step": 1,
+          "show_if": {
+            "change": [
+              "remove_lanes"
+            ]
+          }
+        },
+        {
+          "id": "bike_lane",
+          "label": "Add a protected bike lane",
+          "type": "select",
+          "options": [
+            {
+              "value": true,
+              "label": "Yes"
+            },
+            {
+              "value": false,
+              "label": "No"
+            }
+          ],
+          "default": false,
+          "ui": "segmented"
+        }
+      ]
+    },
+    {
+      "type": "change_transit",
+      "title": "Bus service",
+      "icon": "bus",
+      "constraints": [
+        {
+          "id": "route",
+          "label": "Bus route",
+          "type": "select",
+          "options": [
+            {
+              "value": "29",
+              "label": "29 Linwood"
+            },
+            {
+              "value": "16",
+              "label": "16 Dexter"
+            },
+            {
+              "value": "27",
+              "label": "27 Joy"
+            }
+          ],
+          "default": "29",
+          "engine_hint": "GTFS route_id"
+        },
+        {
+          "id": "buses_per_hour",
+          "label": "Buses per hour",
+          "type": "number",
+          "default": 2,
+          "unit": "per hour",
+          "min": 0,
+          "max": 12,
+          "step": 1
+        }
+      ]
+    },
+    {
+      "type": "rezone",
+      "title": "Rezoning",
+      "icon": "zone",
+      "constraints": [
+        {
+          "id": "parcels",
+          "label": "Parcels",
+          "type": "parcels",
+          "default": [],
+          "show": "map"
+        },
+        {
+          "id": "new_zone",
+          "label": "New zoning",
+          "type": "select",
+          "options": [
+            {
+              "value": "R3",
+              "label": "R3 low-density homes"
+            },
+            {
+              "value": "R5",
+              "label": "R5 medium-density homes"
+            },
+            {
+              "value": "B4",
+              "label": "B4 general business"
+            },
+            {
+              "value": "SD2",
+              "label": "SD2 mixed use"
+            }
+          ],
+          "default": "R5"
+        }
+      ]
+    },
+    {
+      "type": "add_event_surge",
+      "title": "Event venue",
+      "icon": "stadium",
+      "constraints": [
+        {
+          "id": "site",
+          "label": "Site",
+          "type": "select",
+          "options": [
+            {
+              "value": "corktown_lot",
+              "label": "Corktown lot at Michigan and Trumbull"
+            },
+            {
+              "value": "eastern_market",
+              "label": "Eastern Market lot"
+            }
+          ],
+          "default": "corktown_lot"
+        },
+        {
+          "id": "seats",
+          "label": "Seats",
+          "type": "number",
+          "default": 6000,
+          "unit": "seats",
+          "min": 0,
+          "max": 70000,
+          "step": 500
+        },
+        {
+          "id": "events_per_year",
+          "label": "Events a year",
+          "type": "number",
+          "default": 40,
+          "unit": "events",
+          "min": 0,
+          "max": 365,
+          "step": 5
+        },
+        {
+          "id": "event_time",
+          "label": "Typical start time",
+          "type": "select",
+          "options": [
+            {
+              "value": "evening",
+              "label": "Evening"
+            },
+            {
+              "value": "afternoon",
+              "label": "Afternoon"
+            }
+          ],
+          "default": "evening",
+          "ui": "segmented"
+        }
+      ]
+    }
+  ]
+}
