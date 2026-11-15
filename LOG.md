@@ -40,7 +40,7 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 | Lane | Owner | Status | Last update |
 | --- | --- | --- | --- |
 | Data (census, LODES, Detroit open data → S3) | Partner | Not started. Scripts ready; follow DATA_SETUP.md | 11-14 17:50 |
-| Buildings (Overture → Athena → tiles) | Salem | **Built in Athena** (335,338 bldgs, 95% measured height). Tile exporter + `web/prototype/map3d.html` done; tiles not generated/hosted yet | 11-14 19:35 |
+| Buildings (Overture → Athena → tiles) | Salem | **Built in Athena** (335,338 bldgs, 95% measured height). Tiles committed (465 files, 12.8 MB); live at `/map3d.html`. District tags pending | 11-14 19:45 |
 | Engine (traffic Lambda) | — | Load, trips, impact lines work; 6 actions are stubs taking v2 `values` | 11-14 19:05 |
 | Residents (Bedrock) | — | v2 framework: prompt + checks + tests done (stance/reason/quote sample); batching stubbed | 11-14 19:05 |
 | Agent + Infra (Strands, AWS stack) | — | Not started | 11-14 17:50 |
@@ -49,7 +49,6 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Open questions / handoffs
 
-- **For Salem / Partner:** where do building tiles live? (a) commit `web/prototype/buildings/` (~15–20 MB) so Vercel serves them, or (b) S3/CloudFront and use `map3d.html?src=`. Currently gitignored.
 - **For Partner:** after DATA_SETUP.md, rerun `python -m data.buildings.export_tiles --districts data/raw/detroit/council_districts_2026.geojson` so buildings carry their district.
 - **For Partner:** contracts changed to v2 (see 19:05 entry). If your AI already wrote code against the old `top_concern` / 1–5 `support` / `assumptions` fields, update it.
 - **For Partner:** run DATA_SETUP.md, then BUILDINGS.md. Post bucket name, object count and building totals here when done.
@@ -59,6 +58,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 ---
 
 ## Entries
+
+### 2026-11-14 19:45 ET · Salem (AI) · Data
+**Did:** Exported `overture.detroit_buildings` as one Parquet (Athena CTAS `detroit_buildings_export`, bucket_count 1), downloaded it, ran `export_tiles`: 335,338 buildings in 465 tiles, 12.8 MB, counts match Athena. Checked the render locally (downtown, stadiums, RenCen correct). Committed tiles so Vercel serves `/map3d.html`.
+**Files:** web/prototype/buildings/** (generated), .gitignore (tiles no longer ignored), BUILDINGS.md, LOG.md
+**Contracts changed:** none
+**Decisions:** Tiles live in the repo under web/prototype/buildings/ (not data/processed). Regenerate + commit when district tagging lands.
+**Blocked / needs:** council districts GeoJSON (Partner, DATA_SETUP.md) to tag buildings by district.
+**Next:** use map3d as the base map in the main prototype / Next.js.
 
 ### 2026-11-14 19:35 ET · Salem (AI) · Data
 **Did:** Built accurate Detroit buildings in Athena (us-west-2, account 574246332084): Overture 2026-10-21.0 → bbox cut → clipped to the Overture `Detroit` locality polygon → height filled. 335,338 buildings; 318,480 measured height, 94 from floors, 16,764 defaulted; median 5.1 m, max 221.5 m, 105 at 50 m+. Scripted the whole thing (SQL + boto3 runner), wrote a tile exporter and a deck.gl 3D map page (tested on synthetic tiles).

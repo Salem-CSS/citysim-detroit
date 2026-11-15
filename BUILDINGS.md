@@ -43,7 +43,7 @@ Results (Overture release 2026-10-21.0, already built in account 574246332084, t
 
 Overture counts fewer buildings than the city's 419,882 figure in SCOPE.md, mostly garages and sheds missing from the footprint sources. Fine for the map; add SEMCOG (section 4) if you need them.
 
-Tiles are generated data and gitignored (`web/prototype/buildings/`). To show them on the deployed site, either commit them (decision pending, see LOG.md) or host them on S3/CloudFront and open `map3d.html?src=https://<host>/buildings/`.
+Tiles (465 files, 12.8 MB) are committed in `web/prototype/buildings/` so Vercel serves them: https://citysim-detroit.vercel.app/map3d.html. Regenerate with `export_tiles` (e.g. after adding `--districts`) and commit. To host elsewhere, open `map3d.html?src=https://<host>/buildings/`.
 
 ---
 
