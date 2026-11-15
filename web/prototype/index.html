@@ -864,16 +864,16 @@ var mapView = (function () {
     var pd = route ? ease(t / DRAW) : 1;                                         // 1. the route draws itself
     var head = lerp(a, b, pd);
     if (route) L.push(new deck.PathLayer({ id: 'b-route', data: [{ p: [a, head] }], getPath: function (d) { return d.p; },
-      widthUnits: 'pixels', getWidth: 6, getColor: [56, 189, 248, 235], capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
+      widthUnits: 'pixels', getWidth: 8, getColor: [56, 189, 248, 245], capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
     var stops = route ? [{ p: a, s: 0 }, { p: b, s: DRAW * 0.85 }] : [{ p: a, s: 0 }];  // 2. stop poles rise, ripple out
     L.push(new deck.ScatterplotLayer({ id: 'b-ripple', data: stops, getPosition: function (d) { return d.p; }, stroked: true, filled: false,
       radiusUnits: 'meters', lineWidthUnits: 'pixels', getLineWidth: 3,
       getRadius: function (d) { return 10 + 90 * ease((t - d.s) / 900); },
       getLineColor: function (d) { var k = (t - d.s) / 900; return [56, 189, 248, k < 0 || k > 1 ? 0 : Math.round(255 * (1 - k))]; },
       updateTriggers: { getRadius: t, getLineColor: t } }));
-    L.push(new deck.ColumnLayer({ id: 'b-pole', data: stops, diskResolution: 12, radius: 3, extruded: true, getPosition: function (d) { return d.p; },
+    L.push(new deck.ColumnLayer({ id: 'b-pole', data: stops, diskResolution: 12, radius: 5, extruded: true, getPosition: function (d) { return d.p; },
       getElevation: function (d) { return 26 * ease((t - d.s) / RISE); }, getFillColor: [248, 250, 252, 255], updateTriggers: { getElevation: t } }));
-    L.push(new deck.ColumnLayer({ id: 'b-sign', data: stops, diskResolution: 4, radius: 9, extruded: true, angle: 45,
+    L.push(new deck.ColumnLayer({ id: 'b-sign', data: stops, diskResolution: 4, radius: 16, extruded: true, angle: 45,
       getPosition: function (d) { return [d.p[0], d.p[1], 26 * ease((t - d.s) / RISE)]; },
       getElevation: function (d) { return (t - d.s) > RISE * 0.6 ? 7 * ease((t - d.s - RISE * 0.6) / 300) : 0; }, getFillColor: [37, 99, 235, 255],
       updateTriggers: { getPosition: t, getElevation: t } }));
@@ -885,7 +885,7 @@ var mapView = (function () {
     return L;
   }
   var BUS = (function () {                   // 12 m x 2.6 m x 3.2 m box, long axis = x
-    var x = 6, y = 1.3, z = 3.2, P = [], N = [];
+    var x = 14, y = 3.5, z = 7, P = [], N = [];
     function q(a, b, c, d, n) { [a, b, c, a, c, d].forEach(function (v) { P.push(v[0], v[1], v[2]); N.push(n[0], n[1], n[2]); }); }
     var v = [[-x,-y,0],[x,-y,0],[x,y,0],[-x,y,0],[-x,-y,z],[x,-y,z],[x,y,z],[-x,y,z]];
     q(v[4],v[5],v[6],v[7],[0,0,1]); q(v[0],v[1],v[5],v[4],[0,-1,0]); q(v[2],v[3],v[7],v[6],[0,1,0]); q(v[1],v[2],v[6],v[5],[1,0,0]); q(v[3],v[0],v[4],v[7],[-1,0,0]);
@@ -1067,8 +1067,10 @@ var mapView = (function () {
       build = { kind: kind, a: a, b: b || null, t0: performance.now() + 700 };
       var pts = b ? [a, b] : [a], lo = [Math.min.apply(null, pts.map(function (p) { return p[0]; })), Math.min.apply(null, pts.map(function (p) { return p[1]; }))],
           hi = [Math.max.apply(null, pts.map(function (p) { return p[0]; })), Math.max.apply(null, pts.map(function (p) { return p[1]; }))];
-      var cam = map.cameraForBounds([lo, hi], { padding: 160, maxZoom: 16.5 }) || {};
-      map.easeTo({ center: cam.center || a, zoom: Math.min(cam.zoom || 16, 16.5), pitch: 55, bearing: map.getBearing(), duration: 700 });
+      var left = document.getElementById('app').classList.contains('has-blocks') ? 400 : 60;
+      var pad = { top: 140, bottom: 140, left: left, right: 460 };
+      var cam = map.cameraForBounds([lo, hi], { padding: pad, maxZoom: 16 }) || {};
+      map.easeTo({ center: cam.center || a, zoom: Math.min((cam.zoom || 16) - 0.4, 16), pitch: 50, bearing: map.getBearing(), duration: 700 });
       requestAnimationFrame(buildLoop);
       return 700 + (b ? DRAW + DRIVE : RISE + 300);
     },
