@@ -20,3 +20,7 @@ node_modules/
 # aws
 .aws-sam/
 cdk.out/
+# SAM build staging
+infra/.build/
+.aws-sam/
+samconfig.toml

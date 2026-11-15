@@ -43,12 +43,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 | Buildings (Overture → Athena → tiles) | Salem | **Built in Athena** (335,338 bldgs, 95% measured height). Vector tiles (z10-14, ~20 MB) power the main prototype map + `/map3d.html`. Districts approximate until real file | 11-14 20:00 |
 | Engine (traffic Lambda) | — | Load, trips, impact lines work; 6 actions are stubs taking v2 `values` | 11-14 19:05 |
 | Residents (Bedrock) | — | v2 framework: prompt + checks + tests done (stance/reason/quote sample); batching stubbed | 11-14 19:05 |
-| Agent + Infra (Strands, AWS stack) | — | Not started | 11-14 17:50 |
+| Agent + Infra (AWS stack) | Salem | `infra/` SAM stack written (not deployed yet). `POST /scenario` works in tests (Bedrock → validated v2 spec); run pipeline wired with stubs | 11-14 20:35 |
 | Web (Next.js + deck.gl) | Salem | Prototype now on a real 3D Detroit map (MapLibre + deck.gl overlays); Next.js not started | 11-14 20:00 |
 | Deploy (Vercel) | Salem | **Live: https://citysim-detroit.vercel.app** (auto-deploys from `main`) | 11-14 17:58 |
 
 ## Open questions / handoffs
 
+- **For Partner:** read AWS_ACCESS.md. Salem adds your IAM user; you deploy your own `citysim-partner` stack with `./infra/deploy.sh partner`. Your lane: `residents/batch.py` + `aggregate.py` and `data/`/personas. The pipeline already calls them (see `infra/runs.py`).
+- **For Salem:** enable Bedrock model access (Nova Pro + Nova Lite) in us-east-1 and check the Free plan allows it; then `./infra/deploy.sh salem` (CloudShell works).
 - **For Partner:** after DATA_SETUP.md, rerun `python -m data.buildings.export_tiles --districts data/raw/detroit/council_districts_2026.geojson` so buildings carry their district.
 - **For Partner:** contracts changed to v2 (see 19:05 entry). If your AI already wrote code against the old `top_concern` / 1–5 `support` / `assumptions` fields, update it.
 - **For Partner:** run DATA_SETUP.md, then BUILDINGS.md. Post bucket name, object count and building totals here when done.
@@ -58,6 +60,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 ---
 
 ## Entries
+
+### 2026-11-14 20:35 ET · Salem (AI) · Agent+Infra
+**Did:** Backend skeleton as code. `agent/handler.py` = `POST /scenario`: question → Bedrock (tool call with the action catalog from contracts/actions.json) → values checked against the contract (clamped / defaulted with notes) → draft v2 spec with `from_question` / `assumed` / `edited` sources and a summary built from the values. `infra/template.yaml` (SAM): HTTP API, scenario + run Lambdas, DynamoDB runs table, Step Functions (engine → Map over 25-resident batches, 10 at a time → aggregate). Stubbed steps record `not_implemented` instead of failing. `infra/deploy.sh <stage>` deploys a per-person stack. Prototype calls `/scenario` when `web/prototype/config.js` sets `CITYSIM_API`, and falls back to the offline mock otherwise.
+**Files:** agent/handler.py, agent/tests/test_handler.py, infra/{template.yaml,runs.py,deploy.sh,README.md,__init__.py}, AWS_ACCESS.md, web/prototype/{config.js,index.html}, CLAUDE.md, .gitignore
+**Contracts changed:** none (agent output validates against scenario_spec.schema.json in tests)
+**Decisions:** SAM (not CDK). Stacks: citysim-salem / citysim-partner / citysim-main in us-east-1. Default models are parameters: AgentModelId `us.amazon.nova-pro-v1:0`, ResidentModelId `us.amazon.nova-lite-v1:0` (switch to Nova 2 Lite once enabled). No Strands for the agent; one Bedrock Converse tool call keeps it fast and simple.
+**Blocked / needs:** Bedrock model access + a first deploy (Salem). Partner IAM user (Salem).
+**Next:** deploy citysim-salem, set CITYSIM_API, try real questions; then the engine for add_drone_route.
 
 ### 2026-11-14 20:20 ET · Salem (AI) · Web
 **Did:** Resident dots are white before a run (were grey). After a run they keep the stance colors: blue support, grey neutral, orange oppose.
