@@ -18,6 +18,11 @@ import uuid
 
 CORS = {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"}
 BATCH = 25
+# Two ways to ask residents:
+#   fast      groups of 25, every group sent at once (about 10 s; Nov 15 test: 10.5 s for two districts against 20 s
+#             with 10 groups in flight; one four-district run fits inside the account's 200 model calls a minute)
+#   accurate  one resident per call, 10 batches in flight (the 200-a-minute cap sets the pace)
+# Smaller groups were tested on Nov 15 and are no more stable than groups of 25, so there is no middle setting.
 MODES = {"fast": 25, "accurate": 1}      # residents per model call
 
 
@@ -132,7 +137,8 @@ def engine_step(event, context=None):
 
 
 def plan_batches(event, context=None):
-    """Split the personas for the chosen districts into 25-resident batches (ids only; residents load from S3)."""
+    """Split the personas for the chosen districts into batches of about 25 (ids only; residents load from S3).
+    A batch holds a whole number of model calls, so no resident ends up in a smaller group than the mode intends."""
     per = int(os.environ.get("PERSONAS_PER_DISTRICT", "500"))
     ids = [f"d{d}-{i:04d}" for d in event["spec"].get("districts", []) for i in range(per)]
     from engine import proximity
@@ -140,12 +146,16 @@ def plan_batches(event, context=None):
     places = proximity.places_of(event["spec"])
     computed, lines = False, {}       # per-resident lines are built in the batch from places and street effects
     effects = (event.get("engine") or {}).get("street_effects") or []
-    per_call = MODES.get(event.get("mode") or default_mode(), 1)
-    batches = [{"run_id": event["run_id"], "batch": n, "spec": spec, "residents_per_call": per_call, "persona_ids": ids[i:i + BATCH], "places": places, "street_effects": effects,
-                "impacts_computed": computed, "impact_lines": {p: lines[p] for p in ids[i:i + BATCH] if p in lines}}
-               for n, i in enumerate(range(0, len(ids), BATCH))]
-    _update(event["run_id"], batches=len(batches), total=len(ids))
-    return {**event, "batches": batches}
+    mode = event.get("mode") or default_mode()
+    per_call = MODES.get(mode, 1)
+    size, at_once = BATCH, None                      # one group of 25 per batch in Fast; the stack setting in Accurate
+    batches = [{"run_id": event["run_id"], "batch": n, "spec": spec, "residents_per_call": per_call, "calls_at_once": at_once,
+                "persona_ids": ids[i:i + size], "places": places, "street_effects": effects,
+                "impacts_computed": computed, "impact_lines": {p: lines[p] for p in ids[i:i + size] if p in lines}}
+               for n, i in enumerate(range(0, len(ids), size))]
+    _update(event["run_id"], batches=len(batches), total=len(ids), per_call=per_call)
+    # Accurate: 10 batches in flight, as before. Fast: every batch at once.
+    return {**event, "batches": batches, "max_concurrency": 10 if mode == "accurate" else len(batches)}
 
 
 def resident_batch(event, context=None):

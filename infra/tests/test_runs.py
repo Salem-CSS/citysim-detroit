@@ -22,9 +22,10 @@ SPEC = {"spec_id": "s1", "version": 1, "summary": "Proposal: a test.", "district
 def test_mode_sets_residents_per_call(monkeypatch):
     monkeypatch.setenv("PERSONAS_PER_DISTRICT", "50")
     monkeypatch.setattr(runs, "_table", lambda: Table({}))
-    for mode, per_call in (("fast", 25), ("accurate", 1)):
+    for mode, per_call, flight in (("fast", 25, 2), ("accurate", 1, 10)):
         out = runs.plan_batches({"run_id": "r1", "spec": SPEC, "mode": mode})
         assert len(out["batches"]) == 2 and {b["residents_per_call"] for b in out["batches"]} == {per_call}
+        assert out["max_concurrency"] == flight          # Fast: every group at once; Accurate: 10 in flight
 
 
 def test_no_mode_uses_the_stack_default(monkeypatch):
