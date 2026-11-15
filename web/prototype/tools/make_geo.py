@@ -71,7 +71,10 @@ def main():
     over = []
     for name, road, load, parts in CORRIDORS:
         g = linemerge(unary_union([wkt.loads(raw[p]) for p in parts if p in raw]))
-        over.append(feat(g, kind="artery", road=road, name=name, load=load))
+        for df in dists:                      # split per district so the map can show only selected ones
+            piece = g.intersection(Polygon(REGIONS[df["properties"]["n"]]).intersection(city))
+            if not piece.is_empty and piece.length > 0:
+                over.append(feat(piece, kind="artery", road=road, name=name, load=load, d=df["properties"]["n"]))
     over += [feat(route, kind="drone_route"), feat(band, kind="noise_band"),
              feat(Point(MC_LL), kind="hub", name="Michigan Central · Newlab")]
     (OUT / "overlays.geojson").write_text(json.dumps(r6(fc(over))))

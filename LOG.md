@@ -59,6 +59,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 20:15 ET · Salem (AI) · Web
+**Did:** Roads only show inside the selected districts (corridors pre-split per district in overlays.geojson, property `d`). Added a Roads on/off toggle in the map key; roads show before and after a run while the toggle is on.
+**Files:** web/prototype/tools/make_geo.py, web/prototype/geo/overlays.geojson, web/prototype/index.html, LOG.md
+**Contracts changed:** none
+**Decisions:** Road pieces are split by the APPROXIMATE district shapes; rerun make_geo.py when the real districts land.
+**Blocked / needs:** none
+**Next:** —
+
 ### 2026-11-14 20:10 ET · Salem (AI) · Web
 **Did:** Road overlay now uses real street geometry: 12 corridors (Michigan, Woodward, Gratiot, Grand River, Jefferson, 8 Mile, I-94, I-75 Fisher + Chrysler, M-10 Lodge, I-96 Jeffries, M-39 Southfield) pulled from Overture transportation segments in Athena (`overture.segments`), clipped to city limits. Freeways drawn wider; hover shows name + traffic band; map key shows Light / Busy / Heavy.
 **Files:** web/prototype/tools/roads_overture.json (raw WKT from Athena), web/prototype/tools/make_geo.py (CORRIDORS), web/prototype/geo/overlays.geojson, web/prototype/index.html, LOG.md

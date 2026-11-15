@@ -81,9 +81,17 @@ button { cursor: pointer; }
 .dlabel-m.off { opacity: .45; }
 .hub-m { padding: 6px 12px; border-radius: 10px; background: #F8FAFC; color: #0F172A; font-size: 15px; font-weight: 700; white-space: nowrap; pointer-events: none;
   box-shadow: 0 4px 14px rgba(0,0,0,.35); }
-.map-key { position: absolute; z-index: 2; top: 108px; right: 432px; padding: 10px 14px; display: none; gap: 14px; font-size: 14px; color: var(--text-2); }
-.app.has-results .map-key { display: flex; }
+.map-key { position: absolute; z-index: 2; top: 108px; right: 432px; padding: 8px 10px 8px 8px; display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--text-2); }
 .map-key span { display: inline-flex; align-items: center; gap: 6px; }
+.map-key .key-res { display: none; gap: 14px; }
+.app.has-results .map-key .key-res { display: inline-flex; }
+.map-key.roads-off .key-roads { display: none; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px 0 6px; border-radius: 999px; border: 1px solid var(--panel-line);
+  background: transparent; color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; }
+.toggle .knob { width: 34px; height: 20px; border-radius: 999px; background: #475569; position: relative; transition: background .2s; }
+.toggle .knob::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #F8FAFC; transition: transform .2s; }
+.toggle[aria-pressed="true"] .knob { background: #2563EB; }
+.toggle[aria-pressed="true"] .knob::after { transform: translateX(14px); }
 .map-key i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
 
 /* top bar */
@@ -200,7 +208,11 @@ button { cursor: pointer; }
 
   <!-- MAP: static SVG stand-in for deck.gl -->
   <div class="map" id="map" data-state="empty" data-proposal="none" role="img" aria-label="3D map of Detroit with every building, council districts and the proposal"></div>
-  <div class="map-key panel" aria-label="Map key"><span><i style="background:#60A5FA"></i>Supports</span><span><i style="background:#94A3B8"></i>Neutral</span><span><i style="background:#FB923C"></i>Opposes</span><span><i style="background:#4ADE80;border-radius:2px"></i>Light</span><span><i style="background:#FACC15;border-radius:2px"></i>Busy</span><span><i style="background:#F87171;border-radius:2px"></i>Heavy</span></div>
+  <div class="map-key panel" id="mapKey" aria-label="Map key">
+    <button type="button" class="toggle" id="roadsToggle" aria-pressed="true"><span class="knob"></span>Roads</button>
+    <span class="key-roads"><span><i style="background:#4ADE80;border-radius:2px"></i>Light</span><span><i style="background:#FACC15;border-radius:2px"></i>Busy</span><span><i style="background:#F87171;border-radius:2px"></i>Heavy</span></span>
+    <span class="key-res"><span><i style="background:#60A5FA"></i>Supports</span><span><i style="background:#94A3B8"></i>Neutral</span><span><i style="background:#FB923C"></i>Opposes</span></span>
+  </div>
 
   <!-- TOP BAR -->
   <header class="topbar">
@@ -296,7 +308,7 @@ var mapView = (function () {
   var PAD_OPEN = { left: 392, right: 432, top: 110, bottom: 100 }, PAD_CLOSED = { left: 40, right: 432, top: 110, bottom: 100 };
   var RAMP = ['interpolate', ['linear'], ['get', 'h'], 0, '#58647A', 8, '#6E7D94', 15, '#7DA0D7', 40, '#A096EB', 120, '#EBE1FF'];
   var STANCE = { s: [96, 165, 250], n: [148, 163, 184], o: [251, 146, 60], x: [100, 116, 139] };
-  var sel = [], districts = null, overlays = null, residents = [], labels = {}, hub = null, clickFn = null, padded = null, ready = false;
+  var roadsOn = true, sel = [], districts = null, overlays = null, residents = [], labels = {}, hub = null, clickFn = null, padded = null, ready = false;
 
   var map = new maplibregl.Map({
     container: el, style: STYLE, center: [-83.09, 42.36], zoom: 11, pitch: 50, bearing: -12,
@@ -336,8 +348,8 @@ var mapView = (function () {
       getLineWidth: function (f) { return on(f.properties.n) ? 3 : 1.5; }, updateTriggers: { getLineColor: key, getLineWidth: key }
     }));
     if (overlays) {
-      if (st === 'results') layers.push(new deck.GeoJsonLayer({
-        id: 'arteries', data: overlays.features.filter(function (f) { return f.properties.kind === 'artery'; }),
+      if (roadsOn) layers.push(new deck.GeoJsonLayer({
+        id: 'arteries', data: overlays.features.filter(function (f) { return f.properties.kind === 'artery' && on(f.properties.d); }),
         stroked: true, filled: false, pickable: true, lineWidthUnits: 'pixels', lineCapRounded: true, lineJointRounded: true,
         getLineWidth: function (f) { return f.properties.road === 'freeway' ? 6 : 4; },
         getLineColor: function (f) { var l = f.properties.load; return l < .5 ? [74, 222, 128, 230] : l < .75 ? [250, 204, 21, 235] : [248, 113, 113, 245]; }
@@ -406,8 +418,14 @@ var mapView = (function () {
       if (padded !== p) { padded = p; map.easeTo({ padding: p, duration: 500 }); }
       render();
     },
-    onClick: function (fn) { clickFn = fn; }
+    onClick: function (fn) { clickFn = fn; },
+    setRoads: function (v) { roadsOn = v; render(); }
   };
+  var rt = document.getElementById('roadsToggle');
+  rt.addEventListener('click', function () {
+    var v = rt.getAttribute('aria-pressed') !== 'true';
+    rt.setAttribute('aria-pressed', v); document.getElementById('mapKey').classList.toggle('roads-off', !v); api.setRoads(v);
+  });
   return api;
 })();
 </script>
