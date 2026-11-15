@@ -1,76 +1,66 @@
 import json
+from pathlib import Path
 
+import mapbox_vector_tile
 import pyarrow as pa
-import pyarrow.parquet as pq
 from shapely.geometry import MultiPolygon, Polygon, box
 
-from data.buildings import export_tiles as et
+from data.buildings import export_mvt as em
 from data.buildings.athena_build import statements
 
 
-def _rows():
-    rencen = box(-83.0400, 42.3290, -83.0390, 42.3298)            # downtown, tall
-    house = Polygon([(-83.1500, 42.4000), (-83.14988, 42.4000), (-83.14988, 42.40009),
-                     (-83.1500, 42.40009)])
+def _table():
+    rencen = box(-83.0400, 42.3290, -83.0390, 42.3298)                     # big + tall: kept at every zoom
+    house = box(-83.15000, 42.40000, -83.14988, 42.40009)                   # ~100 m2, 7 m: only z13+
     duo = MultiPolygon([box(-83.10, 42.35, -83.0999, 42.3501), box(-83.0998, 42.35, -83.0997, 42.3501)])
-    return [
-        (rencen.wkb, 221.5, "overture_height", -83.0395, 42.3294),
-        (house.wkb, 7.0, "default_house", -83.14994, 42.400045),
-        (duo.wkb, 10.5, "overture_floors", -83.09985, 42.35005),
-        (b"not wkb", 5.0, "overture_height", -83.0, 42.3),
-    ]
+    rows = [(rencen.wkb, 221.5, "overture_height", -83.0395, 42.3294),
+            (house.wkb, 7.0, "default_house", -83.14994, 42.400045),
+            (duo.wkb, 10.5, "overture_floors", -83.09985, 42.35005),
+            (b"not wkb", 5.0, "overture_height", -83.0, 42.3)]
+    cols = list(zip(*rows))
+    return pa.table({"geometry": list(cols[0]), "height_m": list(cols[1]), "height_source": list(cols[2]),
+                     "lon": list(cols[3]), "lat": list(cols[4])})
 
 
-def test_ring_roundtrip():
-    ox, oy = -83.04, 42.32
-    ring = [(-83.0400, 42.3290), (-83.0390, 42.3290), (-83.0390, 42.3298), (-83.0400, 42.3298), (-83.0400, 42.3290)]
-    enc = et.encode_ring(ring, ox, oy)
-    assert len(enc) == 8                                   # 4 points, closing point dropped
-    for (a, b), (c, d) in zip(et.decode_ring(enc, ox, oy), ring):
-        assert abs(a - c) < et.Q and abs(b - d) < et.Q
-
-
-def test_degenerate_ring_dropped():
-    assert et.encode_ring([(-83.0, 42.3), (-83.0, 42.3), (-83.0, 42.3)], -83.0, 42.3) == []
-
-
-def test_export(tmp_path):
-    idx = et.export(_rows(), tmp_path)
-    s = idx["stats"]
-    assert s["buildings"] == 3 and s["parts"] == 4 and s["skipped"] == 1
-    assert s["by_source"] == [1, 1, 1]
-    assert s["max_m"] == 221.5 and s["tall_50m"] == 1
-    assert sum(idx["tiles"].values()) == 4
-    key = "%d_%d" % et.tile_of(-83.0395, 42.3294)
-    tile = json.loads((tmp_path / "t" / f"{key}.json").read_text())
-    h, src, d, *ring = tile["b"][0]
-    assert (h, src, d) == (221.5, 0, 0)
-    xs = [p[0] for p in et.decode_ring(ring, *tile["o"])]
-    assert abs(min(xs) - -83.0400) < 2e-5 and abs(max(xs) - -83.0390) < 2e-5
-
-
-def test_districts(tmp_path):
+def _districts(tmp_path):
     gj = {"type": "FeatureCollection", "features": [
         {"type": "Feature", "properties": {"district": "District 6"},
          "geometry": box(-83.05, 42.32, -83.03, 42.34).__geo_interface__}]}
     p = tmp_path / "d.geojson"
     p.write_text(json.dumps(gj))
-    idx = et.export(_rows(), tmp_path / "out", et.load_districts(p, "district"))
-    assert idx["stats"]["by_district"] == {0: 2, 6: 1}
+    return em.load_districts(p, "district")
 
 
-def test_read_rows(tmp_path):
-    rows = _rows()[:2]
-    cols = list(zip(*rows))
-    pq.write_table(pa.table({"geometry": list(cols[0]), "height_m": list(cols[1]),
-                             "height_source": list(cols[2]), "lon": list(cols[3]), "lat": list(cols[4])}),
-                   tmp_path / "x.parquet")
-    assert len(list(et.read_rows(tmp_path))) == 2
+def _decode(path):
+    return mapbox_vector_tile.decode(path.read_bytes())["buildings"]["features"]
+
+
+def test_tile_range_known_tile():
+    x, y = em.merc(-83.0395, 42.3294)
+    x0, x1, y0, y1 = em.tile_range(float(x), float(y), float(x), float(y), 14)
+    assert (x0, y0) == (x1, y1) == (4412, 6061)        # Renaissance Center at z14
+
+
+def test_keep_rules():
+    assert em.keep_at(10, 5000, 5) and em.keep_at(10, 10, 40) and not em.keep_at(10, 100, 7)
+    assert em.keep_at(14, 1, 1)
+
+
+def test_export(tmp_path):
+    out, res = tmp_path / "tiles", tmp_path / "res.geojson"
+    idx = em.export(_table(), out, _districts(tmp_path), res)
+    st = idx["stats"]
+    assert st["buildings"] == 3 and st["by_source"] == [1, 1, 1] and st["max_m"] == 221.5
+    assert st["by_district"] == {0: 2, 6: 1}
+    assert st["features_per_zoom"][10] == 1 and st["features_per_zoom"][14] == 3
+    feats = _decode(out / "14" / "4412" / "6061.pbf")
+    assert feats[0]["properties"] == {"h": 221.5, "s": 0, "d": 6}
+    assert json.loads((out / "index.json").read_text())["layer"] == "buildings"
+    assert res.exists()
 
 
 def test_sql_statements():
-    from pathlib import Path
-    sql = (Path(et.__file__).parent / "sql" / "03_clip.sql").read_text()
+    sql = (Path(em.__file__).parent / "sql" / "03_clip.sql").read_text()
     st = statements(sql, bucket="b", run="r")
     assert len(st) == 2 and st[0].startswith("DROP")
     assert "s3://b/detroit_buildings_r/" in st[1] and "{" not in st[1]

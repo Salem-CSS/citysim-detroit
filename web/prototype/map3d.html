@@ -6,7 +6,6 @@
 <title>CitySim Detroit · 3D buildings</title>
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="https://unpkg.com/deck.gl@9.0.38/dist.min.js"></script>
 <style>
   :root { --bg:#0B1220; --panel:rgba(15,23,42,.92); --line:#1E293B; --text:#F8FAFC; --text-2:#CBD5E1; --accent:#60A5FA; }
   * { box-sizing:border-box; }
@@ -53,166 +52,80 @@
   <h1 style="font-size:18px;margin:0 0 8px">No building tiles yet</h1>
   <p>Build them once, then reload:</p>
   <p><code>python -m data.buildings.athena_build --bucket &lt;bucket&gt;</code><br>
-     <code>python -m data.buildings.export_tiles</code></p>
-  <p>Or point this page at hosted tiles: <code>map3d.html?src=https://…/buildings/</code></p>
+     <code>python -m data.buildings.export_mvt</code></p>
+  <p>Or point this page at hosted tiles: <code>map3d.html?src=https://…/tiles/</code></p>
 </div>
 
 <script>
-// ---- config -------------------------------------------------------------
 var params = new URLSearchParams(location.search);
-var SRC = (params.get('src') || './buildings/').replace(/\/?$/, '/');
-var DISTRICTS = params.get('districts');           // optional council districts GeoJSON URL
-var MIN_ZOOM_LOAD = 11.5;
-var STYLE = params.get('style') === 'none'          // ?style=none: plain background, no basemap requests
+var BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
+var SRC = (params.get('src') || BASE + 'tiles/').replace(/\/?$/, '/');
+var STYLE = params.get('style') === 'none'
   ? { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0B1220' } }] }
-  : 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';                          // below this, don't fetch new tiles
-
-var HEIGHT_STOPS = [                               // metres -> colour
-  [0,   [71, 85, 105]],
-  [8,   [100, 116, 139]],
-  [15,  [96, 165, 250]],
-  [40,  [167, 139, 250]],
-  [100, [251, 146, 60]],
-  [200, [250, 204, 21]]
-];
-var SOURCE_COLORS = [[96, 165, 250], [52, 211, 153], [251, 146, 60]];
+  : 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
+var HEIGHT_STOPS = [[0, '#475569'], [8, '#64748B'], [15, '#60A5FA'], [40, '#A78BFA'], [100, '#FB923C'], [200, '#FACC15']];
+var SOURCE_COLORS = ['#60A5FA', '#34D399', '#FB923C'];
 var SOURCE_NAMES = ['Measured (Overture / lidar)', 'From floor count', 'Estimated by type'];
-
-// ---- state --------------------------------------------------------------
 var index = null, colorMode = 'height';
-var loaded = {}, pending = {}, buildings = [], version = 0;
 
-function heightColor(h) {
-  for (var i = 1; i < HEIGHT_STOPS.length; i++) {
-    if (h <= HEIGHT_STOPS[i][0]) {
-      var a = HEIGHT_STOPS[i - 1], b = HEIGHT_STOPS[i], t = (h - a[0]) / (b[0] - a[0]);
-      return [0, 1, 2].map(function (k) { return Math.round(a[1][k] + (b[1][k] - a[1][k]) * t); });
-    }
-  }
-  return HEIGHT_STOPS[HEIGHT_STOPS.length - 1][1];
-}
+var COLOR = {
+  height: ['interpolate', ['linear'], ['get', 'h']].concat([].concat.apply([], HEIGHT_STOPS)),
+  source: ['match', ['get', 's'], 0, SOURCE_COLORS[0], 1, SOURCE_COLORS[1], SOURCE_COLORS[2]]
+};
 
-// Decode one tile record: [h, s, d, x, y, dx, dy, ...] (see data/buildings/export_tiles.py)
-function decode(tile) {
-  var q = index.q, ox = tile.o[0], oy = tile.o[1], out = [];
-  for (var i = 0; i < tile.b.length; i++) {
-    var r = tile.b[i], x = r[3], y = r[4], ring = [[ox + x * q, oy + y * q]];
-    for (var j = 5; j < r.length; j += 2) { x += r[j]; y += r[j + 1]; ring.push([ox + x * q, oy + y * q]); }
-    out.push({ polygon: ring, h: r[0], s: r[1], d: r[2] });
-  }
-  return out;
-}
-
-function visibleTiles() {
-  var b = map.getBounds(), o = index.origin, T = index.tile, keys = [];
-  var x0 = Math.floor((b.getWest() - o[0]) / T), x1 = Math.floor((b.getEast() - o[0]) / T);
-  var y0 = Math.floor((b.getSouth() - o[1]) / T), y1 = Math.floor((b.getNorth() - o[1]) / T);
-  for (var x = x0; x <= x1; x++) for (var y = y0; y <= y1; y++) {
-    var k = x + '_' + y;
-    if (index.tiles[k] && !loaded[k] && !pending[k]) keys.push(k);
-  }
-  return keys;
-}
-
-function loadVisible() {
-  if (!index || map.getZoom() < MIN_ZOOM_LOAD) { setStatus(); return; }
-  visibleTiles().forEach(function (k) {
-    pending[k] = true;
-    fetch(SRC + 't/' + k + '.json').then(function (r) { return r.json(); }).then(function (tile) {
-      loaded[k] = true; delete pending[k];
-      buildings = buildings.concat(decode(tile));
-      version++; render(); setStatus();
-    }).catch(function () { delete pending[k]; });
-  });
-  setStatus();
-}
-
-function setStatus() {
-  var n = Object.keys(loaded).length, total = Object.keys(index ? index.tiles : {}).length;
-  var msg = buildings.length.toLocaleString() + ' buildings shown · ' + n + ' / ' + total + ' areas loaded';
-  if (map.getZoom() < MIN_ZOOM_LOAD) msg += ' · zoom in to load more';
-  document.getElementById('status').textContent = msg;
-}
-
-function legend() {
-  var html = '';
-  if (colorMode === 'height') {
-    [['Under 8 m', 4], ['8–15 m (2–4 floors)', 12], ['15–40 m', 28], ['40–100 m', 70], ['100 m+', 180]]
-      .forEach(function (r) { html += '<span class="sw" style="background:rgb(' + heightColor(r[1]) + ')"></span><span>' + r[0] + '</span>'; });
-  } else {
-    var c = index ? index.stats.by_source : [0, 0, 0];
-    SOURCE_NAMES.forEach(function (name, i) {
-      html += '<span class="sw" style="background:rgb(' + SOURCE_COLORS[i] + ')"></span><span>' + name +
-        (index ? ' · ' + c[i].toLocaleString() : '') + '</span>';
-    });
-  }
-  document.getElementById('legend').innerHTML = html;
-}
-
-function render() {
-  var layers = [
-    new deck.SolidPolygonLayer({
-      id: 'buildings', data: buildings, extruded: true, pickable: true,
-      getPolygon: function (d) { return d.polygon; },
-      getElevation: function (d) { return d.h; },
-      getFillColor: function (d) { return colorMode === 'height' ? heightColor(d.h) : SOURCE_COLORS[d.s]; },
-      material: { ambient: 0.35, diffuse: 0.6, shininess: 24 },
-      updateTriggers: { getFillColor: colorMode }
-    })
-  ];
-  if (districtData) layers.push(new deck.GeoJsonLayer({
-    id: 'districts', data: districtData, stroked: true, filled: false,
-    getLineColor: [248, 250, 252, 200], lineWidthMinPixels: 2
-  }));
-  overlay.setProps({ layers: layers });
-}
-
-function onPick(info) {
-  var el = document.getElementById('pick');
-  if (!info.object) { el.style.display = 'none'; return; }
-  var d = info.object, floors = Math.max(1, Math.round(d.h / 3.5));
-  el.innerHTML = '<b>' + d.h.toFixed(1) + ' m tall</b>about ' + floors + ' floor' + (floors > 1 ? 's' : '') +
-    ' · ' + SOURCE_NAMES[d.s].toLowerCase() + (d.d ? ' · District ' + d.d : '');
-  el.style.display = 'block';
-}
-
-// ---- map ----------------------------------------------------------------
 var map = new maplibregl.Map({
-  container: 'map',
-  style: STYLE,
-  center: [-83.0458, 42.3314], zoom: 14.2, pitch: 55, bearing: -28, maxPitch: 75,
-  minZoom: 10, maxBounds: [[-83.6, 42.1], [-82.6, 42.6]]
+  container: 'map', style: STYLE, center: [-83.0458, 42.3314], zoom: 14.2, pitch: 55, bearing: -28, maxPitch: 75,
+  minZoom: 10, maxBounds: [[-83.6, 42.1], [-82.6, 42.6]], attributionControl: false
 });
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
 map.addControl(new maplibregl.AttributionControl({ compact: false,
   customAttribution: 'Buildings © Overture Maps Foundation (ODbL) · Basemap © CARTO, © OpenStreetMap contributors' }));
 
-var overlay = new deck.MapboxOverlay({ interleaved: true, layers: [], onClick: onPick });
-map.addControl(overlay);
-
-var districtData = null;
-if (DISTRICTS) fetch(DISTRICTS).then(function (r) { return r.json(); }).then(function (g) { districtData = g; render(); });
-
-document.getElementById('byHeight').onclick = function () { setMode('height', this); };
-document.getElementById('bySource').onclick = function () { setMode('source', this); };
-function setMode(m, btn) {
-  colorMode = m;
-  document.querySelectorAll('.seg button').forEach(function (b) { b.classList.toggle('on', b === btn); });
-  legend(); render();
-}
-
 map.on('load', function () {
   fetch(SRC + 'index.json').then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (idx) {
     index = idx;
-    document.getElementById('count').textContent =
-      idx.stats.buildings.toLocaleString() + ' buildings inside city limits · tallest ' + idx.stats.max_m + ' m';
-    legend(); loadVisible();
+    map.addSource('bldg', { type: 'vector', tiles: [SRC + '{z}/{x}/{y}.pbf'], minzoom: idx.minzoom, maxzoom: idx.maxzoom, bounds: idx.bounds });
+    map.addLayer({ id: 'buildings', type: 'fill-extrusion', source: 'bldg', 'source-layer': idx.layer, paint: {
+      'fill-extrusion-color': COLOR.height, 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': 0,
+      'fill-extrusion-opacity': 0.95, 'fill-extrusion-vertical-gradient': true } });
+    document.getElementById('count').textContent = idx.stats.buildings.toLocaleString() + ' buildings inside city limits · tallest ' + idx.stats.max_m + ' m';
+    document.getElementById('status').textContent = 'Zoom out for the whole city; small buildings appear as you zoom in.';
+    legend();
   }).catch(function () {
     document.getElementById('empty').style.display = 'block';
     document.getElementById('count').textContent = 'No tiles found at ' + SRC;
   });
 });
-map.on('moveend', loadVisible);
+
+map.on('click', 'buildings', function (e) {
+  var d = e.features[0].properties, el = document.getElementById('pick'), floors = Math.max(1, Math.round(d.h / 3.5));
+  el.innerHTML = '<b>' + (+d.h).toFixed(1) + ' m tall</b>about ' + floors + ' floor' + (floors > 1 ? 's' : '') + ' · ' + SOURCE_NAMES[d.s].toLowerCase();
+  el.style.display = 'block';
+});
+map.on('mouseenter', 'buildings', function () { map.getCanvas().style.cursor = 'pointer'; });
+map.on('mouseleave', 'buildings', function () { map.getCanvas().style.cursor = ''; });
+
+function legend() {
+  var html = '';
+  if (colorMode === 'height') {
+    [['Under 8 m', '#475569'], ['8–15 m (2–4 floors)', '#64748B'], ['15–40 m', '#60A5FA'], ['40–100 m', '#A78BFA'], ['100 m+', '#FB923C']]
+      .forEach(function (r) { html += '<span class="sw" style="background:' + r[1] + '"></span><span>' + r[0] + '</span>'; });
+  } else {
+    var c = index ? index.stats.by_source : null;
+    SOURCE_NAMES.forEach(function (name, i) {
+      html += '<span class="sw" style="background:' + SOURCE_COLORS[i] + '"></span><span>' + name + (c ? ' · ' + c[i].toLocaleString() : '') + '</span>';
+    });
+  }
+  document.getElementById('legend').innerHTML = html;
+}
+document.getElementById('byHeight').onclick = function () { setMode('height', this); };
+document.getElementById('bySource').onclick = function () { setMode('source', this); };
+function setMode(m, btn) {
+  colorMode = m;
+  document.querySelectorAll('.seg button').forEach(function (b) { b.classList.toggle('on', b === btn); });
+  if (map.getLayer('buildings')) map.setPaintProperty('buildings', 'fill-extrusion-color', COLOR[m]);
+  legend();
+}
 legend();
 </script>
 </body>

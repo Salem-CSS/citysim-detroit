@@ -1,0 +1,54 @@
+{
+ "version": 2,
+ "format": "mvt",
+ "layer": "buildings",
+ "minzoom": 10,
+ "maxzoom": 14,
+ "bounds": [
+  -83.28749,
+  42.25576,
+  -82.91113,
+  42.45002
+ ],
+ "stats": {
+  "buildings": 335338,
+  "by_source": [
+   318480,
+   94,
+   16764
+  ],
+  "max_m": 221.5,
+  "tall_50m": 105,
+  "by_district": {
+   "0": 164,
+   "1": 68621,
+   "2": 53395,
+   "3": 63179,
+   "4": 12632,
+   "5": 32700,
+   "6": 24994,
+   "7": 79653
+  },
+  "tiles": {
+   "10": 3,
+   "11": 8,
+   "12": 17,
+   "13": 43,
+   "14": 151
+  },
+  "features_per_zoom": {
+   "10": 2570,
+   "11": 22390,
+   "12": 64372,
+   "13": 248109,
+   "14": 335338
+  },
+  "bytes": 19925840
+ },
+ "sources": [
+  "Overture height",
+  "Floors x 3.5 m",
+  "Default by class"
+ ],
+ "attribution": "Buildings: Overture Maps Foundation (ODbL), incl. OpenStreetMap contributors, Microsoft, Google"
+}

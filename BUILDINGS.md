@@ -13,12 +13,13 @@ Instructions for building the 3D building layer. Written so a person or a coding
 Overture alone is enough: inside Detroit city limits it has **335,338 buildings, 95% with a measured (lidar) height**. Everything is scripted:
 
 ```bash
-pip install boto3 pyarrow shapely
+pip install boto3 pyarrow shapely mapbox-vector-tile
 python -m data.buildings.athena_build --bucket citysim-athena-574246332084-usw2   # runs data/buildings/sql/01-04 in Athena (us-west-2), downloads Parquet
 #   or, if the tables already exist:  ... --download-only
-python -m data.buildings.export_tiles [--districts data/raw/detroit/council_districts_2026.geojson]
-#   writes web/prototype/buildings/index.json + t/*.json
-open web/prototype/map3d.html   # serve the folder: python -m http.server -d web/prototype
+python web/prototype/tools/make_geo.py            # city limits, approx districts, overlays -> web/prototype/geo/
+python -m data.buildings.export_mvt --districts web/prototype/geo/districts.geojson
+#   writes web/prototype/tiles/{z}/{x}/{y}.pbf (z10-14) + index.json, and geo/residents_demo.geojson (~1 min)
+python -m http.server -d web/prototype 8000         # then open http://localhost:8000/ and /map3d.html
 ```
 
 | Step | File | What it does |
@@ -27,8 +28,8 @@ open web/prototype/map3d.html   # serve the folder: python -m http.server -d web
 | Box cut | `sql/02_bbox.sql` | 607,306 buildings in a box around Detroit (~93 MB scanned) |
 | Clip + heights | `sql/03_clip.sql` | Keep centroids inside the Overture `Detroit` locality polygon (drops Hamtramck, Highland Park, Dearborn, Windsor). Height = Overture height, else floors × 3.5 m, else default by class |
 | Check | `sql/04_check.sql` | Expected numbers below |
-| Tiles | `data/buildings/export_tiles.py` | 0.01° grid tiles, ~1 m quantized, delta-encoded JSON; optional district tag |
-| Map | `web/prototype/map3d.html` | MapLibre + deck.gl extruded buildings, loads only visible tiles, color by height or height source |
+| Tiles | `data/buildings/export_mvt.py` | Mapbox Vector Tiles z10-14 (layer `buildings`, props `h` height m, `s` height source, `d` district). Low zooms keep only big/tall buildings; z14 has all at ~0.45 m precision and is overzoomed beyond |
+| Map | `web/prototype/index.html`, `map3d.html` | MapLibre native `fill-extrusion` (tessellated in web workers, only tiles in view load). deck.gl only for overlays in index.html |
 
 Results (Overture release 2026-10-21.0, already built in account 574246332084, table `overture.detroit_buildings`):
 
@@ -43,7 +44,7 @@ Results (Overture release 2026-10-21.0, already built in account 574246332084, t
 
 Overture counts fewer buildings than the city's 419,882 figure in SCOPE.md, mostly garages and sheds missing from the footprint sources. Fine for the map; add SEMCOG (section 4) if you need them.
 
-Tiles (465 files, 12.8 MB) are committed in `web/prototype/buildings/` so Vercel serves them: https://citysim-detroit.vercel.app/map3d.html. Regenerate with `export_tiles` (e.g. after adding `--districts`) and commit. To host elsewhere, open `map3d.html?src=https://<host>/buildings/`.
+Tiles (222 files, ~20 MB total; a typical view loads 1-4 MB) are committed in `web/prototype/tiles/` so Vercel serves them. Regenerate with `export_mvt` and commit (e.g. when the real council districts arrive: `--districts data/raw/detroit/council_districts_2026.geojson`, and point make_geo.py at it). `map3d.html?src=https://<host>/tiles/` reads tiles hosted elsewhere.
 
 ---
 
