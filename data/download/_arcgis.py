@@ -48,12 +48,21 @@ def fetch_layer(layer_url: str, dest: Path, drop_fields: tuple[str, ...] = (), w
     page = meta["maxRecordCount"]
     oid = meta["objectIdField"]
 
-    def one(offset: int) -> list[dict]:
-        body = _get(layer_url + "/query", {
-            "where": "1=1", "outFields": out_fields, "outSR": 4326, "f": "geojson",
-            "orderByFields": oid, "resultOffset": offset, "resultRecordCount": page,
-        })
-        return body["features"]
+    def one(offset: int, count: int | None = None, retries: int = 5) -> list[dict]:
+        count = count or page
+        try:
+            body = _get(layer_url + "/query", {
+                "where": "1=1", "outFields": out_fields, "outSR": 4326, "f": "geojson",
+                "orderByFields": oid, "resultOffset": offset, "resultRecordCount": count,
+            }, retries=retries)
+            return body["features"]
+        except RuntimeError:
+            # Some pages are refused whole (the server answers 400) though their rows are fine in
+            # smaller requests. Split the page; a single row that still fails stops the download.
+            if count == 1:
+                raise
+            half = count // 2
+            return one(offset, half, 2) + one(offset + half, count - half, 2)
 
     tmp = dest.with_suffix(dest.suffix + ".part")
     written = 0
