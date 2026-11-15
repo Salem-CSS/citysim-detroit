@@ -49,7 +49,10 @@
   --r: 16px; --r-sm: 12px; --tap: 48px; --shadow: 0 12px 32px rgba(0,0,0,0.3);
   --font: 'Inter', system-ui, -apple-system, sans-serif;
 }
-:root[data-theme="light"] {
+:root { color-scheme: dark; }
+select option { background: #0D1426; color: #F8FAFC; }
+:root[data-theme="light"] select option { background: #FFFFFF; color: #0F172A; }
+:root[data-theme="light"] { color-scheme: light;
   --bg: #EEF2F7; --panel: rgba(255,255,255,0.96); --panel-line: rgba(15,23,42,0.12); --raised: rgba(15,23,42,0.05);
   --text: #0F172A; --text-2: #334155; --text-3: #64748B; --accent: #2563EB; --support: #0284C7; --neutral: #94A3B8; --oppose: #EA580C;
   --warn: #92400E; --shadow: 0 10px 28px rgba(15,23,42,0.12);
@@ -68,7 +71,7 @@
 .settings { position: absolute; top: 92px; right: 16px; z-index: 6; width: 260px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .settings[hidden] { display: none; }
 .settings h3 { margin: 0; font-size: 16px; }
-.runscrim { position: absolute; inset: 0; z-index: 6; background: rgba(5,8,15,.45); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); animation: rofade .3s ease; }
+.runscrim { display: none !important; position: absolute; inset: 0; z-index: 6; background: rgba(5,8,15,.45); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); animation: rofade .3s ease; }
 .runscrim[hidden] { display: none; }
 @keyframes rofade { from { opacity: 0; } }
 .ro-grid { display: grid; grid-template-columns: repeat(25, 1fr); gap: 4px; padding: 4px 0; }
@@ -77,8 +80,9 @@
 .ro-grid.is-wait i { animation: ropulse 1.6s ease-in-out infinite; animation-delay: calc(var(--k) * 12ms); }
 @keyframes ropulse { 50% { background: rgba(148,163,184,.4); } }
 .runover { animation: rofade .3s ease; }
-.runover { position: absolute; z-index: 7; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
-.app.has-blocks .runover { left: calc(50% + 180px); } .runover[hidden] { display: none; }
+@media (max-width: 900px) { .runover { left: 12px; right: 12px; width: auto; } }
+.runover { position: absolute; z-index: 3; top: 108px; left: 16px; width: 360px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.app.is-running .blocks { opacity: 0; pointer-events: none; transform: translateX(-12px); } .runover[hidden] { display: none; }
 .ro-top { display: flex; align-items: center; gap: 10px; font-size: 16px; }
 .ro-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(148,163,184,.3); border-top-color: var(--support); animation: rospin .8s linear infinite; }
 @keyframes rospin { to { transform: rotate(360deg); } }
@@ -1968,13 +1972,13 @@ var runOver={
     var g=document.getElementById('roGrid'), per=Math.ceil(200/ds.length), html='';    // 200 dots, coloured by district, each = n/200 residents
     ds.forEach(function(d,di){ for(var i=0;i<per && di*per+i<200;i++){ var k=di*per+i; html+='<i style="--c:'+DISTRICTS[d].c+';--k:'+k+'"></i>'; } });
     g.innerHTML=html; this.order=[].slice.call(g.children).map(function(_,i){return i;}).sort(function(){ return Math.random()-.5; });
-    this.update(0,n); o.hidden=false; document.getElementById('runScrim').hidden=false; },
+    this.update(0,n); o.hidden=false; app.classList.add('is-running'); },
   update:function(a,tot){ document.getElementById('roDone').textContent=Math.min(a,tot).toLocaleString();
     document.getElementById('roOf').textContent='of '+tot.toLocaleString()+' answered';
     var bar=document.getElementById('roBar'); bar.parentNode.classList.toggle('is-wait',!a); bar.style.width=a?Math.min(100,100*a/tot)+'%':'';
     var g=document.getElementById('roGrid'), dots=g.children, lit=Math.round(dots.length*Math.min(1,a/tot)); g.classList.toggle('is-wait',!a);
     (this.order||[]).forEach(function(i,j){ if(dots[i]) dots[i].classList.toggle('on', j<lit); }); },
-  hide:function(){ clearTimeout(this.timer); document.getElementById('runOver').hidden=true; document.getElementById('runScrim').hidden=true; }
+  hide:function(){ clearTimeout(this.timer); document.getElementById('runOver').hidden=true; app.classList.remove('is-running'); }
 };
 function runLive(btn, wait){
   var api=(window.CITYSIM_API||'').replace(/\/$/,''), spec=specWithEdits(), n=spec.districts.length*500;
@@ -1989,7 +1993,7 @@ function runLive(btn, wait){
     .then(function(id){ var errs=0; (function poll(){
       fetch(api+'/runs/'+id).then(function(r){return r.json();}).then(function(run){
         errs=0;
-        if(run.stage==='done' && run.result){ runOver.hide(); state.spec=spec; state.runId=id; showResult(run.result); finishRun(btn); syncRoute(); loadAnswers(api,id); }
+        if(run.stage==='done' && run.result){ runOver.hide(); state.spec=spec; state.runId=id; showResult(run.result); finishRun(btn); syncRoute(); loadAnswers(api,id); playProposal(); }
         else if(run.status==='failed') fail(run.error||'the run failed on the server');
         else if(Date.now()-t0>limit) fail('the run did not finish in time');
         else { var a=+run.answered||0, tot=+run.total||n;
@@ -2019,8 +2023,8 @@ function finishRun(b){
 // Run
 document.getElementById('runBtn').addEventListener('click',function(){
   mapView.cancelPick(); mapView.clearPins();
-  var b=this, wait=playProposal();
-  if(window.CITYSIM_API && state.spec && state.spec.actions.length){ runLive(b, wait); return; }   // real residents
+  var b=this, wait=0;
+  if(window.CITYSIM_API && state.spec && state.spec.actions.length){ runLive(b, 0); return; }   // real residents
   b.disabled=true; b.textContent='Asking 2,000 residents…';
   var N=selected().length*500; runOver.show(N,'sample',wait); [300,700,1000,1300].forEach(function(t,i){ setTimeout(function(){ runOver.update(Math.round(N*[.2,.5,.8,1][i]),N); },wait+t); });
   setTimeout(function(){
@@ -2032,7 +2036,7 @@ document.getElementById('runBtn').addEventListener('click',function(){
       else if(el.classList.contains('seg')) state.defaults[el.dataset.k]=el.querySelector('[aria-pressed="true"]').textContent;
       else if(el.classList.contains('stepper')) state.defaults[el.dataset.k]=el.querySelector('output').dataset.v;
     });
-    setMode(true); renderTiles();
+    setMode(true); renderTiles(); playProposal();
   },wait+1600);
 });
 document.getElementById('resetBtn').addEventListener('click',function(){ if(state.question) openBlocks(state.question, state.spec); });

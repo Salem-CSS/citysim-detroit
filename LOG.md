@@ -65,6 +65,12 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: run progress in the proposal panel, animation after results, themed dropdowns
+- While residents are asked, the proposal panel fades out and the progress card (dot grid, count, bar, districts) takes its place on the left; no dimming, the map stays fully usable.
+- The build animation now plays after the results arrive (live and sample runs), not before the run.
+- Native dropdown lists (Rank by, block selects) follow the theme: color-scheme dark/light + option colours.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · main: redeploy after Vercel Pro upgrade
 - Vercel was rate-limiting deploys (free plan). Salem upgraded the project to Pro; this commit triggers a fresh production deploy of main (all frontend work through the person-card cleanup).
 - Files: LOG.md only.
