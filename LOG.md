@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · main: street routing fixes for the bus animation
+- Routes were falling back to straight lines because the basemap's street lines often cross without a shared point and a start point could snap onto a stray fragment. Now: junctions are added where non-freeway streets cross; seam stitching radius 40 m; start/end snap to the main connected street network; if the network is still split, the route follows streets as far as possible. 5 test routes across Detroit all follow streets.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · main: audit fixes + proposal pin
 - Distance dropdown labels say "of site"; picking a band now also switches the By district rows (from each district's groups, when the run reports them).
 - Top reasons: bars show share of all residents (not scaled to the biggest), in the accent colour, heading says so.
