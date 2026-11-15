@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: side tabs to hide both panels
+- Hide controls are now tabs attached to the panels' outer edges: ‹ on the right edge of Check the details, › on the left edge of Public approval. When hidden, a tab on the screen edge brings each back. Results panel reopens when new results arrive; the map key slides right when it is hidden.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: hideable details panel, cleaner bus animation, no loading text on the button
 - Check the details panel: ‹ button (top right) slides it away; a › tab on the left edge brings it back. Opens again on a new question.
 - Bus animation redone as a transit-map style: dark-cased blue route line drawing along the streets, round stops (white with blue ring) at both ends and every ~400 m appearing as the line reaches them, a yellow bus marker riding the route once. No 3D poles/signs/ripple.
