@@ -114,9 +114,18 @@ def main(event: dict, context=None, client=None, table=None) -> dict:
     if missing:
         raise BatchError(f"{len(missing)} persona ids are not in the persona files, e.g. {missing[0]}")
     personas = [people[i] for i in ids]
-    # No engine result for this proposal: leave the impact line out (prompt.build says so to the model).
-    # Never tell a resident there is "no change" that was not computed.
-    lines = (event.get("impact_lines") or {}) if event.get("impacts_computed") else None
+    # Impact lines: engine lines if the engine ran, plus each resident's distance to the verified place(s).
+    # With neither, the line is left out (prompt.build says so to the model): never claim "no change" uncomputed.
+    from engine import proximity
+    lines = dict(event.get("impact_lines") or {}) if event.get("impacts_computed") else {}
+    dist = {}
+    for p in personas:
+        near, d = proximity.lines_for(p, event.get("places") or [])
+        if near:
+            lines[p["persona_id"]] = lines.get(p["persona_id"], []) + near
+            dist[p["persona_id"]] = round(d)
+    if not lines:
+        lines = None
     client = client or bedrock_runtime()
     stats = {"status": "ok", "asked": len(ids), "retried": 0, "calls": 0}
     try:
@@ -135,7 +144,7 @@ def main(event: dict, context=None, client=None, table=None) -> dict:
             stats["calls"] += 1
     except budget.BudgetError as e:
         return {**stats, "status": f"stopped: {e}", "valid": 0, "dropped": len(ids), "quotes_requested": 0}
-    rows = [{**good[i], **{k: people[i][k] for k in KEEP}} for i in ids if i in good]
+    rows = [{**good[i], **{k: people[i][k] for k in KEEP}, **({"distance_m": dist[i]} if i in dist else {})} for i in ids if i in good]
     stats.update(valid=len(rows), dropped=len(ids) - len(rows), quotes_requested=sum(flags.values()))
     store(event["run_id"], event["batch"], rows, table)
     return stats

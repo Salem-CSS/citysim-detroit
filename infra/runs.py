@@ -84,10 +84,12 @@ def plan_batches(event, context=None):
     """Split the personas for the chosen districts into 25-resident batches (ids only; residents load from S3)."""
     per = int(os.environ.get("PERSONAS_PER_DISTRICT", "500"))
     ids = [f"d{d}-{i:04d}" for d in event["spec"].get("districts", []) for i in range(per)]
+    from engine import proximity
     spec = {"spec_id": event["spec"]["spec_id"], "summary": event["spec"]["summary"]}
+    places = proximity.places_of(event["spec"])
     computed = event.get("engine_status") == "ok"
     lines = (event.get("impacts") or {}).get("lines") or {}
-    batches = [{"run_id": event["run_id"], "batch": n, "spec": spec, "persona_ids": ids[i:i + BATCH],
+    batches = [{"run_id": event["run_id"], "batch": n, "spec": spec, "persona_ids": ids[i:i + BATCH], "places": places,
                 "impacts_computed": computed, "impact_lines": {p: lines[p] for p in ids[i:i + BATCH] if p in lines}}
                for n, i in enumerate(range(0, len(ids), BATCH))]
     return {**event, "batches": batches}

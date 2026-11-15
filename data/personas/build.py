@@ -94,6 +94,7 @@ def blocks_with_districts() -> pd.DataFrame:
     pop["GEOID20"] = pop.state + pop.county + pop.tract + pop.block
     pop["adults"] = pop.P3_001N.astype(int)
     out = j.merge(pop[["GEOID20", "adults"]], on="GEOID20", how="left").fillna({"adults": 0})
+    out = out.merge(b.assign(lon=b.INTPTLON20.astype(float), lat=b.INTPTLAT20.astype(float))[["GEOID20", "lon", "lat"]], on="GEOID20")
     out["tract"] = out.GEOID20.str[:11]
     rel = pd.read_csv(CENSUS / "rel" / "2020_Census_Tract_to_2020_PUMA.txt", dtype=str, encoding="utf-8-sig")
     rel["tract"] = rel.STATEFP + rel.COUNTYFP + rel.TRACTCE
@@ -227,7 +228,8 @@ def main() -> None:
         weight = s.apply(lambda r: c["age_sex"][(r.sex_l, r.age_band)] / counts[(r.sex_l, r.age_band)], axis=1)
         empty = [f"{k[0]} {k[1]}" for k, v in c["age_sex"].items() if v > 0 and k not in counts.index]
 
-        home = dblocks.GEOID20.to_numpy()[rng.choice(len(dblocks), size=len(s), p=(dblocks.adults / dblocks.adults.sum()).to_numpy())]
+        home_i = rng.choice(len(dblocks), size=len(s), p=(dblocks.adults / dblocks.adults.sum()).to_numpy())
+        home = dblocks.GEOID20.to_numpy()[home_i]
         mode = [commute(a, b) for a, b in zip(s.JWTRNS, s.JWRIP)]
         work = []
         for blk, m in zip(home, mode):
@@ -240,6 +242,8 @@ def main() -> None:
             "district": d,
             "tract_geoid": [b[:11] for b in home],
             "block_geoid": home,
+            "home_lon": dblocks.lon.to_numpy()[home_i].round(6),      # interior point of the home block, not an address
+            "home_lat": dblocks.lat.to_numpy()[home_i].round(6),
             "age": s.AGEP.astype(int),
             "sex": s.sex_l,
             "hh_income": s.income.clip(lower=0).astype(int),

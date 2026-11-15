@@ -102,6 +102,9 @@ def main(rows: list[dict], spec: dict, stats: dict | None = None) -> dict:
         group("age", "65 and over", lambda r: r["age"] >= 65),
         group("vehicles", "No car", lambda r: r["vehicles"] == 0),
         group("vehicles", "Has a car", lambda r: r["vehicles"] > 0),
+        group("exposure", "Within a quarter mile", lambda r: r.get("distance_m") is not None and r["distance_m"] <= 402),
+        group("exposure", "A quarter mile to a mile", lambda r: r.get("distance_m") is not None and 402 < r["distance_m"] <= 1609),
+        group("exposure", "More than a mile away", lambda r: r.get("distance_m") is not None and r["distance_m"] > 1609),
     ) if g]
 
     quotes = [{"persona_id": r["persona_id"], "text": r["quote"], "stance": r["stance"], "reason": r["reason"],
