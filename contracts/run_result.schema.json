@@ -94,6 +94,12 @@
           },
           "n": {
             "type": "integer"
+          },
+          "neutral": {
+            "type": "number"
+          },
+          "oppose": {
+            "type": "number"
           }
         }
       }
@@ -152,6 +158,67 @@
               "access",
               "none"
             ]
+          },
+          "groups": {
+            "type": "array",
+            "description": "Same groups as the top-level list, for this district only.",
+            "items": {
+              "type": "object",
+              "required": [
+                "dimension",
+                "label",
+                "support"
+              ],
+              "properties": {
+                "dimension": {
+                  "enum": [
+                    "exposure",
+                    "tenure",
+                    "age",
+                    "vehicles"
+                  ]
+                },
+                "label": {
+                  "type": "string"
+                },
+                "support": {
+                  "type": "number"
+                },
+                "n": {
+                  "type": "integer"
+                },
+                "neutral": {
+                  "type": "number"
+                },
+                "oppose": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "profile": {
+            "type": "object",
+            "description": "Who this district's residents are (weighted %, census-derived).",
+            "properties": {
+              "residents": {
+                "type": "integer"
+              },
+              "age": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "renters": {
+                "type": "number"
+              },
+              "no_car": {
+                "type": "number"
+              },
+              "median_income": {
+                "type": "number"
+              }
+            }
           }
         }
       }

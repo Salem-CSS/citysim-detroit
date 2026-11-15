@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 00:40 ET · Salem (AI) · Web + Residents (branch `salem/frontend-try`)
+**Did:** Design pass from the critique. (1) Map layers load on `style.load` instead of the basemap's full `load`, which took 15–30 s with Protomaps; main has the same bug. (2) Loading screen with the new logo and load steps. (3) New logo (gradient tile, three skyline bars, orange "voice" dot) + favicon. (4) "Civic Night" palette: one action colour (blue), sky = support, orange = oppose, slate = neutral; Briefing is now outlined; page background is dark (it was green on small screens). (5) Calmer city view: roads neutral grey until results, resident dots only after a run (smaller), traffic legend only with results. (6) Map refits the selected districts when a side panel opens. (7) Results panel fades at the bottom so it reads as scrollable. (8) District tiles are buttons and open a district view: split, top reason, support by group (age bands, renters vs owners, car vs none, distance), and "Who lives here" (renters, no car, median income, age). (9) Share copies a link (`?d=4,5&q=...`) that restores districts and question. (10) Unselected district labels dimmer, district pills more readable, credits collapse to an ⓘ button.
+**Files:** web/prototype/index.html, residents/aggregate.py, residents/tests/test_batch_aggregate.py, contracts/run_result.schema.json, fixtures/run_result.drone.json, LOG.md (branch only)
+**Contracts changed:** `run_result.schema.json`, additive only: `groups[]` items gain optional `neutral`, `oppose`; `districts[]` items gain optional `groups` (same shape, that district only) and `profile` {residents, age{band: %}, renters, no_car, median_income}. Fixture updated.
+**Decisions:** **Touched Partner's lane** (residents/aggregate.py): adds per-district `groups` and `profile`; existing keys unchanged; all 51 tests pass. Offline mode shows plausible sample numbers in the district view, labelled "Sample data". Live mode shows only what the run returns.
+**Blocked / needs:** For Partner, when merged: redeploy so runs return per-district groups/profile. `median_income` appears only if `hh_income` is kept on rows (batch.py KEEP).
+**Next:** —
+
 ### 2026-11-15 00:15 ET · Salem (AI) · Web (branch `salem/frontend-try`)
 **Did:** Street snapping read only CARTO/OpenMapTiles road names, but the basemap is now Protomaps (`roads` layer, `kind`), so no streets were found and every walker was hidden. Now reads both schemas. Walkers with no clear stretch stand at the roadside instead of hiding; street search radius 300 m.
 **Files:** web/prototype/index.html, LOG.md (branch only)

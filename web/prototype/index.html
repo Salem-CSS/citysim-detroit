@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop offset=%270%27 stop-color=%27%232563EB%27/%3E%3Cstop offset=%271%27 stop-color=%27%2338BDF8%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x=%271%27 y=%271%27 width=%2730%27 height=%2730%27 rx=%279%27 fill=%27url(%23g)%27/%3E%3Cg fill=%27%23F8FAFC%27%3E%3Crect x=%277.5%27 y=%2714%27 width=%274.4%27 height=%2711%27 rx=%272.2%27/%3E%3Crect x=%2713.8%27 y=%278%27 width=%274.4%27 height=%2717%27 rx=%272.2%27/%3E%3Crect x=%2720.1%27 y=%2712%27 width=%274.4%27 height=%2713%27 rx=%272.2%27/%3E%3C/g%3E%3Ccircle cx=%2724.5%27 cy=%277.5%27 r=%272.6%27 fill=%27%23F97316%27/%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CitySim Detroit — prototype</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,15 +41,16 @@
 -->
 <style>
 :root {
-  --panel: rgba(17,28,51,0.92); --panel-line: rgba(255,255,255,0.12); --raised: rgba(255,255,255,0.07);
-  --text: #F8FAFC; --text-2: #CBD5E1; --accent: #60A5FA; --go: #22C55E; --go-ink: #052E16; --ask: #2563EB;
-  --support: #60A5FA; --neutral: #64748B; --oppose: #FB923C; --warn: #FDE68A;
+  /* Civic Night palette: one action colour (blue), sky = support, orange = oppose, slate = neutral */
+  --bg: #0A1020; --panel: rgba(13,20,38,0.94); --panel-line: rgba(148,163,184,0.18); --raised: rgba(148,163,184,0.09);
+  --text: #F8FAFC; --text-2: #CBD5E1; --text-3: #94A3B8; --accent: #3B82F6; --go: #2563EB; --go-ink: #FFFFFF; --ask: #2563EB;
+  --support: #38BDF8; --neutral: #94A3B8; --oppose: #F97316; --warn: #FDE68A; --brand-a: #2563EB; --brand-b: #38BDF8;
   --r: 16px; --r-sm: 12px; --tap: 48px; --shadow: 0 12px 32px rgba(0,0,0,0.3);
   --font: 'Inter', system-ui, -apple-system, sans-serif;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { font: 400 15px/1.5 var(--font); color: var(--text); background: #A9C894; -webkit-font-smoothing: antialiased; }
+body { font: 400 15px/1.5 var(--font); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid #93C5FD; outline-offset: 2px; }
@@ -65,7 +67,9 @@ button { cursor: pointer; }
 .share-btn { height: auto; background: var(--panel); }
 .share-btn:hover { background: rgba(30,45,75,0.95); }
 .btn--go { background: var(--go); color: var(--go-ink); border: 0; font-weight: 800; font-size: 17px; }
-.btn--go:hover { background: #4ADE80; }
+.btn--go:hover { background: #3B82F6; }
+.btn--outline { background: transparent; border: 1px solid rgba(148,163,184,0.45); color: var(--text); }
+.btn--outline:hover { background: var(--raised); }
 .btn--go[disabled] { opacity: .6; cursor: progress; }
 .split { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; background: rgba(255,255,255,0.1); }
 .split span:nth-child(1) { background: var(--support); } .split span:nth-child(2) { background: var(--neutral); } .split span:nth-child(3) { background: var(--oppose); }
@@ -74,19 +78,21 @@ button { cursor: pointer; }
 .app { position: relative; height: 100vh; min-height: 820px; overflow: hidden; }
 .map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: #0B1220; }
 .map .maplibregl-ctrl-attrib { font-size: 13px; }
+.map .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-inner { display: none; }
 .map .maplibregl-ctrl-bottom-left { bottom: 92px; }
 .app.has-blocks .map .maplibregl-ctrl-bottom-left { left: 380px; }
 .dlabel-m { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 10px; background: rgba(15,23,42,0.88);
   border: 1px solid rgba(148,163,184,0.45); color: #F8FAFC; font-size: 15px; font-weight: 600; white-space: nowrap; pointer-events: none; transition: opacity .2s; }
 .dlabel-m .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); }
-.dlabel-m.off { opacity: .45; }
+.dlabel-m.off { opacity: .28; }
 .hub-m { padding: 6px 12px; border-radius: 10px; background: #F8FAFC; color: #0F172A; font-size: 15px; font-weight: 700; white-space: nowrap; pointer-events: none;
   box-shadow: 0 4px 14px rgba(0,0,0,.35); }
 .map-key { position: absolute; z-index: 2; top: 108px; right: 432px; padding: 8px 10px 8px 8px; display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--text-2); }
 .map-key span { display: inline-flex; align-items: center; gap: 6px; }
-.map-key .key-res { display: none; gap: 14px; }
+.map-key .key-res, .map-key .key-roads { display: none; gap: 14px; }
+.app.has-results .map-key .key-roads { display: inline-flex; }
 .app.has-results .map-key .key-res { display: inline-flex; }
-.map-key.roads-off .key-roads { display: none; }
+.app.has-results .map-key.roads-off .key-roads { display: none; }
 .toggle { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px 0 6px; border-radius: 999px; border: 1px solid var(--panel-line);
   background: transparent; color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; }
 .toggle .knob { width: 34px; height: 20px; border-radius: 999px; background: #475569; position: relative; transition: background .2s; }
@@ -105,7 +111,8 @@ button { cursor: pointer; }
 .dchip .dot { background: #64748B; }
 .dchip[aria-pressed="true"] { border: 2px solid var(--c); background: rgba(255,255,255,0.1); color: var(--text); font-weight: 600; }
 .dchip[aria-pressed="true"] .dot { background: var(--c); }
-.dchip[disabled] { opacity: .45; cursor: not-allowed; }
+.dchip[disabled] { opacity: .75; cursor: not-allowed; }
+.dchip[disabled]:hover::after { content: 'Up to 4 districts'; }
 
 /* welcome */
 .welcome { position: absolute; left: 50%; top: 48%; transform: translate(-50%,-50%); z-index: 2; width: min(540px, calc(100% - 900px)); min-width: 380px; padding: 24px 28px; text-align: center; display: flex; flex-direction: column; gap: 10px; }
@@ -148,7 +155,8 @@ button { cursor: pointer; }
 
 /* results (right) */
 .results { position: absolute; top: 108px; right: 16px; bottom: 16px; width: 400px; z-index: 2; display: flex; flex-direction: column; }
-.results__body { flex: 1 1 auto; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 22px; }
+.results__body { flex: 1 1 auto; overflow-y: auto; padding: 20px 20px 36px; display: flex; flex-direction: column; gap: 22px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); }
 .results h2 { margin: 0; font-size: 22px; font-weight: 800; }
 .results h3 { margin: 0 0 10px; font-size: 17px; font-weight: 700; }
 .approval__nums { display: flex; gap: 18px; margin: 8px 0 10px; }
@@ -156,7 +164,47 @@ button { cursor: pointer; }
 .approval__nums b { font-size: 30px; font-weight: 800; line-height: 1.1; }
 .approval__nums span { font-size: 14px; color: var(--text-2); }
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.tile { padding: 12px 14px; border-radius: var(--r-sm); background: var(--raised); display: flex; flex-direction: column; gap: 6px; }
+.tile { padding: 12px 14px; border-radius: var(--r-sm); background: var(--raised); display: flex; flex-direction: column; gap: 6px;
+  border: 1px solid transparent; text-align: left; color: var(--text); width: 100%; cursor: pointer; transition: border-color .15s, background .15s; }
+.tile:hover { border-color: rgba(148,163,184,0.4); background: rgba(148,163,184,0.14); }
+.tile__more { font-size: 13px; color: var(--text-3); margin-top: 2px; }
+.ddetail[hidden] { display: none; }
+.ddetail { display: flex; flex-direction: column; gap: 18px; }
+.ddetail__back { align-self: flex-start; height: 36px; padding: 0 12px; font-size: 14px; }
+.ddetail__title { display: flex; align-items: center; gap: 10px; }
+.ddetail__title h2 { font-size: 24px; }
+.ddetail__title .dot { width: 14px; height: 14px; }
+.ddetail h3 { margin: 0 0 8px; font-size: 16px; }
+.grow { display: grid; grid-template-columns: 112px 1fr 44px; align-items: center; gap: 10px; font-size: 14px; margin-bottom: 8px; }
+.grow .split { height: 10px; }
+.grow b { text-align: right; font-weight: 700; }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fact { padding: 10px 12px; border-radius: var(--r-sm); background: var(--raised); }
+.fact b { display: block; font-size: 20px; font-weight: 800; }
+.fact span { font-size: 13px; color: var(--text-2); }
+.results.is-district [data-hide-district] { display: none !important; }
+/* toast */
+.toast { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%); z-index: 20; padding: 10px 16px; border-radius: 10px;
+  background: #F8FAFC; color: #0F172A; font-weight: 600; font-size: 15px; box-shadow: var(--shadow); opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+/* loading screen */
+.loader { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+  background: radial-gradient(1200px 600px at 50% 40%, #13213F 0%, #0A1020 60%); transition: opacity .5s ease; }
+.loader.done { opacity: 0; pointer-events: none; }
+.loader__word { font-size: 30px; font-weight: 800; letter-spacing: -0.01em; }
+.loader__word span { color: var(--text-3); font-weight: 600; }
+.loader__steps { display: flex; flex-direction: column; gap: 8px; min-width: 280px; font-size: 15px; color: var(--text-3); }
+.loader__steps div { display: flex; align-items: center; gap: 10px; transition: color .2s; }
+.loader__steps div::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #334155; flex: 0 0 auto; }
+.loader__steps div.on { color: var(--text); }
+.loader__steps div.on::before { border-color: var(--brand-b); background: var(--brand-b); }
+.logo-bars rect { transform-origin: bottom; transform-box: fill-box; }
+.loader .logo-bars rect { animation: rise 1.2s ease-in-out infinite; }
+.loader .logo-bars rect:nth-child(2) { animation-delay: .15s; } .loader .logo-bars rect:nth-child(3) { animation-delay: .3s; }
+@keyframes rise { 0%, 100% { transform: scaleY(.55); } 50% { transform: scaleY(1); } }
+.loader .logo-dot { animation: pulse 1.2s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .loader .logo-bars rect, .loader .logo-dot { animation: none; } }
 .tile__name { display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .tile__pct { font-size: 26px; font-weight: 800; }
 .tile__sub { font-size: 14px; color: var(--text-2); }
@@ -218,6 +266,12 @@ button { cursor: pointer; }
 </style>
 </head>
 <body>
+<div class="loader" id="loader" role="status" aria-live="polite">
+  <svg class="logo" width="84" height="84" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lgb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient></defs><rect x="1" y="1" width="30" height="30" rx="9" fill="url(#lgb)"/><g class="logo-bars" fill="#F8FAFC"><rect x="7.5" y="14" width="4.4" height="11" rx="2.2"/><rect x="13.8" y="8" width="4.4" height="17" rx="2.2"/><rect x="20.1" y="12" width="4.4" height="13" rx="2.2"/></g><circle class="logo-dot" cx="24.5" cy="7.5" r="2.6" fill="#F97316" stroke="#F8FAFC" stroke-width="1.2"/></svg>
+  <div class="loader__word">CitySim <span>Detroit</span></div>
+  <div class="loader__steps"><div id="ld1">Loading the street map</div><div id="ld2">Raising 335,338 buildings</div><div id="ld3">Placing residents in their districts</div></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="app" id="app">
 
   <!-- MAP: static SVG stand-in for deck.gl -->
@@ -225,17 +279,17 @@ button { cursor: pointer; }
   <div class="map-key panel" id="mapKey" aria-label="Map key">
     <button type="button" class="toggle" id="roadsToggle" aria-pressed="true"><span class="knob"></span>Roads</button>
     <span class="key-roads"><span><i style="background:#4ADE80;border-radius:2px"></i>Light</span><span><i style="background:#FACC15;border-radius:2px"></i>Busy</span><span><i style="background:#F87171;border-radius:2px"></i>Heavy</span></span>
-    <span class="key-res"><span><i style="background:#60A5FA"></i>Supports</span><span><i style="background:#94A3B8"></i>Neutral</span><span><i style="background:#FB923C"></i>Opposes</span></span>
+    <span class="key-res"><span><i style="background:var(--support)"></i>Supports</span><span><i style="background:#94A3B8"></i>Neutral</span><span><i style="background:var(--oppose)"></i>Opposes</span></span>
   </div>
 
   <!-- TOP BAR -->
   <header class="topbar">
-    <div class="brand panel"><svg width="28" height="28" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="6" fill="#60A5FA"/><path d="M6 15V9l5-3 5 3v6" fill="none" stroke="#0F172A" stroke-width="1.8" stroke-linejoin="round"/></svg>CitySim Detroit</div>
+    <div class="brand panel"><svg class="logo" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient></defs><rect x="1" y="1" width="30" height="30" rx="9" fill="url(#lga)"/><g class="logo-bars" fill="#F8FAFC"><rect x="7.5" y="14" width="4.4" height="11" rx="2.2"/><rect x="13.8" y="8" width="4.4" height="17" rx="2.2"/><rect x="20.1" y="12" width="4.4" height="13" rx="2.2"/></g><circle class="logo-dot" cx="24.5" cy="7.5" r="2.6" fill="#F97316" stroke="#F8FAFC" stroke-width="1.2"/></svg><span>CitySim <span style="color:var(--text-3);font-weight:600">Detroit</span></span></div>
     <div class="picker panel" role="group" aria-labelledby="pickerLabel">
       <div class="picker__label"><b id="pickerLabel">Districts</b><span id="pickerCount">4 of 4 selected</span></div>
       <button type="button" class="dchip" data-d="1" aria-pressed="false" style="--c:#F59E0B"><span class="dot"></span>District 1</button><button type="button" class="dchip" data-d="2" aria-pressed="false" style="--c:#10B981"><span class="dot"></span>District 2</button><button type="button" class="dchip" data-d="3" aria-pressed="false" style="--c:#EF4444"><span class="dot"></span>District 3</button><button type="button" class="dchip" data-d="4" aria-pressed="true" style="--c:#A371F7"><span class="dot"></span>District 4</button><button type="button" class="dchip" data-d="5" aria-pressed="true" style="--c:#4C8DFF"><span class="dot"></span>District 5</button><button type="button" class="dchip" data-d="6" aria-pressed="true" style="--c:#DB61A2"><span class="dot"></span>District 6</button><button type="button" class="dchip" data-d="7" aria-pressed="true" style="--c:#2EC4B6"><span class="dot"></span>District 7</button>
     </div>
-    <button type="button" class="btn panel share-btn"><svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M5 5l3-3 3 3M3 9v4h10V9"/></svg>Share</button>
+    <button type="button" class="btn panel share-btn" id="shareBtn"><svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M5 5l3-3 3 3M3 9v4h10V9"/></svg>Share</button>
   </header>
 
   <!-- BLOCKS (left): built from the question -->
@@ -255,30 +309,31 @@ button { cursor: pointer; }
   <!-- RESULTS (right) -->
   <aside class="results panel" id="results" aria-label="What residents think" aria-live="polite">
     <div class="results__body">
-      <section>
+      <section class="ddetail" id="ddetail" hidden aria-live="polite"></section>
+      <section data-hide-district>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2>Public approval</h2><span class="badge" data-show="results" id="ovBadge">Sample data</span></div>
         <div data-show="empty" class="results__empty" style="margin-top:12px" id="emptyMsg">Ask a question in the bar below to see what residents think. Example: "What if we expand the Newlab drone route to 200 flights a day?"</div>
         <div data-show="results">
           <div class="approval__nums">
-            <div><b class="num" style="color:#93C5FD" id="ovS">45%</b><span>support</span></div>
+            <div><b class="num" style="color:var(--support)" id="ovS">45%</b><span>support</span></div>
             <div><b class="num" id="ovN">25%</b><span>neutral</span></div>
-            <div><b class="num" style="color:#FDBA74" id="ovO">30%</b><span>oppose</span></div>
+            <div><b class="num" style="color:var(--oppose)" id="ovO">30%</b><span>oppose</span></div>
           </div>
           <div class="split" id="ovBar" style="height:14px;border-radius:7px" role="img" aria-label="45% support, 25% neutral, 30% oppose"><span style="width:45%"></span><span style="width:25%"></span><span style="width:30%"></span></div>
           <p style="margin:10px 0 0" class="muted" id="ovLean">Leaning yes. No majority either way.</p>
         </div>
       </section>
-      <section>
+      <section data-hide-district>
         <h3>By district</h3>
         <div class="tiles" id="tiles"></div>
       </section>
-      <section data-show="results" id="worries">
+      <section data-show="results" id="worries" data-hide-district>
         <h3>Top worries</h3>
         <div class="worry"><div class="worry__row"><span>Noise over homes</span><b class="num">34%</b></div><div class="meter"><span style="width:68%"></span></div></div>
         <div class="worry"><div class="worry__row"><span>Privacy and cameras</span><b class="num">21%</b></div><div class="meter"><span style="width:42%"></span></div></div>
         <div class="worry"><div class="worry__row"><span>Safety if one falls</span><b class="num">18%</b></div><div class="meter"><span style="width:36%"></span></div></div>
       </section>
-      <section data-show="results">
+      <section data-show="results" data-hide-district>
         <div class="note note--ok" id="trafficNote"><svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg><div><b>Traffic: no problem.</b> Takes delivery vans off the road. No main street gets jammed.</div></div>
       </section>
       <section>
@@ -287,7 +342,7 @@ button { cursor: pointer; }
     </div>
     <div class="results__foot">
       <button type="button" class="btn">Compare</button>
-      <button type="button" class="btn btn--primary"><svg class="icon" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M5 7l3 3 3-3M3 12v1.5h10V12"/></svg>Briefing</button>
+      <button type="button" class="btn btn--outline" id="briefBtn"><svg class="icon" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M5 7l3 3 3-3M3 12v1.5h10V12"/></svg>Briefing</button>
     </div>
   </aside>
 
@@ -327,7 +382,7 @@ var mapView = (function () {
     : 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
   var PAD_OPEN = { left: 392, right: 432, top: 110, bottom: 100 }, PAD_CLOSED = { left: 40, right: 432, top: 110, bottom: 100 };
   var RAMP = ['interpolate', ['linear'], ['get', 'h'], 0, '#58647A', 8, '#6E7D94', 15, '#7DA0D7', 40, '#A096EB', 120, '#EBE1FF'];
-  var STANCE = { s: [96, 165, 250], n: [148, 163, 184], o: [251, 146, 60], x: [100, 116, 139], idle: [248, 250, 252] };
+  var STANCE = { s: [56, 189, 248], n: [148, 163, 184], o: [249, 115, 22], x: [100, 116, 139], idle: [248, 250, 252] };
   var roadsOn = true, sel = [], districts = null, overlays = null, residents = [], labels = {}, hub = null, clickFn = null, padded = null, ready = false;
 
   var map = new maplibregl.Map({
@@ -339,6 +394,7 @@ var mapView = (function () {
   var overlay = new deck.MapboxOverlay({ interleaved: true, layers: [], getTooltip: function (i) {
     var p = i.object && i.object.properties;
     if (!p || p.kind !== 'artery') return null;
+    if (el.dataset.state !== 'results') return { text: p.name, style: { fontSize: '14px', fontFamily: 'Inter, system-ui, sans-serif', background: 'rgba(15,23,42,.92)', color: '#F8FAFC', borderRadius: '8px', padding: '6px 10px' } };
     var band = p.load < .5 ? 'Light traffic' : p.load < .75 ? 'Busy' : 'Heavy traffic';
     return { text: p.name + ' · ' + band, style: { fontSize: '14px', fontFamily: 'Inter, system-ui, sans-serif', background: 'rgba(15,23,42,.92)', color: '#F8FAFC', borderRadius: '8px', padding: '6px 10px' } };
   } });
@@ -565,8 +621,9 @@ var mapView = (function () {
       if (roadsOn) layers.push(new deck.GeoJsonLayer({
         id: 'arteries', data: cached('arteries', sel.join(','), function () { return overlays.features.filter(function (f) { return f.properties.kind === 'artery' && on(f.properties.d); }); }),
         stroked: true, filled: false, pickable: true, lineWidthUnits: 'pixels', lineCapRounded: true, lineJointRounded: true,
-        getLineWidth: function (f) { return f.properties.road === 'freeway' ? 6 : 4; },
-        getLineColor: function (f) { var l = f.properties.load; return l < .5 ? [74, 222, 128, 230] : l < .75 ? [250, 204, 21, 235] : [248, 113, 113, 245]; }
+        getLineWidth: function (f) { return (f.properties.road === 'freeway' ? 6 : 4) - (st === 'results' ? 0 : 1.5); },
+        getLineColor: function (f) { if (st !== 'results') return [148, 163, 184, 150]; var l = f.properties.load; return l < .5 ? [74, 222, 128, 230] : l < .75 ? [250, 204, 21, 235] : [248, 113, 113, 245]; },
+        updateTriggers: { getLineColor: st, getLineWidth: st }
       }));
       if (drone) {
         layers.push(new deck.GeoJsonLayer({ id: 'noise', data: overlays.features.filter(function (f) { return f.properties.kind === 'noise_band'; }),
@@ -579,9 +636,9 @@ var mapView = (function () {
     var here = cached('residents', sel.join(','), function () { return residents.filter(function (r) { return on(r.d); }); });
     var z = map.getZoom();
     if (z < PEOPLE_ZOOM) {
-      layers.push(new deck.ScatterplotLayer({
+      if (st === 'results') layers.push(new deck.ScatterplotLayer({
         id: 'residents', data: here, getPosition: function (r) { return r.p; },
-        radiusUnits: 'pixels', getRadius: 3.5, stroked: true, lineWidthUnits: 'pixels', getLineWidth: 1, getLineColor: [15, 23, 42],
+        radiusUnits: 'pixels', getRadius: 2.6, stroked: true, lineWidthUnits: 'pixels', getLineWidth: 1, getLineColor: [15, 23, 42],
         getFillColor: stanceOf, updateTriggers: { getFillColor: key }
       }));
     } else {
@@ -614,7 +671,12 @@ var mapView = (function () {
   }
 
   function json(u) { return fetch(u).then(function (r) { if (!r.ok) throw u; return r.json(); }); }
-  map.on('load', function () {
+  function step(n) { var e = document.getElementById('ld' + n); if (e) e.classList.add('on'); }
+  function hideLoader() { var l = document.getElementById('loader'); if (l && !l.classList.contains('done')) { l.classList.add('done'); setTimeout(function () { l.remove(); }, 600); } }
+  setTimeout(hideLoader, 12000);                  // never block the page for long
+  function whenStyleReady(fn) { if (map.isStyleLoaded()) fn(); else map.once('style.load', fn); }
+  whenStyleReady(function () {
+    step(1);
     Promise.all([json(BASE + 'tiles/index.json'), json(BASE + 'geo/districts.geojson'), json(BASE + 'geo/overlays.geojson'), json(BASE + 'geo/residents.geojson').catch(function () { return json(BASE + 'geo/residents_demo.geojson'); })])
       .then(function (g) {
         var idx = g[0]; districts = g[1]; overlays = g[2];
@@ -635,8 +697,11 @@ var mapView = (function () {
         var h = overlays.features.filter(function (f) { return f.properties.kind === 'hub'; })[0];
         var hm = document.createElement('div'); hm.className = 'hub-m'; hm.textContent = h.properties.name;
         hub = new maplibregl.Marker({ element: hm, anchor: 'bottom', offset: [0, -10] }).setLngLat(h.geometry.coordinates).addTo(map);
+        step(2); step(3);
         ready = true; api.setSelected(sel, true); kick();
-      }).catch(function (u) { console.error('map data missing:', u); });
+        map.once('idle', function () { setTimeout(hideLoader, 250); });
+        var at = document.querySelector('.maplibregl-ctrl-attrib'); if (at) at.classList.remove('maplibregl-compact-show');
+      }).catch(function (u) { console.error('map data missing:', u); hideLoader(); });
   });
 
   var api = {
@@ -648,7 +713,7 @@ var mapView = (function () {
     },
     update: function () {                       // call after changing data-state / data-proposal / has-blocks
       var p = padding();
-      if (padded !== p) { padded = p; map.easeTo({ padding: p, duration: 500 }); }
+      if (padded !== p) { padded = p; if (districts && sel.length && !followed) fit(true); else map.easeTo({ padding: p, duration: 500 }); }
       render();
     },
     onClick: function (fn) { clickFn = fn; },
@@ -717,14 +782,82 @@ function renderTiles(){
   var el=document.getElementById('tiles'); el.innerHTML='';
   selected().forEach(function(d){
     var x=DISTRICTS[d], has=state.asked && x.s!=null;
-    var t=document.createElement('div'); t.className='tile'+(has?'':' is-pending');
+    var t=document.createElement('button'); t.type='button'; t.className='tile'+(has?'':' is-pending'); t.setAttribute('aria-label','District '+d+' details');
     t.innerHTML='<div class="tile__name"><span class="dot" style="--c:'+x.c+'"></span>District '+d+'</div>'+
-      '<div class="tile__pct num">'+(has?x.s+'%':'—')+'</div>'+
-      (has?'<div class="split"><span style="width:'+x.s+'%"></span><span style="width:'+x.n+'%"></span><span style="width:'+x.o+'%"></span></div><div class="tile__sub">'+(state.spec?'Top reason: ':'Top worry: ')+x.w+'</div>'
-          :'<div class="tile__sub">'+(state.asked?'Sample has no data here':'500 residents · '+x.area)+'</div>');
+      (has?'<div class="tile__pct num">'+x.s+'%</div><div class="split"><span style="width:'+x.s+'%"></span><span style="width:'+x.n+'%"></span><span style="width:'+x.o+'%"></span></div><div class="tile__sub">Top reason: '+x.w+'</div>'
+          :'<div class="tile__sub">'+x.area+'</div><div class="tile__sub">500 residents</div>')+
+      '<div class="tile__more">See who lives here →</div>';
+    t.addEventListener('click',function(){ openDistrict(d); });
     el.appendChild(t);
   });
+  if(state.openD){ if(selected().indexOf(state.openD)>-1) openDistrict(state.openD); else closeDistrict(); }
 }
+
+// ---------- district detail (opens inside the results panel) ----------
+var GROUP_ORDER=['Under 35','35 to 64','65 and over','Renters','Homeowners','No car','Has a car','Within a quarter mile','A quarter mile to a mile','More than a mile away'];
+function esc(t){ return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function sampleDistrict(d){              // offline mode only: plausible placeholder numbers, always labelled "Sample data"
+  var x=DISTRICTS[d], k=function(i){ var v=Math.sin(d*12.9+i*7.3)*43758.5; return v-Math.floor(v); };
+  var mk=function(label,i){ var s=Math.max(5,Math.min(90,Math.round((x.s||45)+(k(i)-0.5)*30))), o=Math.max(5,Math.min(90,Math.round((x.o||30)+(k(i+9)-0.5)*24))); if(s+o>95) o=95-s; return {label:label,support:s,oppose:o,neutral:100-s-o}; };
+  var u35=Math.round(26+k(1)*14), o65=Math.round(14+k(2)*10);
+  return { sample:true, groups:GROUP_ORDER.map(mk), profile:{ residents:500, age:{'Under 35':u35,'35 to 64':100-u35-o65,'65 and over':o65},
+           renters:Math.round(40+k(3)*30), no_car:Math.round(15+k(4)*20), median_income:Math.round(28000+k(5)*30000) } };
+}
+function districtData(d){
+  var live=state.result && (state.result.districts||[]).filter(function(x){return x.district===d;})[0];
+  if(live) return { sample:false, split:live.split, top:live.top_reason, n:live.n,
+    groups: live.groups && live.groups.length ? live.groups : null, overallGroups: state.result.groups||[], profile: live.profile||null };
+  if(window.CITYSIM_API && state.result) return { sample:false, groups:null, profile:null };
+  return sampleDistrict(d);
+}
+function groupRows(list){
+  var by={}; (list||[]).forEach(function(g){ by[g.label]=g; });
+  return GROUP_ORDER.filter(function(l){return by[l];}).map(function(l){ var g=by[l], s=Math.round(g.support), n=g.neutral!=null?Math.round(g.neutral):null, o=g.oppose!=null?Math.round(g.oppose):null;
+    var short={'Within a quarter mile':'Within ¼ mile','A quarter mile to a mile':'¼ to 1 mile','More than a mile away':'Over 1 mile'};
+    return '<div class="grow"><span>'+esc(short[l]||l)+'</span><div class="split" role="img" aria-label="'+s+'% support"><span style="width:'+s+'%"></span>'+(n!=null?'<span style="width:'+n+'%"></span><span style="width:'+o+'%"></span>':'')+'</div><b class="num">'+s+'%</b></div>'; }).join('');
+}
+function openDistrict(d){
+  state.openD=d;
+  var x=DISTRICTS[d], D=districtData(d), asked=state.asked, el=document.getElementById('ddetail');
+  var h='<button type="button" class="btn ddetail__back" id="ddBack">← All districts</button>'+
+    '<div><div class="ddetail__title"><span class="dot" style="--c:'+x.c+'"></span><h2>District '+d+'</h2>'+(D.sample?'<span class="badge">Sample data</span>':'')+'</div><p class="muted" style="margin:4px 0 0">'+esc(x.area)+'</p></div>';
+  if(asked && (D.split || x.s!=null)){
+    var sp=D.split||{support:x.s,neutral:x.n,oppose:x.o}, r=Math.round;
+    h+='<section><div class="approval__nums"><div><b class="num" style="color:var(--support)">'+r(sp.support)+'%</b><span>support</span></div><div><b class="num">'+r(sp.neutral)+'%</b><span>neutral</span></div><div><b class="num" style="color:var(--oppose)">'+r(sp.oppose)+'%</b><span>oppose</span></div></div>'+
+       '<div class="split" style="height:12px;border-radius:6px"><span style="width:'+sp.support+'%"></span><span style="width:'+sp.neutral+'%"></span><span style="width:'+sp.oppose+'%"></span></div>'+
+       '<p class="muted" style="margin:8px 0 0">Top reason: '+esc(REASON_LABEL[D.top]||D.top||x.w)+'</p></section>';
+    var rows=groupRows(D.groups);
+    if(!rows && D.overallGroups && D.overallGroups.length) rows='<p class="muted" style="margin:0 0 8px;font-size:14px">This run reports groups for all selected districts together:</p>'+groupRows(D.overallGroups);
+    h+='<section><h3>Support by group</h3>'+(rows||'<p class="muted" style="margin:0">Not reported for this run.</p>')+'</section>';
+  } else {
+    h+='<section><p class="muted" style="margin:0">Ask a question to see how this district reacts, broken down by age, renters vs owners, cars and distance.</p></section>';
+  }
+  var P=D.profile;
+  if(P){
+    var ages=Object.keys(P.age||{}).map(function(k){ return '<div class="grow"><span>'+esc(k)+'</span><div class="meter"><span style="width:'+P.age[k]+'%;background:var(--accent)"></span></div><b class="num">'+Math.round(P.age[k])+'%</b></div>'; }).join('');
+    h+='<section><h3>Who lives here</h3><div class="facts">'+
+       '<div class="fact"><b class="num">'+Math.round(P.renters)+'%</b><span>rent their home</span></div>'+
+       '<div class="fact"><b class="num">'+Math.round(P.no_car)+'%</b><span>have no car</span></div>'+
+       (P.median_income?'<div class="fact"><b class="num">$'+Math.round(P.median_income/1000)+'k</b><span>median household income</span></div>':'')+
+       '<div class="fact"><b class="num">'+(P.residents||500)+'</b><span>simulated residents</span></div></div>'+
+       '<h3 style="margin-top:14px">Age</h3>'+ages+'</section>';
+  } else {
+    h+='<section><h3>Who lives here</h3><p class="muted" style="margin:0">Shown after a run: age, renters, cars and income of this district\'s residents, from census data.</p></section>';
+  }
+  el.innerHTML=h; el.hidden=false;
+  document.getElementById('results').classList.add('is-district');
+  document.querySelector('.results__body').scrollTop=0;
+  document.getElementById('ddBack').addEventListener('click',closeDistrict);
+  document.getElementById('ddBack').focus();
+}
+function closeDistrict(){ state.openD=null; document.getElementById('ddetail').hidden=true; document.getElementById('results').classList.remove('is-district'); }
+
+// Share: copy a link to this view
+function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(function(){ t.classList.remove('on'); },1800); }
+document.getElementById('shareBtn').addEventListener('click',function(){
+  var u=location.origin+location.pathname+'?d='+selected().join(',')+(state.question?'&q='+encodeURIComponent(state.question):'');
+  (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(function(){ toast('Link copied'); },function(){ prompt('Copy this link', u); });
+});
 
 // Build blocks from the question
 function parse(q){
@@ -857,6 +990,7 @@ function specWithEdits(){
 }
 var REASON_LABEL={traffic:'Traffic',noise:'Noise',safety:'Safety',privacy:'Privacy',rent:'Rent and housing costs',jobs:'Jobs',access:'Access',none:'No main reason'};
 function showResult(res){
+  state.result=res;
   var o=res.overall, r=function(x){return Math.round(x);};
   document.getElementById('ovS').textContent=r(o.support)+'%'; document.getElementById('ovN').textContent=r(o.neutral)+'%'; document.getElementById('ovO').textContent=r(o.oppose)+'%';
   var bar=document.getElementById('ovBar'); bar.setAttribute('aria-label',r(o.support)+'% support, '+r(o.neutral)+'% neutral, '+r(o.oppose)+'% oppose');
@@ -955,6 +1089,11 @@ mapView.onClick(function(e){
 document.getElementById('rcClose').addEventListener('click',function(){ rc.hidden=true; });
 document.addEventListener('keydown',function(e){ if(e.key==='Escape') rc.hidden=true; });
 
+(function(){                                      // ?d=4,5,6&q=... from a shared link
+  var q=new URLSearchParams(location.search), d=(q.get('d')||'').split(',').map(Number).filter(function(n){return n>=1&&n<=7;}).slice(0,4);
+  if(d.length) document.querySelectorAll('.dchip').forEach(function(b){ b.setAttribute('aria-pressed', d.indexOf(+b.dataset.d)>-1?'true':'false'); });
+  if(q.get('q')) document.getElementById('ask').value=q.get('q');
+})();
 syncPicker();
 </script>
 </body>

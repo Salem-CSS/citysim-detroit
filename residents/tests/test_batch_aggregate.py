@@ -91,7 +91,10 @@ def test_totals_are_weighted_and_match_the_contract():
     res = aggregate.main(rows, SPEC, {"residents": 5, "retried": 1})
     total = sum(p["weight"] for p in people())
     assert res["overall"]["support"] == round(100 * 100.0 / total, 1) and res["overall"]["oppose"] == round(100 * (101 + 102) / total, 1)
-    assert res["districts"] == [{"district": 6, "split": {k: res["overall"][k] for k in ("support", "neutral", "oppose")}, "n": 4, "top_reason": "safety"}]
+    d6 = res["districts"][0]
+    assert {k: d6[k] for k in ("district", "split", "n", "top_reason")} == {"district": 6, "split": {k: res["overall"][k] for k in ("support", "neutral", "oppose")}, "n": 4, "top_reason": "safety"}
+    assert {g["label"] for g in d6["groups"]} >= {"Renters", "Homeowners"} and all(abs(g["support"] + g["neutral"] + g["oppose"] - 100) < 0.2 for g in d6["groups"])
+    assert d6["profile"]["residents"] == 4 and abs(sum(d6["profile"]["age"].values()) - 100) < 0.2
     assert res["run_stats"]["dropped"] == 1 and res["run_stats"]["drop_rate"] == 0.2 and res["run_stats"]["unreliable"] is True
     assert res["quotes"] == [{"persona_id": "d6-0001", "text": "Too loud.", "stance": "oppose", "reason": "noise", "who": "Homeowner, 40, District 6", "district": 6}]
     assert {g["label"]: g["support"] for g in res["groups"]}["No car"] == round(100 * 100.0 / (100 + 102), 1)
