@@ -480,7 +480,6 @@ button { cursor: pointer; }
   <div class="map-key panel" id="mapKey" aria-label="Map key">
     <button type="button" class="key-min" id="keyMin" aria-expanded="true" aria-label="Hide the key" title="Hide the key"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4l-4 4 4 4"/></svg></button>
     <button type="button" class="toggle" id="roadsToggle" aria-pressed="true"><span class="knob"></span>Roads</button>
-    <span class="key-roads"><span><i style="background:#4ADE80;border-radius:2px"></i>Light</span><span><i style="background:#FACC15;border-radius:2px"></i>Busy</span><span><i style="background:#F87171;border-radius:2px"></i>Heavy</span></span>
     <span class="key-res"><span><i style="background:var(--support)"></i>Supports</span><span><i style="background:#94A3B8"></i>Neutral</span><span><i style="background:var(--oppose)"></i>Opposes</span></span>
   </div>
 
@@ -1359,7 +1358,7 @@ var mapView = (function () {
       getLineWidth: function (f) { return on(f.properties.n) ? 3 : 1.5; }, updateTriggers: { getLineColor: key, getLineWidth: key }
     }));
     if (overlays) {
-      if (roadsOn) layers.push(new deck.GeoJsonLayer({
+      if (false) layers.push(new deck.GeoJsonLayer({   // traffic colour lines removed (Salem, Nov 15)
         id: 'arteries', data: cached('arteries', sel.join(',') + '|' + JSON.stringify(route), function () { return nearRoute(overlays.features.filter(function (f) { return f.properties.kind === 'artery' && on(f.properties.d); })); }),
         stroked: true, filled: false, pickable: true, lineWidthUnits: 'pixels', lineCapRounded: true, lineJointRounded: true,
         getLineWidth: function (f) { return (f.properties.road === 'freeway' ? 6 : 4) - (st === 'results' ? 0 : 1.5); },
@@ -2080,7 +2079,7 @@ function showResult(res){
   showOverall();
   var top=(res.reasons||[]).filter(function(x){return x.reason!=='none';}).slice(0,3), max=top.length?top[0].share:1;
   document.getElementById('worries').innerHTML='<h3>Top reasons <span class="muted" style="font-size:13px;font-weight:600">· share of all residents</span></h3>'+(top.length?top.map(function(x){
-    return '<div class="worry"><div class="worry__row"><span>'+(REASON_LABEL[x.reason]||x.reason)+'</span><b class="num">'+r(x.share)+'%</b></div><div class="meter"><span style="width:'+Math.min(100,Math.round(x.share))+'%;background:var(--accent)"></span></div></div>';
+    return '<div class="worry"><div class="worry__row"><span>'+(REASON_LABEL[x.reason]||x.reason)+'</span><b class="num">'+r(x.share)+'%</b></div><div class="meter"><span style="width:'+Math.min(100,Math.round(x.share))+'%;background:var(--oppose)"></span></div></div>';
   }).join(''):'<p class="muted">No resident gave a main reason.</p>');
   var near=(res.groups||[]).filter(function(g){ return g.dimension==='exposure'; }), bd=document.getElementById('byDistance');
   bd.hidden=!near.length;
