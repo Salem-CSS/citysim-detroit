@@ -188,16 +188,36 @@ button { cursor: pointer; }
 .app:has(.results.is-compare) .askbar, .app:has(.results.is-compare) .map-key { display: none; }   /* reading mode: close to ask again */
 .results.is-compare [data-hide-district] { display: none !important; }
 .cmp[hidden] { display: none; }
-.cmp { display: flex; flex-direction: column; gap: 18px; }
-.cmp table { width: 100%; border-collapse: collapse; font-size: 15px; table-layout: fixed; }
-.cmp th, .cmp td { padding: 10px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--panel-line); }
-.cmp th:first-child, .cmp td:first-child { width: 150px; color: var(--text-2); font-weight: 500; }
-.cmp thead th { font-size: 16px; font-weight: 700; color: var(--text); }
-.cmp thead th .dot { display: inline-block; margin-right: 6px; vertical-align: middle; }
-.cmp .big { font-size: 26px; font-weight: 800; color: var(--support); line-height: 1.1; }
-.cmp .row-label { font-size: 14px; }
-.cmp td .split { height: 8px; margin-top: 6px; }
-.cmp .best { box-shadow: inset 0 0 0 2px rgba(56,189,248,0.55); border-radius: 8px; }
+.cmp { display: flex; flex-direction: column; gap: 14px; }
+.cmp table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 15px; table-layout: fixed; }
+.cmp thead th { position: sticky; top: -20px; z-index: 1; background: rgb(13,20,38); padding: 10px 10px 12px; text-align: left; vertical-align: bottom;
+  font-size: 16px; font-weight: 700; color: var(--text); border-bottom: 1px solid var(--panel-line); }
+.cmp thead th .area { display: block; font-size: 13px; font-weight: 500; color: var(--text-2); margin-top: 2px; }
+.cmp thead th .dot { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+.cmp th.lab, .cmp td.lab { width: 150px; }
+.cmp th.gap, .cmp td.gap { width: 64px; text-align: right; }
+.cmp td { padding: 10px; vertical-align: middle; border-bottom: 1px solid rgba(148,163,184,0.10); }
+.cmp td.lab { color: var(--text-2); font-size: 14px; }
+.cmp tr.sec td { padding: 18px 10px 6px; border-bottom: 0; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.cmp .v { display: flex; align-items: center; gap: 10px; }
+.cmp .v b { min-width: 48px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.cmp .v.hi b { font-weight: 800; color: var(--text); }
+.cmp .v.lo b { color: var(--text-3); font-weight: 500; }
+.cmp .track { flex: 1 1 auto; height: 6px; border-radius: 3px; background: rgba(148,163,184,0.14); overflow: hidden; }
+.cmp .track span { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+.cmp .v.hi .track span { background: #60A5FA; }
+.cmp .v.lo .track span { background: #3B5B8F; }
+.cmp .stack { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 6px; }
+.cmp .stack span { display: block; height: 100%; }
+.cmp .big { font-size: 24px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cmp .big.hi::after { content: " highest"; font-size: 12px; font-weight: 700; color: var(--support); vertical-align: 4px; }
+.cmp .sub3 { font-size: 13px; color: var(--text-2); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.cmp .gap { color: var(--text-2); font-size: 14px; font-variant-numeric: tabular-nums; }
+.cmp .key { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--text-2); }
+.cmp .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.cmp .takeaway { padding: 12px 14px; border-radius: var(--r-sm); background: var(--raised); font-size: 15px; }
+.cmp .takeaway b { color: var(--text); }
+
 /* toast */
 .toast { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%); z-index: 20; padding: 10px 16px; border-radius: 10px;
   background: #F8FAFC; color: #0F172A; font-weight: 600; font-size: 15px; box-shadow: var(--shadow); opacity: 0; transition: opacity .2s; pointer-events: none; }
@@ -877,38 +897,70 @@ function closeDistrict(){ state.openD=null; document.getElementById('ddetail').h
 function openCompare(){
   closeDistrict();
   var ds=selected(), r=Math.round, el=document.getElementById('compare'), anySample=false;
+  var SHORT={'Within a quarter mile':'Within ¼ mile','A quarter mile to a mile':'¼ to 1 mile','More than a mile away':'Over 1 mile'};
   var data=ds.map(function(d){ var D=districtData(d), x=DISTRICTS[d]; if(D.sample) anySample=true;
     var sp=D.split || (state.asked && x.s!=null ? {support:x.s,neutral:x.n,oppose:x.o} : null);
     var g={}; (D.groups||[]).forEach(function(q){ g[q.label]=q; });
     return {d:d, x:x, sp:sp, top:REASON_LABEL[D.top]||D.top||x.w, g:g, P:D.profile}; });
-  var top=data.filter(function(c){return c.sp;}).reduce(function(a,c){ return !a||c.sp.support>a.sp.support?c:a; },null);
-  var cell=function(c,fn){ return '<td>'+fn(c)+'</td>'; };
-  var row=function(label,fn,cls){ return '<tr'+(cls?' class="'+cls+'"':'')+'><td class="row-label">'+label+'</td>'+data.map(function(c){return cell(c,fn);}).join('')+'</tr>'; };
-  var bar=function(sp){ return '<div class="split"><span style="width:'+sp.support+'%"></span><span style="width:'+(sp.neutral||0)+'%"></span><span style="width:'+(sp.oppose||0)+'%"></span></div>'; };
+  var n=data.length, gaps=[];
+  var head='<thead><tr><th class="lab"></th>'+data.map(function(c){ return '<th><span class="dot" style="--c:'+c.x.c+'"></span>District '+c.d+'<span class="area">'+esc(c.x.area)+'</span></th>'; }).join('')+
+           (n>1?'<th class="gap" title="Difference between the highest and lowest district">Gap</th>':'')+'</tr></thead>';
+  var sec=function(t){ return '<tr class="sec"><td colspan="'+(n+2)+'">'+t+'</td></tr>'; };
+  // a row of numbers with bars on a shared scale; highest bold, lowest dimmed; gap = max - min
+  function numRow(label, get, fmt, scaleMax, unit){
+    var vals=data.map(get), have=vals.filter(function(v){return v!=null;});
+    if(!have.length) return '';
+    var mx=Math.max.apply(null,have), mn=Math.min.apply(null,have), top=scaleMax||mx||1;
+    var cells=data.map(function(c,i){ var v=vals[i];
+      if(v==null) return '<td><span class="muted">—</span></td>';
+      var cls=have.length>1 && v===mx && mx!==mn ? ' hi' : have.length>1 && v===mn && mx!==mn ? ' lo' : '';
+      return '<td title="District '+c.d+' · '+esc(label)+': '+fmt(v)+'"><div class="v'+cls+'"><b>'+fmt(v)+'</b><div class="track"><span style="width:'+Math.max(2,100*v/top)+'%"></span></div></div></td>'; }).join('');
+    var gap=have.length>1 ? mx-mn : null;
+    if(gap!=null) gaps.push({label:label, gap:gap, unit:unit, hi:data[vals.indexOf(mx)], lo:data[vals.indexOf(mn)], mx:mx, mn:mn, fmt:fmt});
+    return '<tr><td class="lab">'+esc(label)+'</td>'+cells+(n>1?'<td class="gap">'+(gap!=null?(unit==='$'?'$'+r(gap/1000)+'k':r(gap)+' pts'):'')+'</td>':'')+'</tr>';
+  }
+  var pct=function(v){ return r(v)+'%'; };
   var h='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2>Compare districts</h2>'+(anySample?'<span class="badge">Sample data</span>':'')+'</div>';
-  if(!state.asked) h+='<p class="muted" style="margin:0">Ask a question first. The comparison fills in once residents answer.</p>';
-  h+='<table><thead><tr><th></th>'+data.map(function(c){ return '<th><span class="dot" style="--c:'+c.x.c+'"></span>District '+c.d+'<div class="muted" style="font-size:13px;font-weight:500">'+esc(c.x.area)+'</div></th>'; }).join('')+'</tr></thead><tbody>';
+  var body='';
   if(state.asked){
-    h+=row('Support',function(c){ return c.sp?'<div class="big num'+(c===top?' best':'')+'" style="display:inline-block;padding:2px 6px">'+r(c.sp.support)+'%</div>'+bar(c.sp):'—'; });
-    h+=row('Oppose',function(c){ return c.sp?'<b class="num" style="color:var(--oppose)">'+r(c.sp.oppose)+'%</b>':'—'; });
-    h+=row('Neutral',function(c){ return c.sp?'<b class="num">'+r(c.sp.neutral)+'%</b>':'—'; });
-    h+=row('Top reason',function(c){ return esc(c.top||'—'); });
-    GROUP_ORDER.forEach(function(l){
-      if(!data.some(function(c){return c.g[l];})) return;
-      var short={'Within a quarter mile':'Within ¼ mile','A quarter mile to a mile':'¼ to 1 mile','More than a mile away':'Over 1 mile'};
-      h+=row('Support · '+(short[l]||l),function(c){ var q=c.g[l]; return q?'<b class="num">'+r(q.support)+'%</b>':'—'; });
-    });
+    var maxS=Math.max.apply(null,data.map(function(c){return c.sp?c.sp.support:-1;}));
+    body+=sec('How they feel');
+    body+='<tr><td class="lab">Support, neutral, oppose</td>'+data.map(function(c){ if(!c.sp) return '<td><span class="muted">—</span></td>';
+      return '<td title="District '+c.d+': '+r(c.sp.support)+'% support, '+r(c.sp.neutral)+'% neutral, '+r(c.sp.oppose)+'% oppose"><div class="big'+(c.sp.support===maxS&&n>1?' hi':'')+'">'+r(c.sp.support)+'%</div>'+
+        '<div class="stack"><span style="width:'+c.sp.support+'%;background:var(--support)"></span><span style="width:'+c.sp.neutral+'%;background:var(--neutral)"></span><span style="width:'+c.sp.oppose+'%;background:var(--oppose)"></span></div>'+
+        '<div class="sub3">'+r(c.sp.neutral)+'% neutral · '+r(c.sp.oppose)+'% oppose</div></td>'; }).join('')+
+      (n>1?'<td class="gap">'+(function(){ var v=data.filter(function(c){return c.sp;}).map(function(c){return c.sp.support;}); return v.length>1? r(Math.max.apply(null,v)-Math.min.apply(null,v))+' pts':''; })()+'</td>':'')+'</tr>';
+    body+='<tr><td class="lab">Top reason</td>'+data.map(function(c){ return '<td>'+esc(c.top||'—')+'</td>'; }).join('')+(n>1?'<td class="gap"></td>':'')+'</tr>';
+    var grp='';
+    GROUP_ORDER.forEach(function(l){ grp+=numRow(SHORT[l]||l, function(c){ return c.g[l]?c.g[l].support:null; }, pct, 100, '%'); });
+    if(grp) body+=sec('Support by group')+grp;
   }
   if(data.some(function(c){return c.P;})){
-    h+=row('Rent their home',function(c){ return c.P?r(c.P.renters)+'%':'—'; });
-    h+=row('No car',function(c){ return c.P?r(c.P.no_car)+'%':'—'; });
-    h+=row('Median income',function(c){ return c.P&&c.P.median_income?'$'+r(c.P.median_income/1000)+'k':'—'; });
-    h+=row('Under 35',function(c){ return c.P&&c.P.age?r(c.P.age['Under 35'])+'%':'—'; });
-    h+=row('65 and over',function(c){ return c.P&&c.P.age?r(c.P.age['65 and over'])+'%':'—'; });
+    body+=sec('Who lives here');
+    body+=numRow('Rent their home', function(c){ return c.P?c.P.renters:null; }, pct, 100, '%');
+    body+=numRow('No car', function(c){ return c.P?c.P.no_car:null; }, pct, 100, '%');
+    body+=numRow('Median income', function(c){ return c.P&&c.P.median_income?c.P.median_income:null; }, function(v){ return '$'+r(v/1000)+'k'; }, null, '$');
+    var AGE=[['Under 35','#7DD3FC'],['35 to 64','#3B82F6'],['65 and over','#1E3A8A']];
+    body+='<tr><td class="lab">Age mix</td>'+data.map(function(c){ if(!c.P||!c.P.age) return '<td><span class="muted">—</span></td>';
+      var a=c.P.age; return '<td title="District '+c.d+': '+AGE.map(function(k){return k[0]+' '+r(a[k[0]])+'%';}).join(', ')+'"><div class="stack" style="margin-top:0">'+
+        AGE.map(function(k){ return '<span style="width:'+a[k[0]]+'%;background:'+k[1]+'"></span>'; }).join('')+'</div><div class="sub3">'+AGE.map(function(k){return r(a[k[0]]);}).join(' · ')+'</div></td>'; }).join('')+
+      (n>1?'<td class="gap"></td>':'')+'</tr>';
   }
-  h+='</tbody></table>';
-  if(top) h+='<p class="muted" style="margin:0">Highest support: District '+top.d+' ('+r(top.sp.support)+'%).</p>';
-  el.innerHTML=h; el.hidden=false;
+  var table='<table>'+head+'<tbody>'+body+'</tbody></table>';
+  var key='<div class="key">'+(state.asked?'<span><i style="background:var(--support)"></i>Support</span><span><i style="background:var(--neutral)"></i>Neutral</span><span><i style="background:var(--oppose)"></i>Oppose</span>':'')+
+    (data.some(function(c){return c.P;})?'<span><i style="background:#7DD3FC"></i>Under 35</span><span><i style="background:#3B82F6"></i>35–64</span><span><i style="background:#1E3A8A"></i>65+</span>':'')+'<span>Bold = highest, dimmed = lowest. Gap = highest minus lowest.</span></div>';
+  // takeaway: the biggest gap among comparable % rows
+  var big=gaps.filter(function(g){return g.unit==='%';}).sort(function(a,b){return b.gap-a.gap;})[0];
+  var take='';
+  if(n>1 && state.asked){
+    var withSp=data.filter(function(c){return c.sp;}).sort(function(a,b){return b.sp.support-a.sp.support;});
+    if(withSp.length>1) take='<div class="takeaway">Most supportive: <b>District '+withSp[0].d+'</b> ('+r(withSp[0].sp.support)+'%). Least: <b>District '+withSp[withSp.length-1].d+'</b> ('+r(withSp[withSp.length-1].sp.support)+'%).'+
+      (big?' Districts differ most on <b>'+esc(big.label)+'</b> support: '+big.fmt(big.mn)+' (District '+big.lo.d+') to '+big.fmt(big.mx)+' (District '+big.hi.d+').':'')+'</div>';
+  } else if(n>1 && big){
+    take='<div class="takeaway">Biggest difference: <b>'+esc(big.label)+'</b>, from '+big.fmt(big.mn)+' in District '+big.lo.d+' to '+big.fmt(big.mx)+' in District '+big.hi.d+'.</div>';
+  }
+  if(!state.asked) h+='<p class="muted" style="margin:0">Ask a question to add how each district feels. For now, here is who lives in each.</p>';
+  el.innerHTML=h+take+table+key; el.hidden=false;
   var res=document.getElementById('results'); res.classList.add('is-compare');
   var b=document.getElementById('compareBtn'); b.textContent='Close comparison'; b.setAttribute('aria-expanded','true');
   document.querySelector('.results__body').scrollTop=0;

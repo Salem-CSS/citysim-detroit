@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 01:20 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Comparison table redesigned: grouped sections (How they feel / Support by group / Who lives here); each % cell has a thin bar on a shared 0–100 scale; highest value per row bold, lowest dimmed; a Gap column (highest minus lowest); support shown big with a support/neutral/oppose stacked bar and a "highest" marker; the two age rows merged into one Age mix stacked bar; numbers in text colour (bars carry colour); a one-line takeaway (most/least supportive, biggest difference between districts); sticky district headers; hover titles on cells; legend for bar colours.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
 ### 2026-11-15 01:05 ET · Salem (AI) · Web (branch `salem/frontend-try`)
 **Did:** (1) Walkers move only while zoomed in (walk clock pauses when zoomed out). City-view dots sit where each person stopped at the roadside, and a newly snapped person's dot jumps to their road. Residents in areas never zoomed into stay at home until their street loads, because the basemap only carries small streets at street level. (2) District picker label is now just "Max 4 districts" + chips. (3) Removed Share and Briefing. (4) "Compare districts" widens the results panel into a side-by-side table of all selected districts: support (highest outlined), oppose, neutral, top reason, support by group, and who lives here when available. The ask bar hides while comparing; "Close comparison" returns.
 **Files:** web/prototype/index.html, LOG.md (branch only)
