@@ -480,6 +480,7 @@ button { cursor: pointer; }
   <div class="map-key panel" id="mapKey" aria-label="Map key">
     <button type="button" class="key-min" id="keyMin" aria-expanded="true" aria-label="Hide the key" title="Hide the key"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4l-4 4 4 4"/></svg></button>
     <button type="button" class="toggle" id="roadsToggle" aria-pressed="true"><span class="knob"></span>Roads</button>
+    <button type="button" class="toggle" id="heatToggle" aria-pressed="false" title="Where supporters and opponents cluster (after a run)"><span class="knob"></span>Heat map</button>
     <span class="key-res"><span><i style="background:var(--support)"></i>Supports</span><span><i style="background:#94A3B8"></i>Neutral</span><span><i style="background:var(--oppose)"></i>Opposes</span></span>
   </div>
 
@@ -644,7 +645,7 @@ var mapView = (function () {
   var STANCE_D = { s: [56, 189, 248], n: [148, 163, 184], o: [249, 115, 22], x: [100, 116, 139], idle: [248, 250, 252] };
   var STANCE_L = { s: [2, 132, 199], n: [100, 116, 139], o: [234, 88, 12], x: [148, 163, 184], idle: [30, 41, 59] };   // light map: deeper colours so people stand out on beige
   var STANCE = STANCE_D;
-  var roadsOn = true, sel = [], districts = null, overlays = null, residents = [], labels = {}, hub = null, clickFn = null, padded = null, ready = false;
+  var heatOn = false, roadsOn = true, sel = [], districts = null, overlays = null, residents = [], labels = {}, hub = null, clickFn = null, padded = null, ready = false;
 
   var map = new maplibregl.Map({
     container: el, style: STYLES[theme] || STYLE, center: [-83.09, 42.36], zoom: 11, pitch: 50, bearing: -12,
@@ -698,9 +699,9 @@ var mapView = (function () {
       endPick({ label: label, lon: ll[0], lat: ll[1], text: label });
       return;
     }
-    var hit = map.getZoom() >= PEOPLE_ZOOM && overlay.pickObject({ x: e.point.x, y: e.point.y, radius: 10, layerIds: ['people-body', 'people-leg-l', 'people-leg-r'] });
+    var hit = overlay.pickObject({ x: e.point.x, y: e.point.y, radius: 8, layerIds: map.getZoom() >= PEOPLE_ZOOM ? ['people-body', 'people-leg-l', 'people-leg-r'] : ['residents'] });
     if (hit && hit.object) { selectPerson(hit.object); return; }
-    if (clickFn) clickFn({ clientX: e.originalEvent.clientX, clientY: e.originalEvent.clientY });
+    // empty map: nothing opens (the old rotating-quote card is gone)
   });
 
   function hex(c) { return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; }
@@ -1372,10 +1373,19 @@ var mapView = (function () {
       }));
     }
     var here = cached('residents', sel.join(','), function () { return residents.filter(function (r) { return on(r.d); }); });
+    if (heatOn && st === 'results') {
+      var pos = function (r) { return r.walk && r.walk.onStreet ? [r.pos[0], r.pos[1]] : [r.p[0], r.p[1]]; };
+      var sup = here.filter(function (r) { return stanceOf(r) === STANCE.s; }), opp = here.filter(function (r) { return stanceOf(r) === STANCE.o; });
+      var common = { radiusPixels: 55, intensity: 1.2, threshold: 0.06, aggregation: 'SUM', getWeight: 1, getPosition: pos };
+      layers.push(new deck.HeatmapLayer(Object.assign({ id: 'heat-support', data: sup, updateTriggers: { getPosition: key },
+        colorRange: [[186, 230, 253, 0], [186, 230, 253, 70], [125, 211, 252, 120], [56, 189, 248, 160], [14, 165, 233, 190], [2, 132, 199, 210]] }, common)));
+      layers.push(new deck.HeatmapLayer(Object.assign({ id: 'heat-oppose', data: opp, updateTriggers: { getPosition: key },
+        colorRange: [[254, 215, 170, 0], [254, 215, 170, 70], [253, 186, 116, 120], [251, 146, 60, 160], [249, 115, 22, 190], [234, 88, 12, 210]] }, common)));
+    }
     var z = map.getZoom();
     if (z < PEOPLE_ZOOM) {
       layers.push(new deck.ScatterplotLayer({
-        id: 'residents', data: here, getPosition: function (r) { return r.walk && r.walk.onStreet ? [r.pos[0], r.pos[1], 0] : r.p; },
+        id: 'residents', data: here, pickable: true, getPosition: function (r) { return r.walk && r.walk.onStreet ? [r.pos[0], r.pos[1], 0] : r.p; },
         updateTriggers: { getFillColor: key, getPosition: snapRound + ':' + Math.round(walkClock) },
         radiusUnits: 'pixels', getRadius: theme === 'light' ? 3.6 : 3.2, stroked: true, lineWidthUnits: 'pixels', getLineWidth: theme === 'light' ? 1.2 : 1, getLineColor: theme === 'light' ? [255, 255, 255] : [15, 23, 42],
         getFillColor: stanceOf
@@ -1541,8 +1551,12 @@ var mapView = (function () {
         earthTones(); paintBuildings(); paintAllRoads(); render();
       });
     },
-    setRoads: function (v) { roadsOn = v; paintAllRoads(); render(); }
+    setRoads: function (v) { roadsOn = v; paintAllRoads(); render(); },
+    setHeat: function (v) { heatOn = v; render(); }
   };
+  var ht = document.getElementById('heatToggle');
+  ht.addEventListener('click', function () { var v = ht.getAttribute('aria-pressed') !== 'true'; ht.setAttribute('aria-pressed', v); api.setHeat(v);
+    if (v && el.dataset.state !== 'results' && window.toast) toast('Heat map shows after residents are asked'); });
   var rt = document.getElementById('roadsToggle');
   rt.addEventListener('click', function () {
     var v = rt.getAttribute('aria-pressed') !== 'true';

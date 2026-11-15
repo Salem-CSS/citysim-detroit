@@ -65,6 +65,11 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · main: resident card only for the clicked resident; heat map toggle
+- Map click: the old fallback that cycled through quotes on any click (and could pin an "Opposes" quote on a support dot) is removed. A card opens only for the resident actually clicked: walking figure at street zoom, or the dot itself when zoomed out (dots are now pickable). Empty map clicks do nothing.
+- New "Heat map" toggle in the map key: after a run, two heat layers show where supporters (light blue) and opponents (light orange) cluster among the selected districts' residents. Before a run it says it needs results.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · main: consistency test of all six build animations
 - Measured on the live site against the basemap streets and building tiles:
   - Bus (5 routes): 100% of each route within 15 m of a street; 4–5 stops each.
