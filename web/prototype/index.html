@@ -972,7 +972,16 @@ var mapView = (function () {
       for (var dx = -1; dx <= 1; dx++) for (var dy = -1; dy <= 1; dy++) (cell[(cx + dx) + ':' + (cy + dy)] || []).forEach(function (k2) {
         if (k2 === k1 || adj[k1][0][0] === k2) return; var q2 = pos[k2], d2 = Math.hypot((q2[0] - q1[0]) * kx, (q2[1] - q1[1]) * ky); if (d2 < bd2) { bd2 = d2; bk = k2; } });
       if (bk) { adj[k1].push([bk, bd2 * 1.5]); adj[bk].push([k1, bd2 * 1.5]); } }
-    function nearest(c) { var best = null, bd = 250; for (var k in pos) { var q = pos[k], d = Math.hypot((q[0] - c[0]) * kx, (q[1] - c[1]) * ky); if (d < bd && adj[k].length) { bd = d; best = k; } } return best; }
+    // label connected pieces; snap to the main street network, not a stray fragment (parking aisle, clipped stub)
+    var comp = {}, size = {}, cid = 0;
+    for (var k3 in adj) { if (comp[k3] != null) continue; var stack = [k3]; comp[k3] = cid; size[cid] = 0;
+      while (stack.length) { var u3 = stack.pop(); size[cid]++; adj[u3].forEach(function (e) { if (comp[e[0]] == null) { comp[e[0]] = cid; stack.push(e[0]); } }); } cid++; }
+    var big = 0; for (var c3 in size) if (size[c3] > size[big]) big = +c3;
+    function nearest(c) {
+      var best = null, bd = 250, any = null, ad = 250;
+      for (var k in pos) { if (!adj[k].length) continue; var q = pos[k], d = Math.hypot((q[0] - c[0]) * kx, (q[1] - c[1]) * ky);
+        if (d < ad) { ad = d; any = k; } if (comp[k] === big && d < bd) { bd = d; best = k; } }
+      return best || any; }
     return { pos: pos, adj: adj, nearest: nearest };
   }
   function dijkstra(G, s, t) {                // from s; stops at t if given. returns {dist, prev}
