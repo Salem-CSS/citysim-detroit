@@ -71,6 +71,26 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 **Decisions:** Sorting batches by distance does not fix the problem; it was worse than random batches. Asking one at a time is the only method tested where batch-mates cannot matter. Measured cost for 200 residents: $0.022 and 8 s batched (8 calls, 4 at once) against $0.041 and 49 s one at a time (200 calls, 8 at once), so about 1.85 times the cost. Not switched on: needs Partner's go-ahead because it raises cost and run time.
 **Blocked / needs:** One at a time, residents within 1 mile split by vehicles as expected: no vehicle 24 support / 0 neutral / 0 oppose; one vehicle 13 / 20 / 4; two or more 5 / 17 / 8. In random batches the same residents were 24/0/0, 31/6/0 and 23/5/2. So every run made so far overstates support near a site. Even one at a time, 5% to 12% of individual answers differ between two askings; the totals moved by at most 2.5 points on 200 residents. P2 (run-to-run spread on a full run) is still to be measured.
 **Next:** If approved: switch resident batches to one resident per call with temperature 0, check throttling and time on a 2,000-resident run, then P2.
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: grey roads back, sample drone corridor removed, pins clear on submit
+- Restored the grey 'all-roads' layer and road-name lookup from it (reverts the previous entry's removal).
+- Removed the blue sample drone route + noise band (and the Newlab hub marker): it showed for every drone question regardless of the user's own From/To.
+- Each picked place keeps its orange pin (one per field); all pins clear when a question is submitted or residents are asked.
+- Files: web/prototype/index.html only.
+
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: no road highlight layer, no pin marker
+- Removed the 'all-roads' overlay line layer (basemap roads only again; outside-district dim stays). Map pick reads road names from the basemap road layers.
+- No orange marker after picking a place.
+- Files: web/prototype/index.html only.
+
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: pick places on the map (From / To / Where)
+- Every place field (where/from/to) has a pin button. It turns the map top-down; click an intersection or road and the field fills with the road name(s) plus exact coordinates, e.g. `Michigan Ave & Trumbull St (42.33120, -83.06710)`. Typing coordinates works too.
+- A proposal stuck on needs_info unlocks Run once every place field is filled; POST /runs re-checks it as before.
+- **Touched Ammar's lane (logged):**
+  - `shared/places.py`: `resolve()` accepts a trailing `(lat, lon)` (or lon, lat) inside the Detroit area → `status: ok, method: "coordinates"`, district from the polygons. `split_coords()` helper.
+  - `contracts/spec.py`: `summary_line` strips coordinates so residents read only the place name ("a point on the map" if there is no name).
+  - `agent/handler.py`: place questions now say "Tap the pin to pick it on the map, or give two cross streets, an address, a landmark or coordinates."
+  - Test added in `shared/tests/test_places.py`; 52 tests pass. No contract schema change.
+- **Handoff @Ammar:** redeploy after merge so the live resolver accepts map picks.
 
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: compact compare profile, no takeaway, no info button
 - Compare: "Who lives here" dot plots replaced with a small table (districts as columns, value + thin bar, highest bold). Takeaway line removed.

@@ -2,7 +2,7 @@
 
     from contracts.spec import new_action, values, summary_line
 """
-import json, uuid
+import json, re, uuid
 from pathlib import Path
 
 ACTIONS = json.loads((Path(__file__).parent / "actions.json").read_text())
@@ -43,6 +43,16 @@ PLACE_IDS = {"site", "hub", "street", "route"}          # constraints that name 
 PLACE_WORDS = {"from", "between", "on", "at", "near", "along", "above", "over", "in", "by", "across", "next", "behind"}
 
 
+_COORDS = re.compile(r"\s*\(?\s*-?\d{1,3}\.\d+\s*,\s*-?\d{1,3}\.\d+\s*\)?\s*$")
+
+
+def _place(v) -> str:
+    """Residents read the place name, never raw map coordinates."""
+    t = str(v or "").strip()
+    bare = _COORDS.sub("", t).strip(" ,")
+    return bare if bare or not t else "a point on the map"
+
+
 def summary_line(spec: dict) -> str:
     """Neutral one-sentence summary. Residents are asked about this, not the raw prompt.
 
@@ -53,9 +63,9 @@ def summary_line(spec: dict) -> str:
     for a in spec["actions"]:
         by_id = {c["id"]: c for c in a["constraints"]}
         what = str((by_id.get("what") or {}).get("value") or "").strip()
-        where = str((by_id.get("where") or {}).get("value") or "").strip()
-        start = str((by_id.get("from") or {}).get("value") or "").strip()
-        end = str((by_id.get("to") or {}).get("value") or "").strip()
+        where = _place((by_id.get("where") or {}).get("value"))
+        start = _place((by_id.get("from") or {}).get("value"))
+        end = _place((by_id.get("to") or {}).get("value"))
         if start and end:
             where = f"from {start} to {end}"
         joined = where if where.lower().split(" ")[0] in PLACE_WORDS else f"at {where}"

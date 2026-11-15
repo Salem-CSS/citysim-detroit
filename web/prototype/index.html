@@ -68,6 +68,15 @@
 .settings { position: absolute; top: 92px; right: 16px; z-index: 6; width: 260px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .settings[hidden] { display: none; }
 .settings h3 { margin: 0; font-size: 16px; }
+.pickbar { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); z-index: 7; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; font-size: 15px; }
+.pickbar[hidden] { display: none; }
+.pickbar svg { color: var(--oppose); flex: 0 0 auto; }
+.pickbar .btn { height: 36px; min-width: 0; padding: 0 12px; }
+.map.is-picking, .map.is-picking .maplibregl-canvas { cursor: crosshair !important; }
+.placefield { display: flex; gap: 8px; }
+.placefield input { flex: 1; min-width: 0; }
+.pick { flex: 0 0 auto; width: var(--tap); height: var(--tap); border-radius: var(--r-sm); border: 1px solid var(--panel-line); background: var(--raised); color: var(--text); display: grid; place-items: center; cursor: pointer; }
+.pick:hover, .pick[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 .settings .credits { margin: 4px 0 0; font-size: 11px; line-height: 1.45; color: var(--text-3); }
 .settings .seg { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--raised); }
 * { box-sizing: border-box; }
@@ -378,6 +387,12 @@ button { cursor: pointer; }
     <p class="credits">Map data © OpenStreetMap contributors · © CARTO · Buildings © Overture Maps Foundation (ODbL)</p>
   </div>
 
+  <div class="pickbar panel" id="pickBar" role="status" hidden>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+    <span>Click an intersection or road for <b id="pickWhat">the place</b></span>
+    <button type="button" class="btn btn--outline" id="pickCancel">Cancel</button>
+  </div>
+
   <!-- BLOCKS (left): built from the question -->
   <aside class="blocks panel" id="blocks" aria-label="Edit the details" hidden>
     <div class="blocks__head">
@@ -494,7 +509,37 @@ var mapView = (function () {
   map.on('idle', function () { if (ready && map.getZoom() >= PEOPLE_ZOOM && snapToStreets(residents.filter(function (r) { return on(r.d); }))) { snapRound++; render(); } });
   map.on('dragstart', function () { if (followed) { followHold = false; followed = null; document.getElementById('pcFollow').textContent = 'Not following. Click the person again to follow.'; } });
   document.addEventListener('visibilitychange', kick);
+  var pickCb = null, pickPrev = null, pickKey = null, pins = {};
+  function roadNamesAt(pt) {
+    var R = 16, box = [[pt.x - R, pt.y - R], [pt.x + R, pt.y + R]], best = {};
+    var layers = ['all-roads'].filter(function (id) { return map.getLayer(id); });
+    map.queryRenderedFeatures(box, layers.length ? { layers: layers } : undefined).forEach(function (f) {
+      var n = f.properties && (f.properties.name || f.properties['name:en'] || f.properties.ref); if (!n || !f.geometry) return;
+      var g = f.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : []; if (!lines.length) return;
+      var d = Infinity;
+      lines.forEach(function (ln) { for (var i = 1; i < ln.length; i++) {
+        var a = map.project(ln[i - 1]), b = map.project(ln[i]), dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy;
+        var t = L ? Math.max(0, Math.min(1, ((pt.x - a.x) * dx + (pt.y - a.y) * dy) / L)) : 0;
+        d = Math.min(d, Math.hypot(a.x + t * dx - pt.x, a.y + t * dy - pt.y)); } });
+      if (d <= R && (best[n] == null || d < best[n])) best[n] = d; });
+    return Object.keys(best).sort(function (a, b) { return best[a] - best[b]; });
+  }
+  function endPick(done) {
+    if (!pickCb) return;
+    var cb = pickCb; pickCb = null; el.classList.remove('is-picking'); document.getElementById('pickBar').hidden = true;
+    if (map.getLayer('all-roads')) map.setLayoutProperty('all-roads', 'visibility', roadsOn ? 'visible' : 'none');
+    if (!done && pickPrev) map.easeTo(pickPrev);
+    cb(done || null);
+  }
   map.on('click', function (e) {
+    if (pickCb) {
+      var names = roadNamesAt(e.point), ll = e.lngLat;
+      var label = names.length > 1 ? names[0] + ' & ' + names[1] : names.length ? names[0] : '';
+      if (pins[pickKey]) pins[pickKey].remove();
+      pins[pickKey] = new maplibregl.Marker({ color: '#F97316' }).setLngLat(ll).addTo(map);
+      endPick({ label: label, lon: ll.lng, lat: ll.lat, text: (label ? label + ' ' : '') + '(' + ll.lat.toFixed(5) + ', ' + ll.lng.toFixed(5) + ')' });
+      return;
+    }
     var hit = map.getZoom() >= PEOPLE_ZOOM && overlay.pickObject({ x: e.point.x, y: e.point.y, radius: 10, layerIds: ['people-body', 'people-leg-l', 'people-leg-r'] });
     if (hit && hit.object) { selectPerson(hit.object); return; }
     if (clickFn) clickFn({ clientX: e.originalEvent.clientX, clientY: e.originalEvent.clientY });
@@ -751,13 +796,6 @@ var mapView = (function () {
         getLineColor: function (f) { if (st !== 'results') return [148, 163, 184, 150]; var l = f.properties.load; return l < .5 ? [74, 222, 128, 230] : l < .75 ? [250, 204, 21, 235] : [248, 113, 113, 245]; },
         updateTriggers: { getLineColor: st, getLineWidth: st }
       }));
-      if (drone) {
-        layers.push(new deck.GeoJsonLayer({ id: 'noise', data: overlays.features.filter(function (f) { return f.properties.kind === 'noise_band'; }),
-          filled: true, stroked: true, getFillColor: [96, 165, 250, 45], getLineColor: [147, 197, 253, 160], lineWidthUnits: 'pixels', getLineWidth: 1.5 }));
-        layers.push(new deck.PathLayer({ id: 'route', data: overlays.features.filter(function (f) { return f.properties.kind === 'drone_route'; }),
-          getPath: function (f) { return f.geometry.coordinates.map(function (c) { return [c[0], c[1], 120]; }); },
-          widthUnits: 'pixels', getWidth: 4, getColor: [191, 219, 254], capRounded: true }));
-      }
     }
     var here = cached('residents', sel.join(','), function () { return residents.filter(function (r) { return on(r.d); }); });
     var z = map.getZoom();
@@ -782,7 +820,7 @@ var mapView = (function () {
         getPosition: function (r) { return r.hip; }, getOrientation: function (r) { return r.oriR; } }, common)));
     }
     overlay.setProps({ layers: layers });
-    if (hub) hub.getElement().style.display = drone ? '' : 'none';
+    if (hub) hub.getElement().style.display = 'none';      // no sample route/hub drawn; the user's own places are the pins
   }
 
   function padding() { return document.getElementById('app').classList.contains('has-blocks') ? PAD_OPEN : PAD_CLOSED; }
@@ -843,6 +881,16 @@ var mapView = (function () {
       render();
     },
     onClick: function (fn) { clickFn = fn; },
+    pick: function (what, cb, key) {                 // top-down view; next click on a road/intersection returns its name + point
+      if (pickCb) endPick(null);
+      pickPrev = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(), duration: 600 };
+      pickCb = cb; pickKey = key || what; el.classList.add('is-picking');
+      if (map.getLayer('all-roads')) map.setLayoutProperty('all-roads', 'visibility', 'visible');
+      document.getElementById('pickWhat').textContent = what; document.getElementById('pickBar').hidden = false;
+      map.easeTo({ pitch: 0, bearing: 0, zoom: Math.max(map.getZoom(), 15), duration: 700 });
+    },
+    cancelPick: function () { endPick(null); },
+    clearPins: function () { Object.keys(pins).forEach(function (k) { pins[k].remove(); }); pins = {}; },
     setTheme: function (t) { theme = t; },          // panels only; the map keeps its dark look
     setRoads: function (v) { roadsOn = v; paintAllRoads(); render(); }
   };
@@ -1095,7 +1143,10 @@ function blockHTML(a,b){
   if(b.fromQ){ var m=state.question.match(b.fromQ); if(m) v = b.qValue || (b.type==='stepper'? +m[1] : v); }
   state.defaults[a+'.'+b.id]=v;
   if(b.type==='select') ctl='<select aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'">'+b.options.map(function(o){return '<option'+(o===v?' selected':'')+'>'+o+'</option>';}).join('')+'</select>';
-  if(b.type==='text') ctl='<input type="text" maxlength="120" aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'" placeholder="Not given" value="'+String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'">';
+  if(b.type==='text'){ var isPlace=/^(where|from|to)$/.test(b.id);
+    ctl='<input type="text" maxlength="160" aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'" placeholder="'+(isPlace?'Pick on map, or type a place or coordinates':'Not given')+'" value="'+String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'">';
+    if(isPlace) ctl='<div class="placefield">'+ctl+'<button type="button" class="pick" data-pick="'+a+'.'+b.id+'" data-label="'+b.label+'" aria-pressed="false" aria-label="Pick '+b.label+' on the map" title="Pick on the map">'+
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></button></div>'; }
   if(b.type==='seg') ctl='<div class="seg" role="group" aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'">'+b.options.map(function(o){return '<button type="button" aria-pressed="'+(o===v)+'">'+o+'</button>';}).join('')+'</div>';
   if(b.type==='stepper') ctl='<div class="stepper" data-k="'+a+'.'+b.id+'" data-step="'+b.step+'" data-min="'+b.min+'"><button type="button" aria-label="Less">'+'<svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10"/></svg>'+'</button><output class="num" data-v="'+v+'">'+v+' <small>'+b.unit+'</small></output><button type="button" aria-label="More">'+'<svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>'+'</button></div>';
   return '<div class="block" data-k="'+a+'.'+b.id+'"><div class="block__head"><span>'+b.label+'</span>'+(b.assumed&&!(b.fromQ&&state.question.match(b.fromQ))?'<span class="tag">assumed</span>':'')+'</div>'+ctl+'</div>';
@@ -1168,9 +1219,28 @@ function markChanged(el,v){
     note.innerHTML='<svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7.5v3.5M8 5v.3"/></svg>'+'<span>You changed '+n+' detail'+(n>1?'s':'')+'. Ask again to see if support moves.</span>';
   } else if(note) note.remove();
 }
+// a proposal waiting on a place can run once every place field has something; the server re-checks it
+function placesReady(){
+  if(!state.spec || state.spec.status!=='needs_info') return;
+  var run=document.getElementById('runBtn'), fields=body.querySelectorAll('.placefield input');
+  var ok=fields.length && Array.prototype.every.call(fields,function(i){ return i.value.trim(); });
+  run.disabled=!ok; run.textContent= ok ? (state.asked?'Ask again':'Ask residents') : 'Answer the question above first';
+}
+document.getElementById('pickCancel').addEventListener('click',function(){ mapView.cancelPick(); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') mapView.cancelPick(); });
 function wireBlocks(){
   body.querySelectorAll('select').forEach(function(s){ s.addEventListener('change',function(){ markChanged(s,s.value); }); });
-  body.querySelectorAll('.block input[type=text]').forEach(function(t){ t.addEventListener('input',function(){ markChanged(t,t.value); }); });
+  body.querySelectorAll('.block input[type=text]').forEach(function(t){ t.addEventListener('input',function(){ markChanged(t,t.value); placesReady(); }); });
+  body.querySelectorAll('[data-pick]').forEach(function(p){ p.addEventListener('click',function(){
+    var inp=body.querySelector('input[data-k="'+p.dataset.pick+'"]');
+    if(p.getAttribute('aria-pressed')==='true'){ mapView.cancelPick(); return; }
+    body.querySelectorAll('[data-pick]').forEach(function(x){ x.setAttribute('aria-pressed','false'); });
+    p.setAttribute('aria-pressed','true');
+    mapView.pick(p.dataset.label.toLowerCase(), function(r){ p.setAttribute('aria-pressed','false');
+      if(!r) return; inp.value=r.text; markChanged(inp,inp.value); placesReady();
+      var blk=inp.closest('.block'), old=blk.querySelector('.picked'); if(old) old.remove();
+      blk.insertAdjacentHTML('beforeend','<div class="muted picked" style="font-size:13px">'+(r.label?'Picked on the map':'Picked a point on the map (no road name here)')+'</div>'); }, p.dataset.pick);
+  }); });
   body.querySelectorAll('.seg').forEach(function(g){ g.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
     g.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed', x===b?'true':'false');}); markChanged(g,b.textContent); }); });
   body.querySelectorAll('.stepper').forEach(function(s){ var out=s.querySelector('output'), unit=out.querySelector('small').outerHTML;
@@ -1186,6 +1256,7 @@ function setMode(asked){
 
 // Ask
 document.getElementById('askForm').addEventListener('submit',function(e){
+  mapView.cancelPick(); mapView.clearPins();
   e.preventDefault(); var i=document.getElementById('ask'), q=i.value.trim(); if(!q) return;
   state.asked=false; app.classList.remove('has-results'); document.getElementById('rcard').hidden=true; map.dataset.state='idle';
   i.value=''; i.placeholder='Ask a follow-up, like: What if flights only run after 8 AM?'; renderTiles();
@@ -1280,6 +1351,7 @@ function finishRun(b){
 
 // Run
 document.getElementById('runBtn').addEventListener('click',function(){
+  mapView.cancelPick(); mapView.clearPins();
   var b=this;
   if(window.CITYSIM_API && state.spec && state.spec.actions.length){ runLive(b); return; }   // real residents
   b.disabled=true; b.textContent='Asking 2,000 residents…';

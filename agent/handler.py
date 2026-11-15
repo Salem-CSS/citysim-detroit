@@ -177,9 +177,9 @@ def build_spec(tool_input: dict, question: str, districts: list[int], parent: di
 
 
 ROUTE_TYPES = ("add_drone_route", "change_transit")
-ASK = {"where": "Where should this go? Give two cross streets, a street address or a landmark.",
-       "from": "Where does the route start? Give two cross streets, a street address or a landmark.",
-       "to": "Where does the route end? Give two cross streets, a street address or a landmark."}
+ASK = {"where": "Where should this go? Tap the pin to pick it on the map, or give two cross streets, an address, a landmark or coordinates.",
+       "from": "Where does the route start? Tap the pin to pick it on the map, or give two cross streets, an address, a landmark or coordinates.",
+       "to": "Where does the route end? Tap the pin to pick it on the map, or give two cross streets, an address, a landmark or coordinates."}
 
 
 def check_places(spec: dict, resolve=None) -> dict:
@@ -213,7 +213,7 @@ def check_places(spec: dict, resolve=None) -> dict:
                                   "text": f"{r['name']} is in {where}, which is not one of the districts you selected. "
                                           f"Select that district or give another place."})
             else:
-                more = " Which did you mean?" if r.get("alternatives") else " Give two cross streets, a street address or a landmark."
+                more = " Which did you mean?" if r.get("alternatives") else " Tap the pin to pick it on the map, or give two cross streets, an address, a landmark or coordinates."
                 questions.append({"id": qid, "label": c["label"], "text": r["message"] + more, "options": r.get("alternatives", [])})
     if questions:
         spec["status"], spec["questions"] = "needs_info", questions
