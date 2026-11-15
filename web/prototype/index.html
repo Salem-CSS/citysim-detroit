@@ -718,7 +718,7 @@ var mapView = (function () {
       layers.push(new deck.ScatterplotLayer({
         id: 'residents', data: here, getPosition: function (r) { return r.walk && r.walk.onStreet ? [r.pos[0], r.pos[1], 0] : r.p; },
         updateTriggers: { getFillColor: key, getPosition: snapRound + ':' + Math.round(walkClock) },
-        radiusUnits: 'pixels', getRadius: 3.2, stroked: true, lineWidthUnits: 'pixels', getLineWidth: 1, getLineColor: [15, 23, 42],
+        radiusUnits: 'pixels', getRadius: theme === 'light' ? 2.8 : 3.2, stroked: true, lineWidthUnits: 'pixels', getLineWidth: 1, getLineColor: theme === 'light' ? [255, 255, 255] : [15, 23, 42],
         getFillColor: stanceOf
       }));
     } else {
