@@ -967,7 +967,7 @@ var mapView = (function () {
         var dd = Math.hypot((c1[0] - c0[0]) * kx, (c1[1] - c0[1]) * ky) * sg.w;
         adj[u0].push([v0, dd]); adj[v0].push([u0, dd]); } });
     // stitch loose ends (tile seams, clipped lines) to the closest node within 25 m
-    var cell = {}, C = 25; for (var k0 in pos) { var q0 = pos[k0], ck = Math.floor(q0[0] * kx / C) + ':' + Math.floor(q0[1] * ky / C); (cell[ck] = cell[ck] || []).push(k0); }
+    var cell = {}, C = 40; for (var k0 in pos) { var q0 = pos[k0], ck = Math.floor(q0[0] * kx / C) + ':' + Math.floor(q0[1] * ky / C); (cell[ck] = cell[ck] || []).push(k0); }
     for (var k1 in adj) { if (adj[k1].length !== 1) continue; var q1 = pos[k1], cx = Math.floor(q1[0] * kx / C), cy = Math.floor(q1[1] * ky / C), bk = null, bd2 = C;
       for (var dx = -1; dx <= 1; dx++) for (var dy = -1; dy <= 1; dy++) (cell[(cx + dx) + ':' + (cy + dy)] || []).forEach(function (k2) {
         if (k2 === k1 || adj[k1][0][0] === k2) return; var q2 = pos[k2], d2 = Math.hypot((q2[0] - q1[0]) * kx, (q2[1] - q1[1]) * ky); if (d2 < bd2) { bd2 = d2; bk = k2; } });
@@ -987,8 +987,13 @@ var mapView = (function () {
   function roadPath(a, b) {
     var G = roadGraph(a, b); if (!G) return null;
     var s = G.nearest(a), t = G.nearest(b); if (!s || !t) return null;
-    var D = dijkstra(G, s, t); if (D.dist[t] == null) return null;
-    var path = [], k = t; while (k) { path.push(G.pos[k]); k = D.prev[k]; } path.reverse();
+    var D = dijkstra(G, s, t), end = t;
+    if (D.dist[t] == null) {                   // street network split (rail, freeway, tile gap): go as far as the streets allow toward b
+      var kx = 111320 * Math.cos(a[1] * Math.PI / 180), best = null, bd = Infinity;
+      Object.keys(D.dist).forEach(function (k) { var q = G.pos[k], d = Math.hypot((q[0] - b[0]) * kx, (q[1] - b[1]) * 110540); if (d < bd) { bd = d; best = k; } });
+      if (!best || best === s) return null; end = best;
+    }
+    var path = [], k = end; while (k) { path.push(G.pos[k]); k = D.prev[k]; } path.reverse();
     return [a].concat(path, [b]);
   }
   function roadPathsTo(target, origins) {     // street paths from each origin into target (one search)
