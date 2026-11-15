@@ -65,6 +65,12 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: hideable details panel, cleaner bus animation, no loading text on the button
+- Check the details panel: ‹ button (top right) slides it away; a › tab on the left edge brings it back. Opens again on a new question.
+- Bus animation redone as a transit-map style: dark-cased blue route line drawing along the streets, round stops (white with blue ring) at both ends and every ~400 m appearing as the line reaches them, a yellow bus marker riding the route once. No 3D poles/signs/ripple.
+- Ask residents button no longer shows "Asking 2,000 residents…" / counts; the progress card covers that.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: run progress in the proposal panel, animation after results, themed dropdowns
 - While residents are asked, the proposal panel fades out and the progress card (dot grid, count, bar, districts) takes its place on the left; no dimming, the map stays fully usable.
 - The build animation now plays after the results arrive (live and sample runs), not before the run.

@@ -83,6 +83,7 @@ select option { background: #0D1426; color: #F8FAFC; }
 @media (max-width: 900px) { .runover { left: 12px; right: 12px; width: auto; } }
 .runover { position: absolute; z-index: 3; top: 108px; left: 16px; width: 360px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
 .app.is-running .blocks { opacity: 0; pointer-events: none; transform: translateX(-12px); } .runover[hidden] { display: none; }
+.app.is-running .blocks-tab { display: none; }
 .ro-top { display: flex; align-items: center; gap: 10px; font-size: 16px; }
 .ro-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(148,163,184,.3); border-top-color: var(--support); animation: rospin .8s linear infinite; }
 @keyframes rospin { to { transform: rotate(360deg); } }
@@ -190,6 +191,13 @@ button { cursor: pointer; }
 /* blocks (left) */
 .blocks { position: absolute; top: 108px; left: 16px; bottom: 104px; width: 360px; z-index: 2; display: flex; flex-direction: column; transform: translateX(0); transition: transform .25s ease, opacity .25s ease; }
 .blocks[hidden] { display: flex; transform: translateX(-110%); opacity: 0; pointer-events: none; }
+.blocks-hide { position: absolute; top: 14px; right: 14px; z-index: 1; width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--panel-line); background: var(--raised); color: var(--text-2); display: grid; place-items: center; cursor: pointer; }
+.blocks-hide:hover, .blocks-tab:hover { color: var(--text); border-color: rgba(148,163,184,.5); }
+.app.blocks-min .blocks { transform: translateX(calc(-100% - 24px)); opacity: 0; pointer-events: none; }
+.blocks-tab { position: absolute; z-index: 3; top: 124px; left: 0; width: 30px; height: 56px; border-radius: 0 12px 12px 0; border: 1px solid var(--panel-line); border-left: 0;
+  background: var(--panel); color: var(--text-2); display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.blocks-tab[hidden] { display: none; }
+.blocks__head { padding-right: 56px !important; }
 .blocks__head { padding: 18px 20px 10px; }
 .blocks__head h2 { margin: 0; font-size: 19px; font-weight: 800; }
 .blocks__head p { margin: 4px 0 0; color: var(--text-2); }
@@ -496,7 +504,9 @@ button { cursor: pointer; }
   </div>
 
   <!-- BLOCKS (left): built from the question -->
+  <button type="button" class="blocks-tab" id="blocksTab" aria-label="Show the details panel" title="Show the details" hidden><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5l4.5 4.5L6 12.5"/></svg></button>
   <aside class="blocks panel" id="blocks" aria-label="Edit the details" hidden>
+    <button type="button" class="blocks-hide" id="blocksHide" aria-label="Hide the details panel" title="Hide the details"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5L5.5 8l4.5 4.5"/></svg></button>
     <div class="blocks__head">
       <h2 id="blocksTitle">Check the details</h2>
       <p id="blocksSub">Here's what we understood. Change anything, then ask residents.</p>
@@ -979,27 +989,32 @@ var mapView = (function () {
     if (build.kind === 'road') return roadLayers();
     if (build.kind === 'event') return eventLayers();
     if (build.kind === 'rezone') return rezoneLayers();
+    // bus: a clean transit-map look - cased route line, round stops (ends + every ~400 m), a bus marker riding it once
     var t = performance.now() - build.t0, L = [], a = build.a, b = build.b || build.a, route = !!build.b, path = build.path || [a, b];
-    var pd = route ? ease(t / DRAW) : 1;                                         // 1. the route draws itself along the streets
-    var head = along(path, pd).head;
-    if (route) L.push(new deck.PathLayer({ id: 'b-route', data: [{ p: head }], getPath: function (d) { return d.p; },
-      widthUnits: 'pixels', getWidth: 8, getColor: [56, 189, 248, 245], capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
-    var stops = route ? [{ p: a, s: 0 }, { p: b, s: DRAW * 0.85 }] : [{ p: a, s: 0 }];  // 2. stop poles rise, ripple out
-    L.push(new deck.ScatterplotLayer({ id: 'b-ripple', data: stops, getPosition: function (d) { return d.p; }, stroked: true, filled: false,
-      radiusUnits: 'meters', lineWidthUnits: 'pixels', getLineWidth: 3,
-      getRadius: function (d) { return 20 + 160 * ease((t - d.s) / 1100); },
-      getLineColor: function (d) { var k = (t - d.s) / 1100; return [56, 189, 248, k < 0 || k > 1 ? 0 : Math.round(255 * (1 - k))]; },
-      updateTriggers: { getRadius: t, getLineColor: t } }));
-    L.push(new deck.ColumnLayer({ id: 'b-pole', data: stops, diskResolution: 12, radius: 6, extruded: true, getPosition: function (d) { return d.p; },
-      getElevation: function (d) { return POLE * ease((t - d.s) / RISE); }, getFillColor: [248, 250, 252, 255], updateTriggers: { getElevation: t } }));
-    L.push(new deck.ColumnLayer({ id: 'b-sign', data: stops, diskResolution: 4, radius: 24, extruded: true, angle: 45,
-      getPosition: function (d) { return [d.p[0], d.p[1], POLE * ease((t - d.s) / RISE)]; },
-      getElevation: function (d) { return (t - d.s) > RISE * 0.6 ? SIGN * ease((t - d.s - RISE * 0.6) / 300) : 0; }, getFillColor: [37, 99, 235, 255],
-      updateTriggers: { getPosition: t, getElevation: t } }));
-    if (route && t > DRAW) {                                                     // 3. a bus drives the route once
-      var k = ease((t - DRAW) / DRIVE), at = along(path, Math.min(k, 0.999)), pos = at.p, ang = at.ang;
-      L.push(new deck.SimpleMeshLayer({ id: 'b-bus', data: [pos], mesh: BUS, getPosition: function (p) { return [p[0], p[1], 0]; },
-        getOrientation: [0, -ang, 0], sizeScale: 1, getColor: [250, 204, 21], material: { ambient: .6, diffuse: .6 }, updateTriggers: { getPosition: k } }));
+    var pd = route ? ease(t / DRAW) : 1, head = along(path, pd).head;
+    if (route) {
+      L.push(new deck.PathLayer({ id: 'b-case', data: [{ p: head }], getPath: function (d) { return d.p; }, widthUnits: 'pixels', getWidth: 11,
+        getColor: [15, 23, 42, 230], capRounded: true, jointRounded: true, parameters: { depthTest: false, depthCompare: 'always' }, updateTriggers: { getPath: pd } }));
+      L.push(new deck.PathLayer({ id: 'b-route', data: [{ p: head }], getPath: function (d) { return d.p; }, widthUnits: 'pixels', getWidth: 6,
+        getColor: [37, 99, 235, 255], capRounded: true, jointRounded: true, parameters: { depthTest: false, depthCompare: 'always' }, updateTriggers: { getPath: pd } }));
+    }
+    if (!build.stops) {                                        // stop positions along the path, computed once
+      var st = [{ f: 0, end: true }];
+      if (route) { var lenM = 0, kx = 111320 * Math.cos(a[1] * Math.PI / 180); for (var i = 1; i < path.length; i++) lenM += Math.hypot((path[i][0] - path[i - 1][0]) * kx, (path[i][1] - path[i - 1][1]) * 110540);
+        var n = Math.max(0, Math.floor(lenM / 400) - 1); for (var j = 1; j <= n; j++) st.push({ f: j / (n + 1), end: false }); st.push({ f: 1, end: true }); }
+      st.forEach(function (x) { x.p = along(path, Math.min(x.f, 0.9999)).p; if (x.f === 1) x.p = path[path.length - 1]; });
+      build.stops = st;
+    }
+    var stops = build.stops.filter(function (x) { return x.f <= pd + 1e-6; });
+    L.push(new deck.ScatterplotLayer({ id: 'b-stops', data: stops, getPosition: function (d) { return d.p; }, radiusUnits: 'pixels',
+      getRadius: function (d) { return d.end ? 9 : 5.5; }, filled: true, stroked: true, lineWidthUnits: 'pixels',
+      getLineWidth: function (d) { return d.end ? 3.5 : 2.5; }, getFillColor: [255, 255, 255, 255], getLineColor: [37, 99, 235, 255],
+      parameters: { depthTest: false, depthCompare: 'always' }, updateTriggers: { getPosition: stops.length } }));
+    if (route && t > DRAW) {                                   // the bus: white disc with a blue ring and a dark centre, eased along the route
+      var k = ease((t - DRAW) / DRIVE), pos = along(path, Math.min(k, 0.9999)).p;
+      L.push(new deck.ScatterplotLayer({ id: 'b-bus', data: [pos], getPosition: function (p) { return p; }, radiusUnits: 'pixels', getRadius: 12,
+        filled: true, stroked: true, lineWidthUnits: 'pixels', getLineWidth: 4, getFillColor: [250, 204, 21, 255], getLineColor: [15, 23, 42, 255],
+        parameters: { depthTest: false, depthCompare: 'always' }, updateTriggers: { getPosition: k } }));
     }
     return L;
   }
@@ -1758,7 +1773,7 @@ function openBlocks(q, spec){
       return blockHTML(a,b);}).join('')+'</div></section>';
   }).join('');
   wireBlocks(); body.scrollTop=0;
-  blocksEl.hidden=false; app.classList.add('has-blocks');
+  blocksEl.hidden=false; app.classList.add('has-blocks'); if(window.blocksPanel) blocksPanel.show();
   map.dataset.state = state.asked?'results':'idle';
   map.dataset.proposal = state.types.indexOf('add_drone_route')>-1 ? 'drone' : 'none';
   mapView.update();
@@ -1860,6 +1875,13 @@ function placesReady(){
 }
 document.getElementById('pickCancel').addEventListener('click',function(){ mapView.cancelPick(); });
 document.addEventListener('keydown',function(e){ if(e.key==='Escape') mapView.cancelPick(); });
+(function(){                                  // hide / show the Check-the-details panel
+  var tab=document.getElementById('blocksTab'), hide=document.getElementById('blocksHide');
+  function set(min){ app.classList.toggle('blocks-min',min); tab.hidden=!min || document.getElementById('blocks').hidden; }
+  hide.addEventListener('click',function(){ set(true); tab.focus(); });
+  tab.addEventListener('click',function(){ set(false); hide.focus(); });
+  window.blocksPanel={ show:function(){ set(false); }, sync:function(){ set(app.classList.contains('blocks-min')); } };
+})();
 function wireBlocks(){
   body.querySelectorAll('select').forEach(function(s){ s.addEventListener('change',function(){ markChanged(s,s.value); }); });
   body.querySelectorAll('.block input[type=text]').forEach(function(t){ t.addEventListener('input',function(){ if(t.dataset.picked && t.value!==t.dataset.picked){ delete t.dataset.picked; delete t.dataset.ll; } markChanged(t,t.value); placesReady(); syncRoute(); }); });
@@ -1898,7 +1920,7 @@ document.getElementById('askForm').addEventListener('submit',function(e){
   i.value=''; i.placeholder='Ask a follow-up, like: What if flights only run after 8 AM?'; renderTiles();
   if(window.CITYSIM_API){
     document.getElementById('blocksQ').textContent='"'+q+'"'; body.innerHTML='<div class="changed-note"><span>Reading your question…</span></div>';
-    blocksEl.hidden=false; app.classList.add('has-blocks'); mapView.update();
+    blocksEl.hidden=false; app.classList.add('has-blocks'); if(window.blocksPanel) blocksPanel.show(); mapView.update();
     askBackend(q).then(function(spec){ openBlocks(q, spec); })
       .catch(function(err){ openBlocks(q); body.insertAdjacentHTML('afterbegin','<div class="changed-note"><span>Backend unavailable ('+String(err.message).replace(/</g,'&lt;')+'). Showing the offline version.</span></div>'); });
   } else openBlocks(q);
@@ -1983,7 +2005,7 @@ var runOver={
 function runLive(btn, wait){
   var api=(window.CITYSIM_API||'').replace(/\/$/,''), spec=specWithEdits(), n=spec.districts.length*500;
   var mode=runSpeed(), t0=Date.now(), limit=(mode==='accurate'?25:4)*60*1000;      // accurate: 200 model calls a minute is the account's cap
-  btn.disabled=true; btn.textContent='Asking '+n.toLocaleString()+' residents…';
+  btn.disabled=true;
   mapView.setAnswers(null); runOver.show(n, mode, wait);
   var fail=function(msg, j){ runOver.hide(); btn.disabled=false; setMode(state.asked);
     if(j && j.spec && j.spec.questions){ openBlocks(state.question, j.spec); return; }
@@ -1997,7 +2019,6 @@ function runLive(btn, wait){
         else if(run.status==='failed') fail(run.error||'the run failed on the server');
         else if(Date.now()-t0>limit) fail('the run did not finish in time');
         else { var a=+run.answered||0, tot=+run.total||n;
-          btn.textContent = a ? 'Asked '+Math.min(a,tot).toLocaleString()+' of '+tot.toLocaleString()+' residents…' : 'Asking '+tot.toLocaleString()+' residents…';
           runOver.update(a,tot);
           setTimeout(poll, mode==='accurate'?4000:2000); }
       }).catch(function(e){ if(++errs>5) fail(e.message); else setTimeout(poll,4000); }); })(); })
@@ -2025,7 +2046,7 @@ document.getElementById('runBtn').addEventListener('click',function(){
   mapView.cancelPick(); mapView.clearPins();
   var b=this, wait=0;
   if(window.CITYSIM_API && state.spec && state.spec.actions.length){ runLive(b, 0); return; }   // real residents
-  b.disabled=true; b.textContent='Asking 2,000 residents…';
+  b.disabled=true;
   var N=selected().length*500; runOver.show(N,'sample',wait); [300,700,1000,1300].forEach(function(t,i){ setTimeout(function(){ runOver.update(Math.round(N*[.2,.5,.8,1][i]),N); },wait+t); });
   setTimeout(function(){
     runOver.hide(); state.asked=true; b.disabled=false; app.classList.add('has-results'); map.dataset.state='results'; mapView.update();
