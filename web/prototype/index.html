@@ -223,7 +223,8 @@ button { cursor: pointer; }
 .seg button { flex: 1 1 0; height: 44px; border: 0; border-radius: 10px; background: transparent; font-size: 15px; font-weight: 500; }
 .seg button[aria-pressed="true"] { background: var(--text); color: #0F172A; font-weight: 700; }
 .block select { height: var(--tap); padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--panel-line); background: rgba(0,0,0,0.15); font-size: 16px; }
-.block select option { color: #0F172A; }
+.block select option { background: #0D1426; color: #F8FAFC; }
+:root[data-theme="light"] .block select option { background: #FFFFFF; color: #0F172A; }
 .block input[type=text] { height: var(--tap); padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--panel-line); background: rgba(0,0,0,0.15); font-size: 16px; color: inherit; width: 100%; box-sizing: border-box; }
 .changed-note { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: var(--r-sm); background: rgba(253,230,138,0.12); border: 1px solid rgba(253,230,138,0.35); }
 .changed-note .icon { color: var(--warn); }
@@ -370,6 +371,9 @@ button { cursor: pointer; }
 .hrow h3 { margin: 0 !important; }
 .hctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .gsort { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-3); }
+.ovdist select { height: 34px; padding: 0 30px 0 12px; border-radius: 999px; border: 1px solid var(--panel-line); background-color: var(--raised); color: var(--text); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.ovdist[hidden], #ovBadge[hidden] { display: none !important; }
+.ovn { font-size: 13px; color: var(--text-3); margin-top: 6px; }
 .gsort select { height: 32px; padding: 0 28px 0 10px; border-radius: 8px; border: 1px solid var(--panel-line); background-color: var(--raised); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .grow.m-oppose .split > span:first-child { background: var(--oppose); }
 .tile__name { display: flex; align-items: center; gap: 8px; font-size: 15px; }
@@ -533,7 +537,7 @@ button { cursor: pointer; }
       <section class="ddetail" id="ddetail" hidden aria-live="polite"></section>
       <section class="cmp" id="compare" hidden aria-live="polite"></section>
       <section data-hide-district>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2>Public approval</h2><span class="badge" data-show="results" id="ovBadge">Sample data</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2>Public approval</h2><span class="badge" data-show="results" id="ovBadge" hidden>Sample data</span><label class="ovdist" data-show="results" id="ovDistWrap" hidden><span class="sr-only">Show residents living</span><select id="ovDist"><option value="">All residents</option><option value="Within a quarter mile">Within ¼ mile</option><option value="A quarter mile to a mile">¼ to 1 mile</option><option value="More than a mile away">Over 1 mile</option></select></label></div>
         <div data-show="empty" class="results__empty" style="margin-top:12px" id="emptyMsg">Ask a question in the bar below to see what residents think. Example: "What if we expand the Newlab drone route to 200 flights a day?"</div>
         <div data-show="results">
           <div class="approval__nums">
@@ -1083,8 +1087,12 @@ var mapView = (function () {
   // ---- drone route: raised flight line draws, drone flies it once, soft noise pulses under it ----
   function droneLayers() {
     var t = performance.now() - build.t0, o = build.opts, alt = o.alt, a = build.a, b = build.b, L = [];
-    var N = 48, arc = []; for (var i = 0; i <= N; i++) { var f = i / N, up = Math.min(1, f / 0.12, (1 - f) / 0.12);   // climb, cruise, descend
-      arc.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, alt * ease(up)]); }
+    // curved flight path: a smooth bow to one side (quadratic curve), climbing, cruising and descending
+    var kx = 111320 * Math.cos(a[1] * Math.PI / 180), ky = 110540, dx = (b[0] - a[0]) * kx, dy = (b[1] - a[1]) * ky, Lm = Math.hypot(dx, dy) || 1, bow = 0.22 * Lm;
+    var cxm = dx / 2 - dy / Lm * bow, cym = dy / 2 + dx / Lm * bow;            // control point, perpendicular to the straight line
+    var N = 64, arc = []; for (var i = 0; i <= N; i++) { var f = i / N, up = Math.min(1, f / 0.12, (1 - f) / 0.12), u = 1 - f;
+      var xm = 2 * u * f * cxm + f * f * dx, ym = 2 * u * f * cym + f * f * dy;
+      arc.push([a[0] + xm / kx, a[1] + ym / ky, alt * ease(up)]); }
     var pd = ease(t / DRAW), n = Math.max(1, Math.round(N * pd));
     L.push(new deck.PathLayer({ id: 'd-ground', data: [{ p: arc.slice(0, n + 1).map(function (c) { return [c[0], c[1], 0]; }) }], getPath: function (d) { return d.p; },
       widthUnits: 'pixels', getWidth: 2, getColor: [148, 163, 184, 140], updateTriggers: { getPath: n } }));
@@ -1096,7 +1104,7 @@ var mapView = (function () {
     if (t > DRAW) {
       var k = ease((t - DRAW) / DRIVE), idx = Math.min(N, k * N), i0 = Math.floor(idx), i1 = Math.min(N, i0 + 1), fr = idx - i0;
       var p = [arc[i0][0] + (arc[i1][0] - arc[i0][0]) * fr, arc[i0][1] + (arc[i1][1] - arc[i0][1]) * fr, arc[i0][2] + (arc[i1][2] - arc[i0][2]) * fr];
-      var ang = Math.atan2(b[1] - a[1], (b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180)) * 180 / Math.PI;
+      var ang = Math.atan2((arc[i1][1] - arc[i0][1]) * ky, (arc[i1][0] - arc[i0][0]) * kx) * 180 / Math.PI;    // face along the curve
       L.push(new deck.SimpleMeshLayer({ id: 'd-drone', data: [p], mesh: DRONE, getPosition: function (q) { return q; }, getOrientation: [0, -ang, 0],
         getColor: [250, 204, 21], material: { ambient: .7, diffuse: .6 }, updateTriggers: { getPosition: k } }));
       if (k < 1) L.push(new deck.ScatterplotLayer({ id: 'd-noise', data: [[p[0], p[1]]], getPosition: function (q) { return q; }, stroked: true, filled: true,
@@ -1957,16 +1965,28 @@ function specWithEdits(){
   return spec;
 }
 var REASON_LABEL={traffic:'Traffic',noise:'Noise',safety:'Safety',privacy:'Privacy',rent:'Rent and housing costs',jobs:'Jobs',access:'Access',none:'No main reason'};
-function showResult(res){
-  state.result=res;
-  var o=res.overall, r=function(x){return Math.round(x);};
+function showOverall(){
+  var res=state.result; if(!res) return;
+  var r=function(x){return Math.round(x);}, sel=document.getElementById('ovDist'), o=res.overall, note='';
+  if(sel && sel.value){ var g=(res.groups||[]).filter(function(x){ return x.label===sel.value; })[0];
+    if(g && g.support!=null && g.oppose!=null){ var nu=g.neutral!=null?g.neutral:Math.max(0,100-g.support-g.oppose); o={support:g.support,neutral:nu,oppose:g.oppose}; if(g.n!=null) note=g.n.toLocaleString()+' residents '+sel.selectedOptions[0].textContent.toLowerCase(); } }
   document.getElementById('ovS').textContent=r(o.support)+'%'; document.getElementById('ovN').textContent=r(o.neutral)+'%'; document.getElementById('ovO').textContent=r(o.oppose)+'%';
   var bar=document.getElementById('ovBar'); bar.setAttribute('aria-label',r(o.support)+'% support, '+r(o.neutral)+'% neutral, '+r(o.oppose)+'% oppose');
   bar.children[0].style.width=o.support+'%'; bar.children[1].style.width=o.neutral+'%'; bar.children[2].style.width=o.oppose+'%';
   var lean = o.support>50?'Majority supports':o.oppose>50?'Majority opposes':o.neutral>=50?'Mostly neutral'+(o.support>o.oppose?', leaning yes':o.oppose>o.support?', leaning no':''):o.support>o.oppose?'Leaning yes':o.oppose>o.support?'Leaning no':'Evenly split';
-  document.getElementById('ovLean').textContent=lean;
+  document.getElementById('ovLean').textContent=lean+(note?' · '+note:'');
+}
+document.addEventListener('change',function(e){ if(e.target && e.target.id==='ovDist') showOverall(); });
+function showResult(res){
+  state.result=res;
+  var r=function(x){return Math.round(x);};
+  // distance selector: only bands this run actually reports (support + oppose present) can be picked
+  var sel=document.getElementById('ovDist'), gby={}; (res.groups||[]).forEach(function(g){ gby[g.label]=g; });
+  [].forEach.call(sel.options,function(op){ if(!op.value) return; var g=gby[op.value]; op.disabled=!(g && g.support!=null && g.oppose!=null && (g.n==null || g.n>0)); });
+  if(sel.value && sel.selectedOptions[0].disabled) sel.value='';
+  document.getElementById('ovDistWrap').hidden=![].some.call(sel.options,function(op){ return op.value && !op.disabled; });
+  showOverall();
   var st=res.run_stats||{};
-  document.getElementById('ovBadge').textContent='Live · '+(st.valid||0).toLocaleString()+' residents'+(st.mode?' · '+(st.mode==='accurate'?'Accurate':'Fast'):'');
   Object.keys(DISTRICTS).forEach(function(d){ delete DISTRICTS[d].s; delete DISTRICTS[d].n; delete DISTRICTS[d].o; delete DISTRICTS[d].w; });
   (res.districts||[]).forEach(function(d){ var x=DISTRICTS[d.district]; if(!x) return;
     x.s=r(d.split.support); x.n=r(d.split.neutral); x.o=100-x.s-r(d.split.neutral); x.w=REASON_LABEL[d.top_reason]||d.top_reason; });

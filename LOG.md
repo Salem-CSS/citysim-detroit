@@ -65,6 +65,12 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · main: curved drone path, white dropdown text, distance selector on Public approval
+- Drone animation: flight path bows to one side (quadratic curve, 22% of the distance), drone faces along the curve.
+- Block dropdown lists: option text was forced black; now white on dark (dark theme) / dark on white (light theme).
+- Public approval: the "Live · N residents · Fast" badge is replaced by a distance selector (All residents / Within ¼ mile / ¼ to 1 mile / Over 1 mile). It switches the top support/neutral/oppose numbers to that distance band from the run's `groups` (needs per-group neutral/oppose from the updated aggregate; bands the run doesn't report are disabled, and the selector hides when none are available). Shows how many residents are in the band.
+- Files: web/prototype/index.html only. Done directly on main at Salem's request.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: side tabs to hide both panels
 - Hide controls are now tabs attached to the panels' outer edges: ‹ on the right edge of Check the details, › on the left edge of Public approval. When hidden, a tab on the screen edge brings each back. Results panel reopens when new results arrive; the map key slides right when it is hidden.
 - Files: web/prototype/index.html only.
