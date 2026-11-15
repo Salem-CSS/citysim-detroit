@@ -1839,7 +1839,7 @@ function runSpeed(){ var m=window.CITYSIM_SPEED; if(!m){ try{ m=localStorage.get
     pop.querySelectorAll('[data-theme-set]').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.themeSet===t); }); }
   function close(){ pop.hidden=true; btn.setAttribute('aria-expanded','false'); }
   btn.addEventListener('click',function(e){ e.stopPropagation(); pop.hidden=!pop.hidden; btn.setAttribute('aria-expanded', String(!pop.hidden)); sync(); });
-  var HINT={fast:'Fast: residents answer in groups of 25. About 45 seconds for four districts. Accurate mode is more precise close to the site.',
+  var HINT={fast:'Fast: residents answer in groups of 25. About 15 seconds for up to four districts. Accurate mode is more precise close to the site.',
             accurate:'Accurate: every resident is asked alone, so nobody is swayed by who else is in the group. About 2 to 3 minutes per district.'};
   function syncSpeed(){ var m=runSpeed(); pop.querySelectorAll('[data-speed-set]').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.speedSet===m); });
     document.getElementById('speedHint').textContent=HINT[m]; }
