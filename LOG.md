@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 13:22 ET · Salem (AI) · main: road change and drone draw a single line
+
+- `web/prototype/index.html`: road change is now one line that draws along the street (green when it adds a bike lane, red when closed, orange otherwise); the separate glow and bike-stripe lines are gone. Drone route drops the ground-shadow line, so only the flight arc draws.
+
 ### 2026-11-15 13:08 ET · Salem (AI) · main: road change follows the street as one line
 
 - `web/prototype/index.html`: street pieces from the map tiles are merged into one ordered line (`mergeAlong`), so the road change draws as a single stroke along the real street instead of several fragments or a straight fallback. Michigan Ave preset ends moved onto the actual street (lat 42.3314). Quick start now waits for street tiles to load (polls up to ~4 s) so it never falls back to a straight line.
