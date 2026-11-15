@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 21:49 ET · Partner (AI) · Data (personas) + Residents
+**Did:** Built the residents: `data/personas/build.py` writes 500 per district (3,500 total) to `data/processed/personas/district_{n}.parquet`, uploaded to `s3://citysim-data-707604458164/personas/`. Every row is one real anonymous PUMS 2020-2024 record; all 3,500 pass `contracts/persona.schema.json`. Household weights were fitted per district to income, tenure x vehicles and tenure x household size; renter and zero-car household shares match ACS to three decimals in every district. Tier 1 fields from BACKEND_PLAN.md 7.1 are included as extra columns (race, Hispanic origin, education, employment, disability, difficulty walking, born abroad, veteran, poverty ratio, building type, housing cost share of income, someone 65+ at home, home language, internet, SNAP). Also: the quote share is now a deploy setting, and Amazon Location place search was tested.
+**Files:** data/personas/build.py, residents/prompt.py, infra/template.yaml (`QuoteShare`), BACKEND_PLAN.md (11.2 place-search result), LOG.md
+**Contracts changed:** none. Persona rows carry extra columns beyond the schema (it does not forbid them): `move_in_band` and the Tier 1 fields. `years_in_home` is null for everyone because the census gives a band, not a number.
+**Decisions:** `QuoteShare` (default 0.1) sets how many residents also write a sentence; raise it at deploy time, no code change. PUMS code meanings were checked against the Census PUMS Data Dictionary 2020-2024. Blocks are assigned to the official 2026 districts by interior point.
+**Blocked / needs:** Known gap: among adults, renter share runs 4 to 9 points below the household share (for example District 5: 56.5% of adults vs 65.7% of households). Owner households hold more adults, so some gap is expected, but it has not been checked against an adult-level census table (B25008 is not downloaded). Not built: nearest street per persona, Tier 2 (what is around their home), occupation and departure time.
+**Next:** `residents/batch.py` with real model calls, then `aggregate.py`.
+
 ### 2026-11-14 21:39 ET · Partner (AI) · Web + Docs
 **Did:** (1) The prototype panel now shows the spec's `what` and `where` text constraints as editable text blocks (Partner asked for this one web change and nothing else). Checked locally against the live backend: a strip club question shows What = "a strip club", Where = "Trumbull Ave near Michigan Ave". (2) Wrote the plan for verifying places and asking the user for missing ones: BACKEND_PLAN.md section 11.2. Plan only, nothing built.
 **Files:** web/prototype/index.html (one CSS rule; `blockHTML`, `specToLib`, `wireBlocks`, and the run handler's baseline line), BACKEND_PLAN.md, LOG.md
