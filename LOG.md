@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 01:05 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** (1) Walkers move only while zoomed in (walk clock pauses when zoomed out). City-view dots sit where each person stopped at the roadside, and a newly snapped person's dot jumps to their road. Residents in areas never zoomed into stay at home until their street loads, because the basemap only carries small streets at street level. (2) District picker label is now just "Max 4 districts" + chips. (3) Removed Share and Briefing. (4) "Compare districts" widens the results panel into a side-by-side table of all selected districts: support (highest outlined), oppose, neutral, top reason, support by group, and who lives here when available. The ask bar hides while comparing; "Close comparison" returns.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** For every dot to be roadside from the start, roadside positions should be precomputed offline (Overture street segments + building footprints) into the residents file; see Next.
+**Blocked / needs:** none
+**Next:** precompute roadside spots + walk stretches for all residents (needs a one-time street export from Athena).
+
 ### 2026-11-15 00:50 ET · Salem (AI) · Web (branch `salem/frontend-try`)
 **Did:** Resident dots show at the city view again before a run (white), as Salem asked. Radius 3.2 px.
 **Files:** web/prototype/index.html, LOG.md (branch only)
