@@ -1272,6 +1272,20 @@ function corrWhy(st){ var d=st.diagnosis, a=d.opponents_asked;
       return '<div class="worry"><div class="worry__row"><span>'+esc(c.change.replace(/^./,function(x){return x.toUpperCase();}))+'</span><b class="num">'+Math.round(c.share)+'%</b></div><div class="meter"><span style="width:'+c.share+'%"></span></div></div>'; }).join('')+
       '<p class="muted">'+a.asked+' opponents asked, nearest to the site first.</p>':'')+
     ((d.asked_for_but_not_tried||[]).length?'<p class="muted">Not tried: '+d.asked_for_but_not_tried.map(esc).join('; ')+'.</p>':''); }
+function corrAfter(a){
+  // What the residents who asked for this change did once it was made, and why those still opposed say they are.
+  var h='', t=a.asked_then, f=a.follow_up, G={asked_for_it:'Asked for this change, still opposed', new_opponent:'Did not oppose before, opposes now'};
+  var row=t&&t.by_request.filter(function(x){ return x.change===t.change_made; })[0];
+  if(row) h+='<small>Of the '+row.asked_for_it+' opponents who asked for "'+esc(row.change)+'": '+row.oppose+' still oppose, '+row.neutral+' are now neutral, '+row.support+' now support'+(row.answered_rerun<row.asked_for_it?' ('+(row.asked_for_it-row.answered_rerun)+' gave no valid answer this time)':'')+'.</small>';
+  if(!f || f.error || !f.wordings) return h+(f&&f.error?'<small>The follow-up question could not be asked: '+esc(f.error)+'</small>':'');
+  var counts=function(o){ return Object.keys(o||{}).map(function(k){ return o[k]+' "'+esc(k)+'"'; }).join(', '); };
+  var w=f.wordings.stance, c=f.wordings.change;
+  h+='<details style="margin-top:6px"><summary>Why they still oppose ('+(f.asked.asked_for_it+f.asked.new_opponent)+' residents asked)</summary>';
+  if(w) h+='<small>Would object anywhere in the city or only near home: '+counts(w.scope.all)+'. Would accept some version: '+counts(w.acceptable_version.all)+'.</small>';
+  if(c) h+='<small>One change that would help now: '+counts(c.would_change.all)+'.</small>';
+  ((w||c).sentences||[]).forEach(function(x){ h+='<p class="muted" style="margin:6px 0 0"><b>'+G[x.group]+':</b> “'+esc(x.text)+'”</p>'; });
+  return h+'</details>';
+}
 function corrReport(st){
   var el=document.getElementById('correction'), r=Math.round, best=st.best||{}, has=st.original&&st.attempts;
   var near=function(w){ return w?'<td class="num">'+w.adults_within_quarter_mile.toLocaleString()+'</td><td class="num">'+w.adults_within_1_mile.toLocaleString()+'</td><td class="num">'+(w.renters_pct==null?'–':r(w.renters_pct)+'%')+'</td><td class="num">'+(w.no_car_pct==null?'–':r(w.no_car_pct)+'%')+'</td><td class="num">'+(w.age_65_plus_pct==null?'–':r(w.age_65_plus_pct)+'%')+'</td>':'<td colspan="5" class="muted">not a single site</td>'; };
@@ -1283,7 +1297,7 @@ function corrReport(st){
       '<div class="try"><div class="try__head"><span>Your proposal</span></div>'+corrBar(st.original.split)+'</div>'+
       st.attempts.map(function(a){ return '<div class="try'+(best.rerun===a.rerun?' is-best':'')+'"><div class="try__head"><span>'+a.rerun+'. '+esc(a.label)+'</span><span class="num">'+(a.change_vs_original>0?'+':'')+a.change_vs_original+' pts</span></div>'+corrBar(a.split)+
         (a.predicted?'<small>Predicted before the rerun: '+r(a.predicted.support)+'% support, '+r(a.predicted.oppose)+'% oppose.</small>':'')+
-        '<small>'+(a.meets_target?'Reaches the target.':a.beats_best_beyond_spread?'Better than what came before by more than run-to-run variation.':'Not better than what came before.')+'</small></div>'; }).join('')+
+        '<small>'+(a.meets_target?'Reaches the target.':a.beats_best_beyond_spread?'Better than what came before by more than run-to-run variation.':'Not better than what came before.')+'</small>'+corrAfter(a)+'</div>'; }).join('')+
       '</div>'+(st.spread_pts!=null?'<p class="muted" style="margin-top:8px">Run-to-run variation measured on your unchanged proposal: '+st.spread_pts+' pts. '+esc(st.spread_note||'')+'</p>':'')+'</section>';
     var sites=[['Your site', st.original.who_lives_near]].concat(st.attempts.filter(function(a){return a.lever==='location';}).map(function(a){ return [a.rerun+'. '+((a.site||{}).name||''), a.who_lives_near]; }));
     if(sites.length>1 || sites[0][1]) h+='<section><h3>Who lives near each site</h3><table><thead><tr><th>Site</th><th class="num">Adults within ¼ mi</th><th class="num">Within 1 mi</th><th class="num">Renters</th><th class="num">No car</th><th class="num">65+</th></tr></thead><tbody>'+
