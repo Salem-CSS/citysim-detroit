@@ -65,6 +65,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 11:21 ET · Partner (AI) · Residents + Infra (branch `three-modes` only, not on main, not on the live stack)
+**Did:** Built three ways to ask residents, as Partner specified: Instant (groups of 25, every group sent at once), Fast (the smallest groups that fit one minute of model calls: 5 for one district, 8 for two, 14 for three, 23 for four; every group at once), Accurate (unchanged). Deployed to `citysim-partner` and timed, one run a minute, apartment building at Michigan Ave and Trumbull: Instant 17 s (cold start) / 10.5 s / 12.3 s for one / two / four districts; Fast 8.9 s / 10.5 s / 12.3 s. Today's live setting (10 groups in flight) takes about 20 s for two districts. Then the group-size test: the same 200 residents asked twice with different group-mates. Bus route: 44 of 200 changed answer in groups of 25, 28 in groups of 14, 43 of 199 in groups of 8, 44 of 198 in groups of 5 (one at a time at temperature 0: 10 of 200, Nov 15 night test). Apartment building: 33 of 200 in groups of 25, 35 of 193 in groups of 8, 3 of 197 one at a time.
+**Files:** infra/runs.py, infra/template.yaml (Map uses MaxConcurrencyPath), residents/batch.py, infra/tests/test_runs.py
+**Contracts changed:** none yet. `run_result.schema.json` lists mode as fast / accurate; "instant" needs adding before this goes to main. Not done: waiting for Partner.
+**Decisions:** none taken. Finding for Partner: smaller groups are not more stable than groups of 25; only one resident per call is. Sending every group at once roughly halves the wait and does not change who shares a call.
+**Blocked / needs:** Fast with groups of 8 dropped 51 of 1,000 residents against 9 for Instant. The only rejection reason seen in the tests is a resident giving the reason "none" while supporting or opposing (the rule allows "none" only with neutral): 7 of 400 first answers in groups of 8, 5 of 400 one at a time, 0 of 400 in groups of 25. The test backend now carries this branch, so `/corrections` is not deployed there at the moment.
+**Next:** Partner chooses what goes to the live site.
+
 ### 2026-11-15 · Salem (AI) · main: consistency test of all six build animations
 - Measured on the live site against the basemap streets and building tiles:
   - Bus (5 routes): 100% of each route within 15 m of a street; 4–5 stops each.
