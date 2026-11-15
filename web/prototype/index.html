@@ -343,7 +343,7 @@ var mapView = (function () {
     return { text: p.name + ' · ' + band, style: { fontSize: '14px', fontFamily: 'Inter, system-ui, sans-serif', background: 'rgba(15,23,42,.92)', color: '#F8FAFC', borderRadius: '8px', padding: '6px 10px' } };
   } });
   map.on('zoomend', function () { render(); kick(); });
-  map.on('idle', function () { if (ready && map.getZoom() >= PEOPLE_ZOOM) snapToStreets(residents.filter(function (r) { return on(r.d); })); });
+  map.on('idle', function () { if (ready && map.getZoom() >= PEOPLE_ZOOM && snapToStreets(residents.filter(function (r) { return on(r.d); }))) { snapRound++; render(); } });
   map.on('dragstart', function () { if (followed) { followHold = false; followed = null; document.getElementById('pcFollow').textContent = 'Not following. Click the person again to follow.'; } });
   document.addEventListener('visibilitychange', kick);
   map.on('click', function (e) {
@@ -370,7 +370,7 @@ var mapView = (function () {
 
   // ---------- walking residents (street level) ----------
   // Low-poly figure built in code: torso+arms+head (body mesh) and two legs that swing from the hip.
-  var PEOPLE_ZOOM = 14;                       // below this, residents are dots
+  var PEOPLE_ZOOM = 15;                       // below this, residents are dots
   function boxTris(out, cx, cy, cz, sx, sy, sz) {   // axis-aligned box -> 12 triangles (positions + normals)
     var x0 = cx - sx / 2, x1 = cx + sx / 2, y0 = cy - sy / 2, y1 = cy + sy / 2, z0 = cz - sz / 2, z1 = cz + sz / 2;
     var f = [[[x1,y0,z0],[x1,y1,z0],[x1,y1,z1],[x1,y0,z1],[1,0,0]], [[x0,y1,z0],[x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[-1,0,0]],
@@ -421,6 +421,35 @@ var mapView = (function () {
       });
     });
     if (!segs.length) return 0;
+    // Building footprints in view (our own vector tiles) -> grid of rings in local metres, for collision checks.
+    var bfeats = []; try { bfeats = map.querySourceFeatures('bldg', { sourceLayer: 'buildings' }); } catch (e) {}
+    var BC = 30, bgrid = {}, rings = [];
+    bfeats.forEach(function (f) {
+      var polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates : [];
+      polys.forEach(function (pg) {
+        var ring = pg[0].map(function (c) { return [c[0] * kx, c[1] * ky]; }), x0 = 1e18, y0 = 1e18, x1 = -1e18, y1 = -1e18;
+        ring.forEach(function (q) { if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0]; if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1]; });
+        var n = rings.length; rings.push({ r: ring, b: [x0, y0, x1, y1] });
+        for (var gx = Math.floor(x0 / BC); gx <= Math.floor(x1 / BC); gx++) for (var gy = Math.floor(y0 / BC); gy <= Math.floor(y1 / BC); gy++)
+          (bgrid[gx + ',' + gy] = bgrid[gx + ',' + gy] || []).push(n);
+      });
+    });
+    var CLEAR = 2.5;                                    // metres kept between a walker and any wall
+    function segDist(px, py, a, b) { var dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((px - a[0]) * dx + (py - a[1]) * dy) / L2));
+      return Math.hypot(px - a[0] - t * dx, py - a[1] - t * dy); }
+    function blocked(px, py) {
+      var list = bgrid[Math.floor(px / BC) + ',' + Math.floor(py / BC)] || [], i, k, R, ring, inside, j;
+      for (i = 0; i < list.length; i++) {
+        R = rings[list[i]]; if (px < R.b[0] - CLEAR || px > R.b[2] + CLEAR || py < R.b[1] - CLEAR || py > R.b[3] + CLEAR) continue;
+        ring = R.r; inside = false;
+        for (k = 0, j = ring.length - 1; k < ring.length; j = k++) {
+          if (((ring[k][1] > py) !== (ring[j][1] > py)) && (px < (ring[j][0] - ring[k][0]) * (py - ring[k][1]) / (ring[j][1] - ring[k][1]) + ring[k][0])) inside = !inside;
+          if (segDist(px, py, ring[k], ring[j]) < CLEAR) return true;
+        }
+        if (inside) return true;
+      }
+      return false;
+    }
     var snapped = 0;
     list.forEach(function (r) {
       if (r.walk.onStreet) return;
@@ -431,14 +460,26 @@ var mapView = (function () {
         var qx = g[0] + t * dx, qy = g[1] + t * dy, d = Math.hypot(px - qx, py - qy);
         if (d < bestD) { bestD = d; best = { g: g, t: t, qx: qx, qy: qy }; }
       });
-      if (!best) return;
+      if (!best) return;                               // no street nearby: stays hidden at street level
       var g = best.g, dx = g[2] - g[0], dy = g[3] - g[1], len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
-      var side = ((px - best.qx) * -uy + (py - best.qy) * ux) >= 0 ? 1 : -1, off = 6;          // sidewalk on the home's side
-      var ox = -uy * off * side, oy = ux * off * side, half = Math.min(len / 2, 30 + 30 * r.u);
-      var s0 = Math.max(0, best.t * len - half), s1 = Math.min(len, best.t * len + half);
-      if (s1 - s0 < 10) return;
-      r.walk = { A: [(g[0] + ux * s0 + ox) / kx, (g[1] + uy * s0 + oy) / ky], B: [(g[0] + ux * s1 + ox) / kx, (g[1] + uy * s1 + oy) / ky],
-                 L: s1 - s0, ph: r.walk.ph, onStreet: true };
+      var side = ((px - best.qx) * -uy + (py - best.qy) * ux) >= 0 ? 1 : -1, sc = best.t * len, want = 30 + 30 * r.u;
+      var STEP = 2, n = Math.max(2, Math.ceil(len / STEP)), pick = null;
+      // Try the sidewalk on the home's side, closer in, the centerline, then the far side. Keep the longest clear run.
+      [6, 3.5, 0, -3.5, -6].forEach(function (o) {
+        var off = o * side, ok = [];
+        for (var k = 0; k <= n; k++) { var sk = Math.min(len, k * STEP); ok.push(!blocked(g[0] + ux * sk - uy * off, g[1] + uy * sk + ux * off)); }
+        var c = Math.round(sc / STEP), lo, hi;
+        if (!ok[c]) { var d2 = 1; while (d2 < 15 && !(ok[c - d2] || ok[c + d2])) d2++; if (ok[c - d2]) c = c - d2; else if (ok[c + d2]) c = c + d2; else return; }
+        lo = c; hi = c; while (lo > 0 && ok[lo - 1]) lo--; while (hi < n && ok[hi + 1]) hi++;
+        var s0 = Math.max(lo * STEP, c * STEP - want), s1 = Math.min(Math.min(len, hi * STEP), c * STEP + want);
+        if (!pick || s1 - s0 > pick.s1 - pick.s0 + 4) pick = { s0: s0, s1: s1, off: off };
+      });
+      if (!pick) return;
+      var still = pick.s1 - pick.s0 < 6;
+      if (still) { var mid = (pick.s0 + pick.s1) / 2; pick.s0 = mid - 0.5; pick.s1 = mid + 0.5; }
+      var ox = -uy * pick.off, oy = ux * pick.off;
+      r.walk = { A: [(g[0] + ux * pick.s0 + ox) / kx, (g[1] + uy * pick.s0 + oy) / ky], B: [(g[0] + ux * pick.s1 + ox) / kx, (g[1] + uy * pick.s1 + oy) / ky],
+                 L: Math.max(1, pick.s1 - pick.s0), ph: r.walk.ph, onStreet: true, still: still };
       snapped++;
     });
     return snapped;
@@ -447,7 +488,7 @@ var mapView = (function () {
     for (var i = 0; i < list.length; i++) {
       var r = list[i], w = r.walk, u = (t * SPEED / w.L + w.ph) % 2, fwd = u < 1, f = fwd ? u : 2 - u;
       var lon = w.A[0] + (w.B[0] - w.A[0]) * f, lat = w.A[1] + (w.B[1] - w.A[1]) * f, walked = t * SPEED + w.ph * w.L;
-      var swing = 28 * Math.sin(2 * Math.PI * walked / (2 * STRIDE)), bob = Math.abs(Math.sin(2 * Math.PI * walked / (2 * STRIDE))) * 0.05 * S;
+      var swing = w.still ? 0 : 28 * Math.sin(2 * Math.PI * walked / (2 * STRIDE)), bob = w.still ? 0 : Math.abs(Math.sin(2 * Math.PI * walked / (2 * STRIDE))) * 0.05 * S;
       var dxm = (w.B[0] - w.A[0]) * Math.cos(lat * Math.PI / 180), dym = (w.B[1] - w.A[1]);
       var heading = Math.atan2(dym, dxm) * 180 / Math.PI + (fwd ? 0 : 180);
       r.pos[0] = lon; r.pos[1] = lat; r.pos[2] = bob;
@@ -455,8 +496,8 @@ var mapView = (function () {
       r.ori[1] = heading; r.oriL[0] = swing; r.oriL[1] = heading; r.oriR[0] = -swing; r.oriR[1] = heading;
     }
   }
-  function figureScale(z) { return Math.max(3, Math.min(16, 514000 / Math.pow(2, z))); }   // ~8 px tall figures, capped
-  var frame = 0, animating = false, followed = null, followHold = false;
+  function figureScale(z) { return Math.max(2.5, Math.min(7, 514000 / Math.pow(2, z))); }   // ~8 px tall, capped so they fit on a sidewalk
+  var frame = 0, animating = false, followed = null, followHold = false, snapRound = 0;
   function animate() {
     if (!ready || map.getZoom() < PEOPLE_ZOOM || document.hidden) { animating = false; return; }
     animating = true; frame++; render();
@@ -537,8 +578,9 @@ var mapView = (function () {
       }));
     } else {
       var S = figureScale(z), t = performance.now() / 1000;
-      stepWalkers(here, t, S);
-      var common = { data: here, sizeScale: S, getColor: function (r) { return r === followed ? [250, 204, 21] : stanceOf(r); }, material: { ambient: 0.55, diffuse: 0.6, shininess: 8 },
+      var walkers = cached('walkers', sel.join(',') + ':' + snapRound, function () { return here.filter(function (r) { return r.walk.onStreet; }); });
+      stepWalkers(walkers, t, S);
+      var common = { data: walkers, sizeScale: S, getColor: function (r) { return r === followed ? [250, 204, 21] : stanceOf(r); }, material: { ambient: 0.55, diffuse: 0.6, shininess: 8 },
         updateTriggers: { getColor: key + (followed ? followed.id : ''), getPosition: frame, getOrientation: frame } };
       layers.push(new deck.SimpleMeshLayer(Object.assign({ id: 'people-body', mesh: BODY, pickable: true,
         getPosition: function (r) { return r.pos; }, getOrientation: function (r) { return r.ori; } }, common)));

@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 00:05 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Walkers no longer walk into buildings. Each street-snapped path is checked against the building footprints in view (our tiles, 2.5 m clearance), trying sidewalk offsets 6 / 3.5 / 0 / -3.5 / -6 m, and keeps the longest clear stretch. No clear stretch → the figure stands still on the street; no street within 150 m → hidden at street level. Figures capped smaller (2.5–7× life size) and appear from zoom 15. Test: 90 walkers, 0 paths touching a building.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
 ### 2026-11-14 23:55 ET · Salem (AI) · Web (branch `salem/frontend-try`)
 **Did:** Walkers stay on streets: at street level each figure snaps to the nearest real street in the basemap tiles (OpenMapTiles `transportation`, motorways/rail excluded) and paces the sidewalk on its home's side (6 m off the centerline). Click a figure → person card (district, stance, demographics) and the camera zooms in and follows them; drag the map, ×, or Esc stops it. Selected figure turns yellow.
 **Files:** web/prototype/index.html, LOG.md (branch only)
