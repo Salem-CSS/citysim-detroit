@@ -75,3 +75,14 @@ def test_building_with_unverified_place_asks_with_alternatives():
     assert s["status"] == "needs_info" and s["questions"][0]["options"] == ["Woodward Ave & Temple St"]
     s = check_places(spec_with("add_building", {"what": "a strip club"}), resolve)
     assert s["status"] == "needs_info" and "Where should this go" in s["questions"][0]["text"]
+
+
+def test_map_pick_coordinates_are_exact_and_hidden_from_residents():
+    a = r("Michigan Ave & Trumbull St (42.33120, -83.06710)")
+    assert a["status"] == "ok" and a["method"] == "coordinates" and a["name"] == "Michigan Ave & Trumbull St" and a["in_selected"]
+    b = r("42.35, -83.05")
+    assert b["status"] == "ok" and b["district"] == 6 and b["name"].startswith("Point at")
+    assert r("-83.05, 42.35")["lat"] == 42.35
+    s = spec_with("add_drone_route", {"from": "Michigan Ave & Trumbull St (42.33120, -83.06710)", "to": "42.35, -83.05"})
+    line = summary_line(s)
+    assert "42.3" not in line and "Michigan Ave & Trumbull St" in line and "a point on the map" in line

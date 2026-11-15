@@ -64,6 +64,16 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: pick places on the map (From / To / Where)
+- Every place field (where/from/to) has a pin button. It turns the map top-down; click an intersection or road and the field fills with the road name(s) plus exact coordinates, e.g. `Michigan Ave & Trumbull St (42.33120, -83.06710)`. Typing coordinates works too.
+- A proposal stuck on needs_info unlocks Run once every place field is filled; POST /runs re-checks it as before.
+- **Touched Ammar's lane (logged):**
+  - `shared/places.py`: `resolve()` accepts a trailing `(lat, lon)` (or lon, lat) inside the Detroit area → `status: ok, method: "coordinates"`, district from the polygons. `split_coords()` helper.
+  - `contracts/spec.py`: `summary_line` strips coordinates so residents read only the place name ("a point on the map" if there is no name).
+  - `agent/handler.py`: place questions now say "Tap the pin to pick it on the map, or give two cross streets, an address, a landmark or coordinates."
+  - Test added in `shared/tests/test_places.py`; 52 tests pass. No contract schema change.
+- **Handoff @Ammar:** redeploy after merge so the live resolver accepts map picks.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: compact compare profile, no takeaway, no info button
 - Compare: "Who lives here" dot plots replaced with a small table (districts as columns, value + thin bar, highest bold). Takeaway line removed.
 - Map attribution (i) button removed; credits now in the Settings popover.

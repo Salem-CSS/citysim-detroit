@@ -5,7 +5,7 @@
     resolve("Woodward and 5th", [5]) ->
         {"status": "no_crossing", "message": "...", "alternatives": [...]}
 
-Order: two streets -> street address -> landmark (Amazon Location place search, Detroit only).
+Order: coordinates (map pick) -> two streets -> street address -> landmark (Amazon Location place search, Detroit only).
 The index comes from data/places/build_index.py (city road layer + official council districts).
 Statuses: ok | empty | unknown_street | no_crossing | no_address | ambiguous | not_found | error.
 """
@@ -161,11 +161,30 @@ def _count_search() -> None:
             pass
 
 
+COORDS = re.compile(r"\(?\s*(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*\)?\s*$")
+
+
+def split_coords(text: str):
+    """'Michigan Ave & Trumbull St (42.33120, -83.06710)' -> ('Michigan Ave & Trumbull St', lon, lat).
+    Accepts lat,lon or lon,lat; returns (text, None, None) when there is no Detroit-area pair at the end."""
+    m = COORDS.search(text or "")
+    if not m:
+        return text, None, None
+    a, b = float(m.group(1)), float(m.group(2))
+    lat, lon = (a, b) if 41 < a < 43 else (b, a)
+    if not (41 < lat < 43 and -84 < lon < -82):
+        return text, None, None
+    return text[:m.start()].strip(" ,"), lon, lat
+
+
 def resolve(text: str, districts=None, index: dict | None = None, client=None) -> dict:
     idx = load(index)
     text = " ".join((text or "").split())
     if not text:
         return {"status": "empty", "message": "No place was given.", "alternatives": []}
+    label, lon, lat = split_coords(text)
+    if lon is not None:                              # picked on the map or typed as coordinates: the point is exact
+        return _ok(label or f"Point at {lat:.5f}, {lon:.5f}", "coordinates", lon, lat, districts, idx)
     core = re.sub(r"^(the )?(corner|intersection) of ", "", text, flags=re.I)
     core = re.sub(r"^(at|on|near|by|in) ", "", core, flags=re.I)
     m = re.match(r"^(.+?)\s+(?:and|&|at|near|@|\+)\s+(.+)$", core, flags=re.I)
