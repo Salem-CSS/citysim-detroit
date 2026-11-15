@@ -307,7 +307,7 @@ var mapView = (function () {
     : 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
   var PAD_OPEN = { left: 392, right: 432, top: 110, bottom: 100 }, PAD_CLOSED = { left: 40, right: 432, top: 110, bottom: 100 };
   var RAMP = ['interpolate', ['linear'], ['get', 'h'], 0, '#58647A', 8, '#6E7D94', 15, '#7DA0D7', 40, '#A096EB', 120, '#EBE1FF'];
-  var STANCE = { s: [96, 165, 250], n: [148, 163, 184], o: [251, 146, 60], x: [100, 116, 139] };
+  var STANCE = { s: [96, 165, 250], n: [148, 163, 184], o: [251, 146, 60], x: [100, 116, 139], idle: [248, 250, 252] };
   var roadsOn = true, sel = [], districts = null, overlays = null, residents = [], labels = {}, hub = null, clickFn = null, padded = null, ready = false;
 
   var map = new maplibregl.Map({
@@ -328,7 +328,7 @@ var mapView = (function () {
   function on(d) { return sel.indexOf(d) > -1; }
   function stanceOf(r) {
     var st = el.dataset.state, x = window.DISTRICTS && DISTRICTS[r.d];
-    if (st !== 'results') return STANCE.n;
+    if (st !== 'results') return STANCE.idle;
     if (!x || x.s == null) return STANCE.x;
     return r.u * 100 < x.s ? STANCE.s : r.u * 100 < x.s + x.n ? STANCE.n : STANCE.o;
   }
