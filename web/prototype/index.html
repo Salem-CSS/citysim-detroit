@@ -1057,7 +1057,7 @@ var mapView = (function () {
       getColor: col, capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
     if (o.bike && o.change !== 'bike_lane' && t > 900) { var bd = ease((t - 900) / 1400);
       L.push(new deck.PathLayer({ id: 'r-bike', data: lines.map(function (ln) { return along(ln, bd).head; }), getPath: function (d) { return d; },
-        widthUnits: 'pixels', getWidth: 3, getColor: [74, 222, 128, 255], capRounded: true, jointRounded: true, updateTriggers: { getPath: bd } })); }
+        widthUnits: 'pixels', getWidth: 4, getColor: [134, 239, 172, 255], capRounded: true, jointRounded: true, updateTriggers: { getPath: bd } })); }
     var ends = []; lines.forEach(function (ln) { if (ln.length) { ends.push(ln[0]); } }); if (lines.length) { var last = lines[lines.length - 1]; ends.push(last[last.length - 1]); }
     if (o.change === 'close' && t > 1200) L.push(new deck.ScatterplotLayer({ id: 'r-ends', data: ends, getPosition: function (p) { return p; },
       radiusUnits: 'pixels', getRadius: 7 * ease((t - 1200) / 300), getFillColor: [239, 68, 68, 255], stroked: true, getLineColor: [248, 250, 252], lineWidthUnits: 'pixels', getLineWidth: 2, updateTriggers: { getRadius: t } }));
@@ -1302,8 +1302,10 @@ var mapView = (function () {
       if (kind === 'building') { var cb = map.cameraForBounds([[a[0] - .002, a[1] - .0015], [a[0] + .002, a[1] + .0015]], { padding: pad, maxZoom: 17 }) || {}; cam = cb; }
       var go = function () { if (build !== B || B.ready) return; if (b && kind === 'transit') { try { B.path = roadPath(a, b); } catch (e) { B.path = null; } }
         if (kind === 'road') { var ls = [];
-          if (opts.ends) { var rp = null; try { rp = roadPath(opts.ends[0], opts.ends[1]); } catch (e) {} ls = [rp || opts.ends]; }
-          else { try { ls = streetNear(a, opts.street, 320); } catch (e) {} if (!ls.length) ls = [[[a[0] - .002, a[1]], [a[0] + .002, a[1]]]]; }
+          var span = opts.ends ? Math.hypot((opts.ends[1][0] - opts.ends[0][0]) * 111320 * Math.cos(a[1] * Math.PI / 180), (opts.ends[1][1] - opts.ends[0][1]) * 110540) / 2 + 30 : 320;
+          if (opts.street) { try { ls = streetNear(a, opts.street, span); } catch (e) {} }                 // trace the named street itself
+          if (!ls.length && opts.ends) { var rp = null; try { rp = roadPath(opts.ends[0], opts.ends[1]); } catch (e) {} ls = [rp || opts.ends]; }
+          if (!ls.length) ls = [[[a[0] - .002, a[1]], [a[0] + .002, a[1]]]];
           opts.lines = ls; }
         if (kind === 'event') { var org = []; for (var oi = 0; oi < 8; oi++) { var g = 2 * Math.PI * oi / 8 + .3; org.push([a[0] + 750 * Math.cos(g) / (111320 * Math.cos(a[1] * Math.PI / 180)), a[1] + 750 * Math.sin(g) / 110540]); }
           try { opts.paths = roadPathsTo(a, org); } catch (e) { opts.paths = []; } }
@@ -1696,7 +1698,7 @@ var PRESET_LL={ michigan_14th:[-83.0789,42.3306], bagley_16th:[-83.0806,42.3262]
 function presetOf(a,id){ var el=body.querySelector('[data-k="'+a.action_id+'.'+id+'"]'), c=(a.constraints||[]).filter(function(x){return x.id===id;})[0]; if(!c) return null;
   var v=c.value; if(el){ var lab=el.tagName==='SELECT'?el.value:(el.querySelector('[aria-pressed="true"]')||{}).textContent; var m=(c.options||[]).filter(function(o){return o.label===lab;})[0]; if(m) v=m.value; }
   return PRESET_LL[v]||null; }
-var PRESET_ROAD={ michigan_trumbull_14th:[[-83.0679,42.3318],[-83.0789,42.3306]], vernor_w:[[-83.0790,42.3255],[-83.0990,42.3190]], trumbull:[[-83.0676,42.3318],[-83.0705,42.3440]] };
+var PRESET_ROAD={ michigan_trumbull_14th:{name:'Michigan Avenue',ends:[[-83.0679,42.3318],[-83.0789,42.3306]]}, vernor_w:{name:'West Vernor Highway',ends:[[-83.0790,42.3255],[-83.0990,42.3190]]}, trumbull:{name:'Trumbull Avenue',ends:[[-83.0676,42.3318],[-83.0705,42.3440]]} };
 var ZONE_COL={ R3:[74,222,128], R5:[250,204,21], B4:[167,139,250], SD2:[45,212,191] };
 function presetVal(a,id){ var c=(a.constraints||[]).filter(function(x){return x.id===id;})[0]; if(!c) return null; var el=body.querySelector('[data-k="'+a.action_id+'.'+id+'"]'), v=c.value;
   if(el){ var lab=el.tagName==='SELECT'?el.value:(el.querySelector('[aria-pressed="true"]')||{}).textContent; var m=(c.options||[]).filter(function(o){return o.label===lab;})[0]; if(m) v=m.value; } return v; }
@@ -1722,7 +1724,7 @@ function playProposal(){
   if(rd){ var ch=presetVal(rd,'change')||'remove_lanes', bk=presetVal(rd,'bike_lane'), bike=bk===true||bk==='true'||ch==='bike_lane';
     var wp=placeOf(rd,'where'), inp=body.querySelector('input[data-k="'+rd.action_id+'.where"]'), nm=inp&&inp.value?inp.value.split(/\s*(?:&| and | between | from )\s*/i)[0]:'';
     if(wp) return mapView.playBuild('road',wp,null,{street:nm,change:ch,bike:bike});
-    var ends=PRESET_ROAD[presetVal(rd,'street')]; if(ends) return mapView.playBuild('road',[(ends[0][0]+ends[1][0])/2,(ends[0][1]+ends[1][1])/2],null,{ends:ends,change:ch,bike:bike}); }
+    var pr=PRESET_ROAD[presetVal(rd,'street')]; if(pr){ var ends=pr.ends; return mapView.playBuild('road',[(ends[0][0]+ends[1][0])/2,(ends[0][1]+ends[1][1])/2],null,{ends:ends,street:pr.name,change:ch,bike:bike}); } }
   var ev=acts.filter(function(x){ return x.type==='add_event_surge'; })[0];
   if(ev){ var vp=placeOf(ev,'where')||presetOf(ev,'site'); if(vp) return mapView.playBuild('event',vp,null,{}); }
   var rz=acts.filter(function(x){ return x.type==='rezone'; })[0];
