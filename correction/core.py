@@ -150,9 +150,24 @@ def choose_levers(diag: dict, spec: dict) -> tuple[list[str], str | None]:
     if "location" in order and not diag["opposition_is_local"]:
         order = [l for l in order if l != "location"] + ["location"]      # still tried, but last
     levers = [l for l in dict.fromkeys(order) if can[l]]
+    diag["asked_for_but_not_tried"] = not_tried(said, can, sum(said.values()))
     if not levers:
         return [], "no lever is available for this kind of proposal" + (" (residents asked for community benefits, which the engine cannot model)" if said.get("community benefits") else "")
     return levers, None
+
+
+def not_tried(said: dict, can: dict, total: int) -> list[str]:
+    """What opponents asked for that the engine cannot change, in plain words."""
+    out, name = [], {"different location": "location", "smaller": "size", "limited hours": "hours"}
+    why = {"location": "this proposal has no single verified site to move", "size": "this kind of proposal has no size setting",
+           "hours": "this kind of proposal has no hours setting"}
+    for k, n in sorted(said.items(), key=lambda kv: -kv[1]):
+        share = round(100 * n / total, 1) if total else 0
+        if k == "community benefits":
+            out.append(f"community benefits ({share}% of opponents asked): the engine cannot model benefits; this is for the proposer to answer")
+        elif k in name and not can[name[k]]:
+            out.append(f"{k} ({share}% of opponents asked): {why[name[k]]}")
+    return out
 
 
 def _where(action: dict) -> dict | None:

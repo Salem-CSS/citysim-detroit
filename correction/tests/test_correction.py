@@ -83,6 +83,11 @@ def test_levers_follow_what_opponents_asked_for():
     assert core.choose_levers(core.diagnose(rows, said(("smaller", 9), ("different location", 3))), spec())[0] == ["size", "location"]
     assert core.choose_levers(core.diagnose(rows, said(("different location", 9), ("limited hours", 3))), spec())[0] == ["location", "hours"]
     assert core.choose_levers(core.diagnose(rows, None), spec())[0] == ["location", "size", "hours"]
+    d = core.diagnose(rows, said(("community benefits", 6), ("different location", 4)))
+    assert core.choose_levers(d, spec())[0] == ["location"] and d["asked_for_but_not_tried"][0].startswith("community benefits (60.0% of opponents asked)")
+    no_hours = spec(); no_hours["actions"][0]["type"] = "add_building"
+    d = core.diagnose(rows, said(("limited hours", 7), ("different location", 3)))
+    assert core.choose_levers(d, no_hours)[0] == ["location"] and "no hours setting" in d["asked_for_but_not_tried"][0]
     flat = [{**r, "stance": "oppose" if i % 2 else "support"} for i, r in enumerate(rows)]
     levers, why = core.choose_levers(core.diagnose(flat, said(("nothing", 9), ("smaller", 1))), spec())
     assert levers == [] and "not fixable" in why

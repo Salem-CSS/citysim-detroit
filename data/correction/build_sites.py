@@ -49,9 +49,10 @@ def main():
     g = gpd.sjoin(g, districts[[dcol, "geometry"]], how="inner", predicate="within")
     g["d"] = g[dcol].astype(str).str.extract(r"(\d+)")[0].astype(int)
 
-    rows = [[r.lon, r.lat, int(r.total_square_footage), zi[r.zoning_district], int(r.d), (r.address or "").title(),
-             r.cross_street_1 or "", r.cross_street_2 or "", r.neighborhood or "", r.inventory_status_socrata]
-            for r in g.itertuples()]
+    text = lambda v: v.strip() if isinstance(v, str) else ""          # a missing value is NaN, not None
+    rows = [[r.lon, r.lat, int(r.total_square_footage), zi[r.zoning_district], int(r.d), text(r.address).title(),
+             text(r.cross_street_1), text(r.cross_street_2), text(r.neighborhood), text(r.inventory_status_socrata)]
+            for r in g.itertuples() if text(r.address)]
     par = [[r.lon, r.lat, zi[r.zoning_district]] for r in zoned.itertuples()]
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({
