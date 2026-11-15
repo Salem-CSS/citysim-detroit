@@ -64,7 +64,6 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
-<<<<<<< HEAD
 ### 2026-11-15 03:56 ET · Partner (AI) · Correction engine (branch `correction-engine` only, NOT on main)
 **Did:** Built the correction engine from BACKEND_PLAN section 15 and tested it on real AWS. After a run, "Find a better version" works out why residents said no (by distance, by group, and by asking up to 200 opponents the seven parked questions), picks what to change (location, size or hours), draws real alternative sites from 53,711 Land Bank lots in the same zoning district, ranks them from the residents' own answers, and reruns the proposal on the same residents, at most 5 times. Report: best version, why they said no, every attempt with its prediction, who lives near each site, limits.
 **Files:** correction/ (core.py, ask.py, loop.py, tests), data/correction/build_sites.py, infra/runs.py (`launch`, `spec_json` on the run item, the finished run notifies the correction), infra/template.yaml (3 functions, 2 routes), infra/deploy.sh, web/prototype/index.html, web/prototype/config.js, contracts/correction_result.schema.json, fixtures/correction_result.busgarage.json, contracts/README.md, BACKEND_PLAN.md (15.13 As built)
@@ -72,7 +71,6 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 **Decisions:** Deployed to `citysim-partner` only; `citysim-main` and main do not have it. On this branch `web/prototype/config.js` points at the partner stack: do not merge that file to main as it is. See 15.13 for how the build differs from the plan.
 **Blocked / needs:** Five real corrections ran (59 s to 467 s, $0.13 to $0.24 of reruns each); none reached its target, and moving the site cut opposition by 5 to 14 points. The predictor is weak (predicted 13% oppose, got 28% to 34%). In Fast mode the same site gives different totals in different corrections. Routes cannot be moved yet. To merge: review, deploy `citysim-main` from the merged code, upload nothing new (the site index is already in the bucket), and restore config.js.
 **Next:** Partner to review the branch.
-=======
 ### 2026-11-15 04:08 ET · Partner (AI) · Web (demo check fixes; touches Salem's lane, approved by Partner)
 **Did:** Page-level check on Vercel after the six-type backend check. (1) District detail and Compare showed placeholder "Sample data" numbers before a run. They now show each district's real profile (renters, no car, median household income, age mix) computed in the page from the census-built residents, weighted by each resident's census weight; the "Sample data" badge no longer appears when those residents are loaded. `residents.geojson` now carries `weight`. (2) The map-pick view opened on the middle of the selected districts (for Districts 5 and 6, the river); it now opens on the proposal's verified place. (3) The "Verified: ..." note under a place box is hidden once the box is changed, since the new value has not been verified yet.
 **Files:** web/prototype/index.html, web/prototype/geo/residents.geojson, web/prototype/tools/make_residents.py, LOG.md
@@ -88,7 +86,6 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 **Decisions:** Deployed to `citysim-main`. Results of the six-type check (District 6, Fast): building, rezoning, event venue and road change ran (15 to 74 s, $0.08 to $0.11 each). The page's own example "expand the Newlab drone route to 200 flights a day" stops and asks for the route's start and end, as designed: a route needs both. A bus route to the Renaissance Center with only District 6 selected is refused because the Renaissance Center is in District 5, as designed.
 **Blocked / needs:** For Salem: the ask bar's placeholder example leads to two place questions. An example that runs straight through: "Build a 120-unit apartment building at Michigan Ave and Trumbull".
 **Next:** page-level check on Vercel.
->>>>>>> claude/confident-ritchie-ccwiqs
 
 ### 2026-11-15 03:42 ET · Partner (AI) · Infra + Web (failed runs no longer hang)
 **Did:** GET /runs/{id} now checks the run's Step Functions execution while the run is still marked running; if it failed, timed out or was aborted, the response has `status: "failed"` and an `error` line. The page shows "Could not run: ..." and re-enables the button instead of waiting for its time limit. Settings hint for Accurate now reads "about 2 to 3 minutes per district" (measured: 108 s for one district, 631 s for four).
