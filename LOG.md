@@ -65,6 +65,12 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: building + drone build animations
+- add_building: camera flies to the site (picked Where, else the preset site), ripple, footprint tint, then a blue block rises to floors × 3.4 m with floor lines appearing as it climbs; footprint sized from homes per floor (illustration only).
+- add_drone_route: raised flight line draws from From (or the preset hub) to To/Where at the chosen flying height (climb, cruise, descend) with a ground trace, landing pads at both ends, then a drone flies it once with a pulsing noise ring under it.
+- Preset sites/hubs from contracts/actions.json mapped to approximate points (PRESET_LL) for framing only.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: map pick snaps to a named road; bus route really follows streets
 - Map pick always lands on a named road: snaps to the nearest point on the closest named road (wider search if needed; asks to click closer if none). Two roads at that point → "A & B" at their meeting point. The field shows only the road name; the snapped point is kept on the input (data-ll) and appended as "(lat, lon)" only in the spec sent to the backend, so the resolver gets an exact point and residents never see coordinates.
 - Road path fix: tile seams left the road graph disconnected, so every path fell back to a straight line. Loose ends now stitch to the nearest node within 25 m; tested Midtown path = 50 points along the streets.
