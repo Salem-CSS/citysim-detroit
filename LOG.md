@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · main: heat map removed
+- Removed the Heat map toggle from the map key (heat layers never draw; dots always show).
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · main: resident card only for the clicked resident; heat map toggle
 - Map click: the old fallback that cycled through quotes on any click (and could pin an "Opposes" quote on a support dot) is removed. A card opens only for the resident actually clicked: walking figure at street zoom, or the dot itself when zoomed out (dots are now pickable). Empty map clicks do nothing.
 - New "Heat map" toggle in the map key: after a run, two heat layers show where supporters (light blue) and opponents (light orange) cluster among the selected districts' residents. Before a run it says it needs results.
