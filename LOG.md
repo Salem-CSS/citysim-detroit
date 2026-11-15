@@ -65,6 +65,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 11:34 ET · Partner (AI) · Web + Infra (on main, asked for by Partner)
+**Did:** Three additions, none of which removes or rewrites existing page code (index.html: 179 lines added, 0 deleted across the two web commits). (1) **Demo mode**: Settings > Presentation > Demo mode, or `?demo=1`. It tours the districts, types a question, sends a real run, opens a supporter, an opponent and a neutral resident, then the district detail and Compare. Esc or Stop ends it. Checked end to end (9 of 9 steps, no console errors) on top of Salem's page as of commit 1e54fe4. (2) **Correction engine preview**: a new button left of the settings icon opens the saved report of one real correction (`web/prototype/corrections/example.json`: a 5,000-seat concert venue, District 6, Accurate mode, run Nov 15). Read-only; it calls no backend. Everything it adds is under `.corrx` / `#corrx` / `#corrxBtn`. The engine itself stays on the `correction-engine` branch. (3) **Fast mode sends every group of 25 at once** (was 10 at a time): 10.5 s for two districts against about 20 s, measured on `citysim-partner`. Accurate is unchanged. The state machine's Map now reads its concurrency from `plan_batches` (`MaxConcurrencyPath`).
+**Files:** web/prototype/index.html, web/prototype/corrections/example.json, infra/runs.py, infra/template.yaml, residents/batch.py, infra/tests/test_runs.py
+**Contracts changed:** none
+**Decisions:** No third speed setting. Tested Nov 15: groups of 5, 8 and 14 change as many answers when group-mates change as groups of 25 do (44, 43 and 28 of 200 against 44); only one resident per call is stable (10 of 200).
+**Blocked / needs:** The account allows 200 model calls a minute across every stack. One four-district Fast run uses about 165, so two large runs started in the same minute will slow each other, and any Accurate run or correction slows every Fast run while it lasts.
+**Next:** For Salem: the new button and panel sit beside your settings button; restyle or move them freely, the ids are `corrxBtn` and `corrx`. The demo tour calls `mapView.select/find/answerCounts`, `openDistrict`, `openCompare` and reads `#pcTitle` / `#pcSub`; if those change, the tour needs the same change.
+
 ### 2026-11-15 · Salem (AI) · main: fits laptop screens
 - Removed the 820 px minimum page height (now 100dvh, floor 600 px) and stopped page scrolling on desktop widths, so the ask bar and Compare button stay on screen at 1366×768. Stacked layout under 1100 px still scrolls.
 - Files: web/prototype/index.html only.
