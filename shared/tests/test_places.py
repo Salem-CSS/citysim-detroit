@@ -86,3 +86,13 @@ def test_map_pick_coordinates_are_exact_and_hidden_from_residents():
     s = spec_with("add_drone_route", {"from": "Michigan Ave & Trumbull St (42.33120, -83.06710)", "to": "42.35, -83.05"})
     line = summary_line(s)
     assert "42.3" not in line and "Michigan Ave & Trumbull St" in line and "a point on the map" in line
+
+
+def test_a_stretch_of_one_street_between_two_cross_streets():
+    x = r("Michigan Ave between Trumbull and 5th St")
+    assert x["status"] == "ok" and x["method"] == "midpoint of two crossings" and x["name"] == "Michigan Ave between Trumbull St and 5th St"
+    assert x["lon"] == -83.0635 and x["lat"] == 42.3305 and x["in_selected"]
+    y = r("Michigan Ave between Trumbull and Woodward")              # Woodward does not cross Michigan in this index
+    assert y["status"] == "no_crossing"
+    z = r("Michigan Ave between Trumbull and Nowhere Rd")
+    assert z["status"] == "unknown_street"
