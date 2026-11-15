@@ -9,6 +9,7 @@
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/deck.gl@9.0.38/dist.min.js"></script>
+<script src="./config.js"></script>
 <!--
   CitySim Detroit — static design prototype (combined design).
   Visual + interaction reference for web/ (Next.js + deck.gl).
@@ -502,24 +503,47 @@ function blockHTML(a,b){
   var v=b.value, ctl;
   if(b.fromQ){ var m=state.question.match(b.fromQ); if(m) v = b.qValue || (b.type==='stepper'? +m[1] : v); }
   state.defaults[a+'.'+b.id]=v;
-  if(b.type==='select') ctl='<select aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'">'+b.options.map(function(o){return '<option>'+o+'</option>';}).join('')+'</select>';
+  if(b.type==='select') ctl='<select aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'">'+b.options.map(function(o){return '<option'+(o===v?' selected':'')+'>'+o+'</option>';}).join('')+'</select>';
   if(b.type==='seg') ctl='<div class="seg" role="group" aria-label="'+b.label+'" data-k="'+a+'.'+b.id+'">'+b.options.map(function(o){return '<button type="button" aria-pressed="'+(o===v)+'">'+o+'</button>';}).join('')+'</div>';
   if(b.type==='stepper') ctl='<div class="stepper" data-k="'+a+'.'+b.id+'" data-step="'+b.step+'" data-min="'+b.min+'"><button type="button" aria-label="Less">'+'<svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10"/></svg>'+'</button><output class="num" data-v="'+v+'">'+v+' <small>'+b.unit+'</small></output><button type="button" aria-label="More">'+'<svg class="icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>'+'</button></div>';
   return '<div class="block" data-k="'+a+'.'+b.id+'"><div class="block__head"><span>'+b.label+'</span>'+(b.assumed&&!(b.fromQ&&state.question.match(b.fromQ))?'<span class="tag">assumed</span>':'')+'</div>'+ctl+'</div>';
 }
-function openBlocks(q){
-  state.question=q; state.actions=parse(q); state.defaults={};
+// Live spec (from POST /scenario) -> the same block shapes the mock uses.
+function specToLib(spec){
+  var lib={};
+  spec.actions.forEach(function(a){
+    lib[a.action_id]={ type:a.type, title:a.title, icon:a.type==='add_drone_route'?'drone':'spark', blocks:a.constraints.filter(function(c){return (c.show||'panel')==='panel' && (c.type==='number'||c.type==='select');}).map(function(c){
+      var b={id:c.id, label:c.label, assumed:c.source==='assumed', unit:c.unit||''};
+      if(c.options){ b.type = c.ui==='segmented' ? 'seg' : 'select'; b.options=c.options.map(function(o){return o.label;});
+        var m=c.options.filter(function(o){return String(o.value)===String(c.value);})[0]; b.value = m?m.label:b.options[0]; }
+      else { b.type='stepper'; b.value=c.value; b.step=c.step||1; b.min=c.min||0; }
+      return b; }) };
+  });
+  return lib;
+}
+function openBlocks(q, spec){
+  var lib = spec ? specToLib(spec) : ACTIONS;
+  state.question=q; state.spec=spec||null; state.actions = spec ? Object.keys(lib) : parse(q); state.defaults={};
+  state.types = state.actions.map(function(k){ return lib[k].type || k; });
   document.getElementById('blocksQ').textContent='"'+q+'"';
-  body.innerHTML=state.actions.map(function(a){
-    var A=ACTIONS[a];
+  var notes = spec && spec.unsupported && spec.unsupported.length ? '<div class="changed-note"><span>Not covered yet: '+spec.unsupported.map(function(t){return String(t).replace(/</g,'&lt;');}).join('; ')+'</span></div>' : '';
+  var empty = spec && !spec.actions.length ? '<div class="changed-note"><span>Couldn\'t match this to a proposal type yet. Try naming a drone route, building, road change, bus route, rezoning or event venue.</span></div>' : '';
+  body.innerHTML=notes+empty+state.actions.map(function(a){
+    var A=lib[a];
     return '<section class="group"><div class="group__title"><span class="group__icon">'+ICONS[A.icon]+'</span>'+A.title+'</div><div style="display:flex;flex-direction:column;gap:8px">'+A.blocks.map(function(b){return blockHTML(a,b);}).join('')+'</div></section>';
   }).join('');
   wireBlocks(); body.scrollTop=0;
   blocksEl.hidden=false; app.classList.add('has-blocks');
   map.dataset.state = state.asked?'results':'idle';
-  map.dataset.proposal = state.actions.indexOf('add_drone_route')>-1 ? 'drone' : 'none';
+  map.dataset.proposal = state.types.indexOf('add_drone_route')>-1 ? 'drone' : 'none';
   mapView.update();
   setMode(false);
+}
+function askBackend(q){
+  var api=(window.CITYSIM_API||'').replace(/\/$/,'');
+  return fetch(api+'/scenario',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({question:q, districts:selected(), spec: state.spec && !blocksEl.hidden ? state.spec : undefined})})
+    .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.error||r.status); return j.spec; }); });
 }
 function markChanged(el,v){
   var k=el.dataset.k, blk=body.querySelector('.block[data-k="'+k+'"]');
@@ -549,7 +573,13 @@ function setMode(asked){
 document.getElementById('askForm').addEventListener('submit',function(e){
   e.preventDefault(); var i=document.getElementById('ask'), q=i.value.trim(); if(!q) return;
   state.asked=false; app.classList.remove('has-results'); document.getElementById('rcard').hidden=true; map.dataset.state='idle';
-  openBlocks(q); i.value=''; i.placeholder='Ask a follow-up, like: What if flights only run after 8 AM?'; renderTiles();
+  i.value=''; i.placeholder='Ask a follow-up, like: What if flights only run after 8 AM?'; renderTiles();
+  if(window.CITYSIM_API){
+    document.getElementById('blocksQ').textContent='"'+q+'"'; body.innerHTML='<div class="changed-note"><span>Reading your question…</span></div>';
+    blocksEl.hidden=false; app.classList.add('has-blocks'); mapView.update();
+    askBackend(q).then(function(spec){ openBlocks(q, spec); })
+      .catch(function(err){ openBlocks(q); body.insertAdjacentHTML('afterbegin','<div class="changed-note"><span>Backend unavailable ('+String(err.message).replace(/</g,'&lt;')+'). Showing the offline version.</span></div>'); });
+  } else openBlocks(q);
   document.getElementById('emptyMsg').textContent='Check the details on the left, then ask residents.';
 });
 document.querySelectorAll('.pill[data-q]').forEach(function(p){ p.addEventListener('click',function(){ document.getElementById('ask').value=p.dataset.q; document.getElementById('ask').focus(); }); });
@@ -569,7 +599,7 @@ document.getElementById('runBtn').addEventListener('click',function(){
     setMode(true); renderTiles();
   },1600);
 });
-document.getElementById('resetBtn').addEventListener('click',function(){ if(state.question) openBlocks(state.question); });
+document.getElementById('resetBtn').addEventListener('click',function(){ if(state.question) openBlocks(state.question, state.spec); });
 
 // Resident card on map click (after results)
 var rc=document.getElementById('rcard');

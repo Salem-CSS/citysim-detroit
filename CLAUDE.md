@@ -32,6 +32,7 @@ Two people are building CitySim Detroit at the same time, each with their own AI
 | BUILD.md | Step-by-step build plan, lanes, checkpoints |
 | DATA_SETUP.md | Download data and load into S3 |
 | BUILDINGS.md | 3D building layer pipeline |
+| AWS_ACCESS.md | AWS access for both teammates, per-person stacks, deploys |
 | LOG.md | Team change log (read first, write last) |
 | contracts/ | JSON schemas shared by all lanes (start with contracts/README.md) |
 | contracts/actions.json | The 6 action types and their editable constraints |

@@ -1,0 +1,216 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: CitySim Detroit backend (one stack per Stage - salem, partner, main). Deploy with infra/deploy.sh.
+
+Parameters:
+  Stage:
+    Type: String
+    AllowedPattern: "[a-z0-9-]+"
+    Description: salem | partner | main
+  AgentModelId:
+    Type: String
+    Default: us.amazon.nova-pro-v1:0
+    Description: Bedrock model (or inference profile) that turns questions into specs
+  ResidentModelId:
+    Type: String
+    Default: us.amazon.nova-lite-v1:0
+    Description: Bedrock model for resident batches (BUILD.md says Nova 2 Lite; set its id here when enabled)
+  DataBucket:
+    Type: String
+    Default: ""
+    Description: Shared data bucket (personas, processed data). Leave empty until it exists.
+  PersonasPerDistrict:
+    Type: Number
+    Default: 500
+  BedrockRoleArn:
+    Type: String
+    Default: ""
+    Description: Role in a second AWS account to call Bedrock through (infra/bedrock-role.yaml). Empty = this account.
+  BedrockExternalId:
+    Type: String
+    Default: citysim-detroit
+  BedrockRegion:
+    Type: String
+    Default: us-east-1
+
+Conditions:
+  HasDataBucket: !Not [!Equals [!Ref DataBucket, ""]]
+  HasBedrockRole: !Not [!Equals [!Ref BedrockRoleArn, ""]]
+
+Globals:
+  Function:
+    Runtime: python3.12
+    CodeUri: .build/src
+    MemorySize: 512
+    Timeout: 30
+    Architectures: [arm64]
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        RUNS_TABLE: !Ref RunsTable
+        DATA_BUCKET: !Ref DataBucket
+        AGENT_MODEL_ID: !Ref AgentModelId
+        RESIDENT_MODEL_ID: !Ref ResidentModelId
+        PERSONAS_PER_DISTRICT: !Ref PersonasPerDistrict
+        BEDROCK_ROLE_ARN: !Ref BedrockRoleArn
+        BEDROCK_EXTERNAL_ID: !Ref BedrockExternalId
+        BEDROCK_REGION: !Ref BedrockRegion
+
+Resources:
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: ["https://citysim-detroit.vercel.app", "http://localhost:8000", "http://localhost:3000"]
+        AllowMethods: [GET, POST, OPTIONS]
+        AllowHeaders: [content-type]
+
+  RunsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub citysim-${Stage}-runs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: run_id, AttributeType: S}]
+      KeySchema: [{AttributeName: run_id, KeyType: HASH}]
+
+  # ---------- question -> blocks ----------
+  ScenarioFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub citysim-${Stage}-scenario
+      Handler: agent.handler.handler
+      Timeout: 60
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
+              Resource: "*"
+        - !If
+          - HasBedrockRole
+          - Statement: [{Effect: Allow, Action: sts:AssumeRole, Resource: !Ref BedrockRoleArn}]
+          - !Ref AWS::NoValue
+      Events:
+        Post: {Type: HttpApi, Properties: {ApiId: !Ref Api, Path: /scenario, Method: POST}}
+
+  # ---------- runs ----------
+  StartRunFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub citysim-${Stage}-start-run
+      Handler: infra.runs.start_run
+      Environment: {Variables: {STATE_MACHINE_ARN: !Ref RunMachine}}
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref RunsTable}
+        - StepFunctionsExecutionPolicy: {StateMachineName: !GetAtt RunMachine.Name}
+      Events:
+        Post: {Type: HttpApi, Properties: {ApiId: !Ref Api, Path: /runs, Method: POST}}
+
+  GetRunFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub citysim-${Stage}-get-run
+      Handler: infra.runs.get_run
+      Policies: [{DynamoDBReadPolicy: {TableName: !Ref RunsTable}}]
+      Events:
+        Get: {Type: HttpApi, Properties: {ApiId: !Ref Api, Path: "/runs/{id}", Method: GET}}
+
+  EngineFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub citysim-${Stage}-engine
+      Handler: infra.runs.engine_step
+      Timeout: 120
+      MemorySize: 1024
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref RunsTable}
+        - !If [HasDataBucket, {S3ReadPolicy: {BucketName: !Ref DataBucket}}, !Ref AWS::NoValue]
+
+  PlanBatchesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub citysim-${Stage}-plan-batches
+      Handler: infra.runs.plan_batches
+
+  ResidentBatchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub citysim-${Stage}-resident-batch
+      Handler: infra.runs.resident_batch
+      Timeout: 120
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [bedrock:InvokeModel]
+              Resource: "*"
+        - !If
+          - HasBedrockRole
+          - Statement: [{Effect: Allow, Action: sts:AssumeRole, Resource: !Ref BedrockRoleArn}]
+          - !Ref AWS::NoValue
+        - !If [HasDataBucket, {S3ReadPolicy: {BucketName: !Ref DataBucket}}, !Ref AWS::NoValue]
+
+  AggregateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub citysim-${Stage}-aggregate
+      Handler: infra.runs.aggregate_step
+      Timeout: 60
+      Policies: [{DynamoDBCrudPolicy: {TableName: !Ref RunsTable}}]
+
+  RunMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub citysim-${Stage}-run
+      Policies:
+        - LambdaInvokePolicy: {FunctionName: !Ref EngineFunction}
+        - LambdaInvokePolicy: {FunctionName: !Ref PlanBatchesFunction}
+        - LambdaInvokePolicy: {FunctionName: !Ref ResidentBatchFunction}
+        - LambdaInvokePolicy: {FunctionName: !Ref AggregateFunction}
+      Definition:
+        StartAt: Engine
+        States:
+          Engine:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters: {FunctionName: !GetAtt EngineFunction.Arn, Payload.$: "$"}
+            OutputPath: $.Payload
+            Next: PlanBatches
+          PlanBatches:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters: {FunctionName: !GetAtt PlanBatchesFunction.Arn, Payload.$: "$"}
+            OutputPath: $.Payload
+            Next: Residents
+          Residents:
+            Type: Map
+            ItemsPath: $.batches
+            MaxConcurrency: 10
+            ResultPath: $.batch_results
+            ItemProcessor:
+              ProcessorConfig: {Mode: INLINE}
+              StartAt: Batch
+              States:
+                Batch:
+                  Type: Task
+                  Resource: arn:aws:states:::lambda:invoke
+                  Parameters: {FunctionName: !GetAtt ResidentBatchFunction.Arn, Payload.$: "$"}
+                  OutputPath: $.Payload
+                  Retry:
+                    - ErrorEquals: [Lambda.TooManyRequestsException, ThrottlingException, States.TaskFailed]
+                      IntervalSeconds: 2
+                      BackoffRate: 2
+                      MaxAttempts: 3
+                  End: true
+            Next: Aggregate
+          Aggregate:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters: {FunctionName: !GetAtt AggregateFunction.Arn, Payload.$: "$"}
+            OutputPath: $.Payload
+            End: true
+
+Outputs:
+  ApiUrl:
+    Description: Paste into web/prototype/config.js (window.CITYSIM_API) for this stage
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com
+  RunsTableName:
+    Value: !Ref RunsTable

@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Deploy in the SECOND AWS account (the one whose Bedrock we use). Creates a role the CitySim
+  backend account can borrow to call Bedrock. That account pays for and rate-limits the calls.
+
+Parameters:
+  BackendAccountId:
+    Type: String
+    Default: "574246332084"
+    Description: AWS account that runs the CitySim stack (Lambdas)
+  ExternalId:
+    Type: String
+    Default: citysim-detroit
+    Description: Shared secret-ish string; must match BedrockExternalId in the backend stack
+
+Resources:
+  BedrockAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: citysim-bedrock-access
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {AWS: !Sub "arn:aws:iam::${BackendAccountId}:root"}
+            Action: sts:AssumeRole
+            Condition: {StringEquals: {sts:ExternalId: !Ref ExternalId}}
+      Policies:
+        - PolicyName: bedrock-invoke-only
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
+                Resource: "*"
+
+Outputs:
+  RoleArn:
+    Description: Pass to the backend deploy as BedrockRoleArn=<this>
+    Value: !GetAtt BedrockAccessRole.Arn
