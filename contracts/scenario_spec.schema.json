@@ -33,9 +33,10 @@
     "status": {
       "enum": [
         "draft",
-        "confirmed"
+        "confirmed",
+        "needs_info"
       ],
-      "description": "draft: shown in the panel for review. confirmed: the user pressed Ask residents."
+      "description": "draft: shown in the panel for review. confirmed: the user pressed Ask residents. needs_info: a required place is missing or could not be verified; see `questions`. A run is refused in this state."
     },
     "prompt": {
       "type": "string",
@@ -105,6 +106,36 @@
             "items": {
               "$ref": "#/$defs/constraint"
             }
+          }
+        }
+      }
+    },
+    "questions": {
+      "type": "array",
+      "description": "What the user must answer before this proposal can run (status needs_info).",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "<action_id>.<constraint_id> the question is about"
+          },
+          "label": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Real alternatives from the map, if any"
           }
         }
       }
@@ -198,6 +229,34 @@
         "note": {
           "type": "string",
           "description": "Optional one-line explanation shown under the block."
+        },
+        "resolved": {
+          "type": "object",
+          "description": "The verified place for a text constraint (shared/places.py).",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "method": {
+              "enum": [
+                "crossing",
+                "address",
+                "place search"
+              ]
+            },
+            "lon": {
+              "type": "number"
+            },
+            "lat": {
+              "type": "number"
+            },
+            "district": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
         }
       }
     }

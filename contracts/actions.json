@@ -39,6 +39,22 @@
           "note": "The place the user named (address, cross streets, landmark). Residents read this."
         },
         {
+          "id": "from",
+          "label": "From",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "Where the route starts, as the user named it. Residents read this."
+        },
+        {
+          "id": "to",
+          "label": "To",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "Where the route ends, as the user named it. Residents read this."
+        },
+        {
           "id": "hub",
           "label": "Takes off from",
           "type": "select",
@@ -379,6 +395,22 @@
           "default": "",
           "show": "panel",
           "note": "The place the user named (address, cross streets, landmark). Residents read this."
+        },
+        {
+          "id": "from",
+          "label": "From",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "Where the route starts, as the user named it. Residents read this."
+        },
+        {
+          "id": "to",
+          "label": "To",
+          "type": "text",
+          "default": "",
+          "show": "panel",
+          "note": "Where the route ends, as the user named it. Residents read this."
         },
         {
           "id": "route",

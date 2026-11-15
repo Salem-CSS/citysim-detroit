@@ -103,6 +103,8 @@ Resources:
       Timeout: 60
       Policies:
         - DynamoDBCrudPolicy: {TableName: !Ref RunsTable}   # spend counters
+        - !If [HasDataBucket, {S3ReadPolicy: {BucketName: !Ref DataBucket}}, !Ref AWS::NoValue]   # place index
+        - Statement: [{Effect: Allow, Action: "geo-places:SearchText", Resource: "*"}]            # landmark lookup
         - Statement:
             - Effect: Allow
               Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
@@ -124,6 +126,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy: {TableName: !Ref RunsTable}
         - StepFunctionsExecutionPolicy: {StateMachineName: !GetAtt RunMachine.Name}
+        - !If [HasDataBucket, {S3ReadPolicy: {BucketName: !Ref DataBucket}}, !Ref AWS::NoValue]   # place index
+        - Statement: [{Effect: Allow, Action: "geo-places:SearchText", Resource: "*"}]
       Events:
         Post: {Type: HttpApi, Properties: {ApiId: !Ref Api, Path: /runs, Method: POST}}
 

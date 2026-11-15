@@ -54,9 +54,13 @@ def summary_line(spec: dict) -> str:
         by_id = {c["id"]: c for c in a["constraints"]}
         what = str((by_id.get("what") or {}).get("value") or "").strip()
         where = str((by_id.get("where") or {}).get("value") or "").strip()
+        start = str((by_id.get("from") or {}).get("value") or "").strip()
+        end = str((by_id.get("to") or {}).get("value") or "").strip()
+        if start and end:
+            where = f"from {start} to {end}"
         joined = where if where.lower().split(" ")[0] in PLACE_WORDS else f"at {where}"
         head = (what or a["title"]) + (f" {joined}" if where else "")
-        skip = {"what", "where"} | (PLACE_IDS if where else set())   # the user's own place replaces a preset place
+        skip = {"what", "where", "from", "to"} | (PLACE_IDS if where else set())   # the user's own place replaces a preset place
         stated = [c for c in a["constraints"] if c["id"] not in skip and c.get("show", "panel") == "panel"
                   and c.get("source") in ("from_question", "edited") and c.get("type") in ("number", "select")]
         details = ", ".join(f"{c['label'].lower()}: {label_of(c)}" for c in stated)

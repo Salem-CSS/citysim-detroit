@@ -66,8 +66,7 @@ def clean_values(action_type: str, raw: dict) -> tuple[dict, list[str]]:
     out, notes = {}, []
     for k, v in (raw or {}).items():
         c = t.get(k)
-        if c is None:
-            notes.append(f"ignored unknown field {k}")
+        if c is None:                    # the model added a field the action does not have: drop it silently
             continue
         if isinstance(v, dict) and "value" in v:   # the model sometimes wraps a value as {value, source}
             v = v["value"]
@@ -136,6 +135,14 @@ def build_spec(tool_input: dict, question: str, districts: list[int], parent: di
         notes += n
         act = new_action(t, vals)
         raw = a.get("values") or {}
+        said = (question + " " + " ".join(str(c.get("value") or "") for x in (parent or {}).get("actions", []) for c in x["constraints"]
+                                          if c["id"] in ("where", "from", "to"))).lower()
+        what = next((str(c["value"]).lower() for c in act["constraints"] if c["id"] == "what"), "")
+        for c in act["constraints"]:     # a place the user never named is not a place: clear it so the user is asked
+            if c["id"] in ("where", "from", "to") and c["value"]:
+                words = [w for w in re.findall(r"[a-z0-9]+", str(c["value"]).lower()) if len(w) >= 3 and w not in ("the", "and", "near", "from")]
+                if str(c["value"]).lower() == what or not any(w in said for w in words):
+                    c["value"], c["source"] = "", "assumed"
         for c in act["constraints"]:     # a value that is not in the question was not stated by the user
             if parent or c["source"] != "from_question" or c["type"] not in ("number", "select"):
                 continue                 # (follow-ups are checked against the earlier spec, not the short follow-up text)
@@ -145,9 +152,13 @@ def build_spec(tool_input: dict, question: str, districts: list[int], parent: di
             if not stated:
                 c["source"] = "assumed"
                 c["note"] = "Not stated in the question; filled in by the assistant."
-        if parent:                       # follow-up: values the user gave this time are 'edited'
+        if parent:                       # follow-up: a value that changed is 'edited'; an unchanged one keeps its earlier source
+            before = {c["id"]: c for x in parent.get("actions", []) if x.get("type") == t for c in x["constraints"]}
             for c in act["constraints"]:
-                if c["source"] == "from_question":
+                old = before.get(c["id"])
+                if old is not None and str(old.get("value")) == str(c["value"]):
+                    c["source"] = old.get("source", c["source"])
+                elif c["source"] == "from_question":
                     c["source"] = "edited"
         actions.append(act)
     spec = {
@@ -162,6 +173,53 @@ def build_spec(tool_input: dict, question: str, districts: list[int], parent: di
         "unsupported": list(tool_input.get("unsupported", [])) + notes,
     }
     spec["summary"] = summary_line(spec) if actions else ""
+    return check_places(spec)
+
+
+ROUTE_TYPES = ("add_drone_route", "change_transit")
+ASK = {"where": "Where should this go? Give two cross streets, a street address or a landmark.",
+       "from": "Where does the route start? Give two cross streets, a street address or a landmark.",
+       "to": "Where does the route end? Give two cross streets, a street address or a landmark."}
+
+
+def check_places(spec: dict, resolve=None) -> dict:
+    """Verify every place the proposal needs (BACKEND_PLAN.md 11.2). A route needs a start and an end; anything else
+    needs one place. If a place is missing, not found, ambiguous or outside the selected districts, the spec comes back
+    as needs_info with a question. Nothing is guessed. Skipped when no place index is configured (unit tests)."""
+    if resolve is None:
+        if not (os.environ.get("PLACES_FILE") or os.environ.get("DATA_BUCKET")):
+            return spec
+        from shared.places import resolve
+    questions = []
+    for a in spec["actions"]:
+        by_id = {c["id"]: c for c in a["constraints"]}
+        if a["type"] in ROUTE_TYPES and not (by_id["from"]["value"] or by_id["to"]["value"]) and " to " in str(by_id["where"]["value"]):
+            parts = re.split(r"\s+to\s+", re.sub(r"^from\s+", "", str(by_id["where"]["value"]), flags=re.I), maxsplit=1)
+            by_id["from"]["value"], by_id["to"]["value"] = parts[0].strip(), parts[1].strip()
+            by_id["from"]["source"] = by_id["to"]["source"] = by_id["where"]["source"]
+        for cid in (("from", "to") if a["type"] in ROUTE_TYPES else ("where",)):
+            c = by_id[cid]
+            c.pop("resolved", None)
+            qid, text = f"{a['action_id']}.{cid}", str(c["value"] or "").strip()
+            if not text:
+                questions.append({"id": qid, "label": c["label"], "text": ASK[cid], "options": []})
+                continue
+            r = resolve(text, spec.get("districts"))
+            if r["status"] == "ok" and r["in_selected"]:
+                c["resolved"] = {k: r[k] for k in ("name", "method", "lon", "lat", "district")}
+            elif r["status"] == "ok":
+                where = f"District {r['district']}" if r["district"] else "outside Detroit's council districts"
+                questions.append({"id": qid, "label": c["label"], "options": [],
+                                  "text": f"{r['name']} is in {where}, which is not one of the districts you selected. "
+                                          f"Select that district or give another place."})
+            else:
+                more = " Which did you mean?" if r.get("alternatives") else " Give two cross streets, a street address or a landmark."
+                questions.append({"id": qid, "label": c["label"], "text": r["message"] + more, "options": r.get("alternatives", [])})
+    if questions:
+        spec["status"], spec["questions"] = "needs_info", questions
+    else:
+        spec.pop("questions", None)
+    spec["summary"] = summary_line(spec) if spec["actions"] else ""
     return spec
 
 
@@ -177,7 +235,7 @@ def ask_model(question: str, parent: dict | None, client=None) -> dict:
         modelId=MODEL_ID,
         system=[{"text": SYSTEM + "\n\nActions and their fields (use these ids and option values exactly):\n" + catalog()
                  + "\n\nCall submit_actions exactly once. Fill only values the user stated or clearly implied; the rest get defaults."
-                 + " Always fill `what` and `where` for every action. `what` is the thing the user proposed, in their own terms and kept specific (for example 'a strip club', 'a 24-hour gas station', 'a new bus route'), as a short neutral noun phrase. Never generalise it to a broader category. `where` is the place the user named (street, cross streets, landmark, from-to); leave it out if they named none. If the specific use or place has no matching option in a select field, leave that field out: do not pick the nearest option and do not list the use under `unsupported`. `unsupported` is only for parts of the question that none of the action types can represent."}],
+                 + " Always fill `what` and `where` for every action. `what` is the thing the user proposed, in their own terms and kept specific (for example 'a strip club', 'a 24-hour gas station', 'a new bus route'), as a short neutral noun phrase. Never generalise it to a broader category. `where` is the place the user named (street, cross streets, landmark, from-to); leave it out if they named none. For a route (drone route, bus service) also fill `from` and `to` with the start and end places the user named, and leave either out if the user did not name it; never invent a start or an end. If the specific use or place has no matching option in a select field, leave that field out: do not pick the nearest option and do not list the use under `unsupported`. `unsupported` is only for parts of the question that none of the action types can represent."}],
         messages=[{"role": "user", "content": [{"text": user}]}],
         toolConfig={"tools": [tool_spec()], "toolChoice": {"tool": {"name": "submit_actions"}}},
         inferenceConfig={"temperature": 0, "maxTokens": 1500},

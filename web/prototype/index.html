@@ -524,6 +524,26 @@ function specToLib(spec){
   });
   return lib;
 }
+
+// Places the backend could not verify: show its questions; an option click sends it back as a follow-up.
+function questionsHTML(spec){
+  if(!spec || !spec.questions || !spec.questions.length) return '';
+  return spec.questions.map(function(q,i){
+    var esc=function(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');};
+    return '<div class="changed-note" style="flex-direction:column;align-items:flex-start;gap:8px"><span><b>'+esc(q.label||'Place')+':</b> '+esc(q.text)+'</span>'+
+      ((q.options||[]).length?'<div style="display:flex;flex-wrap:wrap;gap:6px">'+q.options.map(function(o){
+        return '<button type="button" class="btn" data-answer="For '+esc(q.label||'the place')+', use '+esc(o)+'">'+esc(o)+'</button>';}).join('')+'</div>':'')+'</div>';
+  }).join('');
+}
+function wireQuestions(spec){
+  var need = !!(spec && spec.status==='needs_info'), run=document.getElementById('runBtn');
+  run.disabled = need; if(need) run.textContent='Answer the question above first';
+  body.querySelectorAll('[data-answer]').forEach(function(b){ b.addEventListener('click',function(){
+    var i=document.getElementById('ask'); i.value=b.dataset.answer; document.getElementById('askForm').requestSubmit(); }); });
+  if(spec) spec.actions.forEach(function(a){ a.constraints.forEach(function(c){
+    if(!c.resolved) return; var blk=body.querySelector('.block[data-k="'+a.action_id+'.'+c.id+'"]'); if(!blk) return;
+    blk.insertAdjacentHTML('beforeend','<div class="muted" style="font-size:13px">Verified: '+String(c.resolved.name).replace(/</g,'&lt;')+' · District '+c.resolved.district+'</div>'); }); });
+}
 function openBlocks(q, spec){
   var lib = spec ? specToLib(spec) : ACTIONS;
   state.question=q; state.spec=spec||null; state.actions = spec ? Object.keys(lib) : parse(q); state.defaults={};
@@ -531,7 +551,7 @@ function openBlocks(q, spec){
   document.getElementById('blocksQ').textContent='"'+q+'"';
   var notes = spec && spec.unsupported && spec.unsupported.length ? '<div class="changed-note"><span>Not covered yet: '+spec.unsupported.map(function(t){return String(t).replace(/</g,'&lt;');}).join('; ')+'</span></div>' : '';
   var empty = spec && !spec.actions.length ? '<div class="changed-note"><span>Couldn\'t match this to a proposal type yet. Try naming a drone route, building, road change, bus route, rezoning or event venue.</span></div>' : '';
-  body.innerHTML=notes+empty+state.actions.map(function(a){
+  body.innerHTML=questionsHTML(spec)+notes+empty+state.actions.map(function(a){
     var A=lib[a];
     return '<section class="group"><div class="group__title"><span class="group__icon">'+ICONS[A.icon]+'</span>'+A.title+'</div><div style="display:flex;flex-direction:column;gap:8px">'+A.blocks.map(function(b){return blockHTML(a,b);}).join('')+'</div></section>';
   }).join('');
@@ -541,6 +561,7 @@ function openBlocks(q, spec){
   map.dataset.proposal = state.types.indexOf('add_drone_route')>-1 ? 'drone' : 'none';
   mapView.update();
   setMode(false);
+  wireQuestions(spec);
 }
 function askBackend(q){
   var api=(window.CITYSIM_API||'').replace(/\/$/,'');
@@ -631,17 +652,18 @@ function showResult(res){
 function runLive(btn){
   var api=(window.CITYSIM_API||'').replace(/\/$/,''), spec=specWithEdits(), n=spec.districts.length*500;
   btn.disabled=true; btn.textContent='Asking '+n.toLocaleString()+' residents…';
-  var fail=function(msg){ btn.disabled=false; setMode(state.asked);
+  var fail=function(msg, j){ btn.disabled=false; setMode(state.asked);
+    if(j && j.spec && j.spec.questions){ openBlocks(state.question, j.spec); return; }
     body.insertAdjacentHTML('afterbegin','<div class="changed-note"><span>Could not run: '+String(msg).replace(/</g,'&lt;')+'</span></div>'); };
   fetch(api+'/runs',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({spec:spec})})
-    .then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.error||r.status); return j.run_id; }); })
+    .then(function(r){ return r.json().then(function(j){ if(!r.ok){ var e=new Error(j.error||r.status); e.body=j; throw e; } return j.run_id; }); })
     .then(function(id){ var tries=0; (function poll(){
       fetch(api+'/runs/'+id).then(function(r){return r.json();}).then(function(run){
         if(run.stage==='done' && run.result){ state.spec=spec; showResult(run.result); finishRun(btn); }
         else if(++tries>90) fail('the run did not finish in time');
         else setTimeout(poll,2000);
       }).catch(function(e){ fail(e.message); }); })(); })
-    .catch(function(e){ fail(e.message); });
+    .catch(function(e){ fail(e.message, e.body); });
 }
 function finishRun(b){
     state.asked=true; b.disabled=false; app.classList.add('has-results'); map.dataset.state='results'; mapView.update();
