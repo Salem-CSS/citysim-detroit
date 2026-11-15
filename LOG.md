@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 23:55 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Walkers stay on streets: at street level each figure snaps to the nearest real street in the basemap tiles (OpenMapTiles `transportation`, motorways/rail excluded) and paces the sidewalk on its home's side (6 m off the centerline). Click a figure → person card (district, stance, demographics) and the camera zooms in and follows them; drag the map, ×, or Esc stops it. Selected figure turns yellow.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** The card shows real demographics only when they exist. The map now loads `geo/residents.geojson` if present (else the demo file), so real residents drop in with no code change.
+**Blocked / needs:** **For Partner:** export `web/prototype/geo/residents.geojson`, one Point per persona at a home in its census block, with properties `persona_id, district, age, sex, hh_income, tenure, years_in_home, hh_size, vehicles, commute_mode`. Per-run `stance` / `reason` per persona_id from the run result would let each figure show its own answer.
+**Next:** —
+
 ### 2026-11-14 23:40 ET · Salem (AI) · Web (branch `salem/frontend-try`)
 **Did:** Residents walk. At zoom 14+ each resident is a small 3D figure (body + two swinging legs, deck.gl SimpleMeshLayer, mesh built in code) pacing a short stretch near their home, colored by stance after a run (white before). Zoomed out they stay dots. Figures scale with zoom (~8 px tall). Animation stops when zoomed out or the tab is hidden. Merged latest main into the branch first.
 **Files:** web/prototype/index.html, LOG.md (branch only, not on main)
