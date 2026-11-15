@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: new building lands on open land
+- Building animation searches outward from the picked point (10 m rings, up to 260 m) for a spot where the footprint overlaps no existing building (+3 m) and stays clear of road centrelines, then builds there; camera follows if it moved. Keeps the picked point if tiles aren't loaded or nothing is free. Existing buildings can't be hidden individually (tiles carry no ids), so no demolition.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: building + drone build animations
 - add_building: camera flies to the site (picked Where, else the preset site), ripple, footprint tint, then a blue block rises to floors × 3.4 m with floor lines appearing as it climbs; footprint sized from homes per floor (illustration only).
 - add_drone_route: raised flight line draws from From (or the preset hub) to To/Where at the chosen flying height (climb, cruise, descend) with a ground trace, landing pads at both ends, then a drone flies it once with a pulsing noise ring under it.
