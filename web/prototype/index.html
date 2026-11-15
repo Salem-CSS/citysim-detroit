@@ -855,7 +855,7 @@ var mapView = (function () {
   }
   // ---------- "added to the world" animation (illustration only; never feeds a number) ----------
   var build = null;                        // { kind:'transit', a:[lon,lat], b:[lon,lat]|null, t0 }
-  var DRAW = 1400, RISE = 700, DRIVE = 1800;
+  var DRAW = 1400, RISE = 800, DRIVE = 3000, POLE = 45, SIGN = 14;
   function lerp(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
   function ease(t) { t = Math.max(0, Math.min(1, t)); return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
   function buildLayers() {
@@ -868,18 +868,18 @@ var mapView = (function () {
     var stops = route ? [{ p: a, s: 0 }, { p: b, s: DRAW * 0.85 }] : [{ p: a, s: 0 }];  // 2. stop poles rise, ripple out
     L.push(new deck.ScatterplotLayer({ id: 'b-ripple', data: stops, getPosition: function (d) { return d.p; }, stroked: true, filled: false,
       radiusUnits: 'meters', lineWidthUnits: 'pixels', getLineWidth: 3,
-      getRadius: function (d) { return 10 + 90 * ease((t - d.s) / 900); },
-      getLineColor: function (d) { var k = (t - d.s) / 900; return [56, 189, 248, k < 0 || k > 1 ? 0 : Math.round(255 * (1 - k))]; },
+      getRadius: function (d) { return 20 + 160 * ease((t - d.s) / 1100); },
+      getLineColor: function (d) { var k = (t - d.s) / 1100; return [56, 189, 248, k < 0 || k > 1 ? 0 : Math.round(255 * (1 - k))]; },
       updateTriggers: { getRadius: t, getLineColor: t } }));
-    L.push(new deck.ColumnLayer({ id: 'b-pole', data: stops, diskResolution: 12, radius: 5, extruded: true, getPosition: function (d) { return d.p; },
-      getElevation: function (d) { return 26 * ease((t - d.s) / RISE); }, getFillColor: [248, 250, 252, 255], updateTriggers: { getElevation: t } }));
-    L.push(new deck.ColumnLayer({ id: 'b-sign', data: stops, diskResolution: 4, radius: 16, extruded: true, angle: 45,
-      getPosition: function (d) { return [d.p[0], d.p[1], 26 * ease((t - d.s) / RISE)]; },
-      getElevation: function (d) { return (t - d.s) > RISE * 0.6 ? 7 * ease((t - d.s - RISE * 0.6) / 300) : 0; }, getFillColor: [37, 99, 235, 255],
+    L.push(new deck.ColumnLayer({ id: 'b-pole', data: stops, diskResolution: 12, radius: 6, extruded: true, getPosition: function (d) { return d.p; },
+      getElevation: function (d) { return POLE * ease((t - d.s) / RISE); }, getFillColor: [248, 250, 252, 255], updateTriggers: { getElevation: t } }));
+    L.push(new deck.ColumnLayer({ id: 'b-sign', data: stops, diskResolution: 4, radius: 24, extruded: true, angle: 45,
+      getPosition: function (d) { return [d.p[0], d.p[1], POLE * ease((t - d.s) / RISE)]; },
+      getElevation: function (d) { return (t - d.s) > RISE * 0.6 ? SIGN * ease((t - d.s - RISE * 0.6) / 300) : 0; }, getFillColor: [37, 99, 235, 255],
       updateTriggers: { getPosition: t, getElevation: t } }));
     if (route && t > DRAW) {                                                     // 3. a bus drives the route once
       var k = ease((t - DRAW) / DRIVE), pos = lerp(a, b, k), ang = Math.atan2(b[1] - a[1], (b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180)) * 180 / Math.PI;
-      if (k < 1) L.push(new deck.SimpleMeshLayer({ id: 'b-bus', data: [pos], mesh: BUS, getPosition: function (p) { return [p[0], p[1], 0]; },
+      L.push(new deck.SimpleMeshLayer({ id: 'b-bus', data: [pos], mesh: BUS, getPosition: function (p) { return [p[0], p[1], 0]; },
         getOrientation: [0, -ang, 0], sizeScale: 1, getColor: [250, 204, 21], material: { ambient: .6, diffuse: .6 }, updateTriggers: { getPosition: k } }));
     }
     return L;
