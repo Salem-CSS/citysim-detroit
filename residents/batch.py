@@ -2,7 +2,7 @@
 
     main(event) -> {"status", "asked", "valid", "retried", "dropped", "calls", "quotes_requested"}
 
-event: {"run_id", "batch", "persona_ids", "spec": {"spec_id", "summary"}, "impacts_computed": bool,
+event: {"run_id", "batch", "persona_ids", "residents_per_call" (optional), "spec": {"spec_id", "summary"}, "impacts_computed": bool,
         "impact_lines": {persona_id: [line, ...]}}
 
 - Residents come from s3://$DATA_BUCKET/personas/district_{n}.json (data/personas/build.py).
@@ -91,11 +91,12 @@ def ask(client, run_id, personas: list[dict], spec: dict, impact_lines: dict, ta
     return good, flags
 
 
-def ask_all(client, run_id, personas: list[dict], spec: dict, impact_lines, table=None) -> tuple[dict, dict, int]:
+def ask_all(client, run_id, personas: list[dict], spec: dict, impact_lines, table=None, per_call: int | None = None) -> tuple[dict, dict, int]:
     """Ask everyone, RESIDENTS_PER_CALL to a call, CALLS_AT_ONCE calls in parallel. Returns (answers, quote flags, calls)."""
     from concurrent.futures import ThreadPoolExecutor
 
-    groups = [personas[i:i + PER_CALL] for i in range(0, len(personas), PER_CALL)]
+    per_call = max(1, int(per_call or PER_CALL))
+    groups = [personas[i:i + per_call] for i in range(0, len(personas), per_call)]
 
     def one(group):
         return ask(client, run_id, group, spec, impact_lines, table)
@@ -158,12 +159,13 @@ def main(event: dict, context=None, client=None, table=None) -> dict:
     client = client or bedrock_runtime()
     stats = {"status": "ok", "asked": len(ids), "retried": 0, "calls": 0}
     try:
-        good, flags, n = ask_all(client, event["run_id"], personas, event["spec"], lines, table)
+        per_call = event.get("residents_per_call")          # set per run by the Fast / Accurate switch; else the stack default
+        good, flags, n = ask_all(client, event["run_id"], personas, event["spec"], lines, table, per_call)
         stats["calls"] += n
         again = [p for p in personas if p["persona_id"] not in good]
         if again:
             stats["retried"] = len(again)
-            more, _, n = ask_all(client, event["run_id"], again, event["spec"], lines, table)
+            more, _, n = ask_all(client, event["run_id"], again, event["spec"], lines, table, per_call)
             stats["calls"] += n
             good.update(more)
         quoted = [p for p in personas if flags[p["persona_id"]] and p["persona_id"] in good]

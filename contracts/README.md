@@ -20,6 +20,7 @@ typed question
 | `impacts.schema.json` | `engine/` | `residents/` |
 | `resident_response.schema.json` | Bedrock (via `residents/`) | `residents/aggregate` |
 | `run_result.schema.json` | `engine/` + `residents/` | `web/` |
+| `run_answers.schema.json` | `infra/runs.get_answers` (GET /runs/{id}/answers) | `web/` (figure colours, person card) |
 | `persona.schema.json` | `data/personas` | `residents/` |
 | `spec.py` | helpers: `new_action`, `values`, `summary_line`, `apply_edit` | agent, engine, residents |
 

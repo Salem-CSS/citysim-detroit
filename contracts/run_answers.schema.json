@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "run_answers",
+  "description": "GET /runs/{id}/answers. Each resident's own answer for one run, so the map can colour every figure and a click on a person can show what they said. Written by infra/runs.get_answers from the stored resident responses; read by web/.",
+  "type": "object",
+  "required": [
+    "run_id",
+    "answers"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "description": "running or done; while running the list holds the answers stored so far"
+    },
+    "mode": {
+      "enum": [
+        "fast",
+        "accurate"
+      ],
+      "description": "fast = 25 residents share a model call; accurate = one resident per call"
+    },
+    "answers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "persona_id",
+          "stance",
+          "reason"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "persona_id": {
+            "type": "string"
+          },
+          "stance": {
+            "enum": [
+              "support",
+              "neutral",
+              "oppose"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string",
+            "description": "one sentence, only for the sampled share of residents"
+          },
+          "distance_m": {
+            "type": "number",
+            "description": "metres from the resident's home to the proposal's verified place; absent when the proposal has no verified place"
+          }
+        }
+      }
+    }
+  }
+}

@@ -156,6 +156,15 @@ Resources:
       Events:
         Get: {Type: HttpApi, Properties: {ApiId: !Ref Api, Path: "/runs/{id}", Method: GET}}
 
+  GetAnswersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub citysim-${Stage}-get-answers
+      Handler: infra.runs.get_answers
+      Policies: [{DynamoDBReadPolicy: {TableName: !Ref RunsTable}}]
+      Events:
+        Get: {Type: HttpApi, Properties: {ApiId: !Ref Api, Path: "/runs/{id}/answers", Method: GET}}
+
   EngineFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -172,6 +181,7 @@ Resources:
     Properties:
       FunctionName: !Sub citysim-${Stage}-plan-batches
       Handler: infra.runs.plan_batches
+      Policies: [{DynamoDBCrudPolicy: {TableName: !Ref RunsTable}}]   # records how many batches the run has
 
   ResidentBatchFunction:
     Type: AWS::Serverless::Function

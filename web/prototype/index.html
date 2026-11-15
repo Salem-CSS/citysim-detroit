@@ -360,6 +360,7 @@ button { cursor: pointer; }
 .pcard { position: absolute; z-index: 4; left: 16px; bottom: 100px; width: 320px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .app.has-blocks .pcard { left: 392px; }
 .pcard[hidden] { display: none; }
+.pcard { max-height: calc(100% - 210px); overflow-y: auto; }
 .pcard__head { display: flex; align-items: center; gap: 12px; }
 .pcard__head b { font-size: 16px; display: block; }
 .pcard__head .x { margin-left: auto; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--panel-line); background: transparent; color: var(--text); font-size: 18px; cursor: pointer; }
@@ -420,6 +421,9 @@ button { cursor: pointer; }
   <div class="settings panel" id="settings" role="dialog" aria-label="Settings" hidden>
     <h3>Appearance</h3>
     <div class="seg" role="group" aria-label="Theme"><button type="button" data-theme-set="dark" aria-pressed="true">Dark</button><button type="button" data-theme-set="light" aria-pressed="false">Light</button></div>
+    <h3>Resident answers</h3>
+    <div class="seg" role="group" aria-label="How residents are asked"><button type="button" data-speed-set="fast" aria-pressed="true">Fast</button><button type="button" data-speed-set="accurate" aria-pressed="false">Accurate</button></div>
+    <p class="credits" id="speedHint" style="font-size:12px"></p>
     <p class="credits">Map data © OpenStreetMap contributors · © CARTO · Buildings © Overture Maps Foundation (ODbL)</p>
   </div>
 
@@ -471,6 +475,7 @@ button { cursor: pointer; }
         <div class="worry"><div class="worry__row"><span>Privacy and cameras</span><b class="num">21%</b></div><div class="meter"><span style="width:42%"></span></div></div>
         <div class="worry"><div class="worry__row"><span>Safety if one falls</span><b class="num">18%</b></div><div class="meter"><span style="width:36%"></span></div></div>
       </section>
+      <section data-show="results" data-hide-district id="byDistance" hidden></section>
       <section data-show="results" data-hide-district>
         <div class="fact-line" id="trafficNote"><b>Traffic: no problem.</b></div>
       </section>
@@ -496,7 +501,9 @@ button { cursor: pointer; }
   <div class="pcard panel" id="pcard" role="dialog" aria-label="Resident" hidden>
     <div class="pcard__head"><span class="avatar" id="pcAvatar">R</span><div><b id="pcTitle">Resident</b><span class="muted" style="font-size:14px" id="pcSub"></span></div><button type="button" class="x" id="pcClose" aria-label="Close">×</button></div>
     <div class="stance" id="pcStance"></div>
+    <p id="pcQuote" hidden style="margin:0;font-size:15px;line-height:1.45"></p>
     <dl id="pcFacts"></dl>
+    <div class="follow" id="pcSource" style="font-size:12px">Simulated resident built from census records. Not a real person.</div>
     <div class="follow" id="pcFollow">Camera is following this resident. Drag the map to stop.</div>
   </div>
   <div class="rcard panel" id="rcard" role="dialog" aria-label="Resident details" hidden>
@@ -587,6 +594,7 @@ var mapView = (function () {
     var st = el.dataset.state, x = window.DISTRICTS && DISTRICTS[r.d];
     if (st !== 'results') return STANCE.idle;
     if (r.stance) return r.stance === 'support' ? STANCE.s : r.stance === 'oppose' ? STANCE.o : STANCE.n;   // real per-resident answer
+    if (answersOn) return STANCE.x;             // a live run is loaded and this resident has no answer in it
     if (!x || x.s == null) return STANCE.x;
     return r.u * 100 < x.s ? STANCE.s : r.u * 100 < x.s + x.n ? STANCE.n : STANCE.o;
   }
@@ -767,6 +775,7 @@ var mapView = (function () {
     }
   }
   function figureScale(z) { return Math.max(2.5, Math.min(7, 514000 / Math.pow(2, z))); }   // ~8 px tall, capped so they fit on a sidewalk
+  var answersOn = false, answersV = 0;
   var frame = 0, animating = false, followed = null, followHold = false, snapRound = 0, walkClock = 0, lastTick = 0;
   function animate() {
     if (!ready || map.getZoom() < PEOPLE_ZOOM || document.hidden) { animating = false; lastTick = 0; return; }
@@ -802,43 +811,56 @@ var mapView = (function () {
 
 
   // ---------- person card + follow camera ----------
-  var FACTS = [['age', 'Age'], ['sex', 'Sex'], ['hh_income', 'Household income'], ['tenure', 'Owns or rents'], ['years_in_home', 'Years in home'],
-               ['hh_size', 'Household size'], ['vehicles', 'Cars'], ['commute_mode', 'Gets to work by']];
+  var FACTS = [['age', 'Age'], ['sex', 'Sex'], ['hh_income', 'Household income'], ['tenure', 'Owns or rents'], ['building_type', 'Home'],
+               ['years_in_home', 'Years in home'], ['move_in_band', 'Moved in'], ['hh_size', 'Household size'], ['children', 'Children at home'],
+               ['vehicles', 'Cars'], ['employment', 'Work'], ['commute_mode', 'Gets to work by'], ['commute_minutes', 'Commute'], ['education', 'Education']];
+  var REASONS = { traffic: 'Traffic', noise: 'Noise', safety: 'Safety', privacy: 'Privacy', rent: 'Rent and housing costs', jobs: 'Jobs', access: 'Access', none: 'No main reason' };
+  function cap(v) { v = String(v); return v.charAt(0).toUpperCase() + v.slice(1); }
+  function miles(m) { return m < 160 ? Math.round(m * 3.281 / 10) * 10 + ' ft' : (m / 1609.34).toFixed(m < 16093 ? 1 : 0) + ' mi'; }
   var COMMUTE = { drive_alone: 'Drives alone', carpool: 'Carpool', bus: 'Bus', walk: 'Walks', bike: 'Bikes', work_from_home: 'Works from home', other: 'Other', not_working: 'Not working' };
   function fmt(k, v) {
     if (v == null || v === '') return null;
     if (k === 'hh_income') return '$' + Math.round(v).toLocaleString();
     if (k === 'tenure') return v === 'owner' ? 'Owns' : 'Rents';
     if (k === 'commute_mode') return COMMUTE[v] || v;
-    if (k === 'sex') return v.charAt(0).toUpperCase() + v.slice(1);
+    if (k === 'sex' || k === 'employment' || k === 'education' || k === 'building_type') return cap(v);
+    if (k === 'children') return v ? 'Yes' : 'No';
+    if (k === 'commute_minutes') return v + ' min';
+    if (k === 'move_in_band') return cap(v) + ' ago';
     return String(v);
   }
   function selectPerson(r) {
-    followed = r;
-    var x = window.DISTRICTS && DISTRICTS[r.d], st = el.dataset.state === 'results';
-    var col = stanceOf(r), lab = !st ? 'Not asked yet' : (col === STANCE.s ? 'Supports' : col === STANCE.o ? 'Opposes' : col === STANCE.n ? 'Neutral' : 'No answer');
-    document.getElementById('pcTitle').textContent = r.t && r.t.age ? (fmt('tenure', r.t.tenure) || 'Resident') + ', ' + r.t.age : 'Resident';
-    document.getElementById('pcSub').textContent = 'District ' + r.d + (x && x.area ? ' · ' + x.area : '');
-    document.getElementById('pcAvatar').textContent = String(r.d);
-    document.getElementById('pcStance').innerHTML = '<i style="background:rgb(' + col.join(',') + ')"></i>' + lab +
-      (st && r.reason ? ' · ' + r.reason : '');
-    var rows = r.t ? FACTS.map(function (f) { var v = fmt(f[0], r.t[f[0]]); return v ? '<dt>' + f[1] + '</dt><dd>' + v + '</dd>' : ''; }).join('') : '';
-    document.getElementById('pcFacts').innerHTML = rows ||
-      '<dt>Details</dt><dd style="font-weight:400">This figure is a placeholder. Real age, income, housing and commute appear once each resident\'s census record is exported to the map.</dd>';
-    document.getElementById('pcFollow').textContent = 'Camera is following this resident. Drag the map to stop.';
-    document.getElementById('pcard').hidden = false;
-    document.getElementById('rcard').hidden = true;
+    selectPersonCard(r);
     followHold = true;                         // let the zoom-in finish, then track every frame
     map.once('moveend', function () { followHold = false; });
     map.easeTo({ center: [r.pos[0], r.pos[1]], zoom: Math.max(map.getZoom(), 16.8), pitch: 62, duration: 800 });
     kick();
+  }
+  function selectPersonCard(r) {
+    followed = r;
+    var x = window.DISTRICTS && DISTRICTS[r.d], st = el.dataset.state === 'results';
+    var col = stanceOf(r), lab = !st ? 'Not asked yet' : (col === STANCE.s ? 'Supports' : col === STANCE.o ? 'Opposes' : col === STANCE.n ? 'Neutral' : 'No answer');
+    document.getElementById('pcTitle').textContent = r.t && r.t.age ? (r.t.tenure === 'owner' ? 'Homeowner' : r.t.tenure === 'renter' ? 'Renter' : 'Resident') + ', ' + r.t.age : 'Resident';
+    document.getElementById('pcSub').textContent = 'District ' + r.d + (r.t && r.t.neighborhood ? ' · ' + r.t.neighborhood : x && x.area ? ' · ' + x.area : '');
+    document.getElementById('pcAvatar').textContent = String(r.d);
+    document.getElementById('pcStance').innerHTML = '<i style="background:rgb(' + col.join(',') + ')"></i>' + lab +
+      (st && r.reason && r.reason !== 'none' ? ' · ' + (REASONS[r.reason] || r.reason) : '');
+    var q = document.getElementById('pcQuote');
+    q.hidden = !(st && r.quote); q.textContent = st && r.quote ? '\u201C' + r.quote + '\u201D' : '';
+    var dist = st && r.dist != null ? '<dt>Lives</dt><dd>' + miles(r.dist) + ' from the proposal</dd>' : '';
+    var rows = r.t ? FACTS.map(function (f) { var v = fmt(f[0], r.t[f[0]]); return v ? '<dt>' + f[1] + '</dt><dd>' + v + '</dd>' : ''; }).join('') : '';
+    document.getElementById('pcFacts').innerHTML = (rows ? dist + rows : '') ||
+      '<dt>Details</dt><dd style="font-weight:400">This figure is a placeholder. Real age, income, housing and commute appear once each resident\'s census record is exported to the map.</dd>';
+    document.getElementById('pcFollow').textContent = 'Camera is following this resident. Drag the map to stop.';
+    document.getElementById('pcard').hidden = false;
+    document.getElementById('rcard').hidden = true;
   }
   document.getElementById('pcClose').addEventListener('click', function () { followed = null; document.getElementById('pcard').hidden = true; });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('pcard').hidden) { followed = null; document.getElementById('pcard').hidden = true; } });
 
   function render() {
     if (!ready) return;
-    var st = el.dataset.state, drone = el.dataset.proposal === 'drone' && st !== 'empty', key = sel.join(',') + st;
+    var st = el.dataset.state, drone = el.dataset.proposal === 'drone' && st !== 'empty', key = sel.join(',') + st + ':' + answersV;
     var layers = [];
     if (districts) layers.push(new deck.GeoJsonLayer({
       id: 'districts', data: districts, stroked: true, filled: false, lineWidthUnits: 'pixels',
@@ -938,6 +960,14 @@ var mapView = (function () {
       render();
     },
     onClick: function (fn) { clickFn = fn; },
+    setAnswers: function (list) {               // list from GET /runs/{id}/answers, or null to clear
+      var by = {}; (list || []).forEach(function (a) { by[a.persona_id] = a; });
+      residents.forEach(function (r) { var a = by[r.id]; r.stance = a ? a.stance : null; r.reason = a ? a.reason : null; r.quote = a ? a.quote || null : null; r.dist = a && a.distance_m != null ? a.distance_m : null; });
+      answersOn = !!list; answersV++; render();
+      if (followed && !document.getElementById('pcard').hidden) { var keep = followHold; selectPersonCard(followed); followHold = keep; }
+    },
+    answerCounts: function () { var c = { support: 0, neutral: 0, oppose: 0 }; residents.forEach(function (r) { if (r.stance) c[r.stance]++; }); return c; },
+    find: function (fn) { return residents.filter(function (r) { return on(r.d) && fn(r); }); },
     setRoute: function (a, b) { route = a && b ? [a, b] : null; render(); },
     pick: function (what, cb, key) {                 // top-down view; next click on a road/intersection returns its name + point
       if (pickCb) endPick(null);
@@ -1164,13 +1194,22 @@ document.getElementById('compareBtn').addEventListener('click',function(){
   if(document.getElementById('results').classList.contains('is-compare')) closeCompare(); else openCompare();
 });
 
-// ---------- settings: light / dark ----------
+// ---------- settings: light / dark, and how residents are asked ----------
+function runSpeed(){ var m=window.CITYSIM_SPEED; if(!m){ try{ m=localStorage.getItem('citysim-speed'); }catch(e){} }
+  return m==='accurate'?'accurate':'fast'; }
 (function(){
   var btn=document.getElementById('settingsBtn'), pop=document.getElementById('settings');
   function sync(){ var t=document.documentElement.dataset.theme||'dark';
     pop.querySelectorAll('[data-theme-set]').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.themeSet===t); }); }
   function close(){ pop.hidden=true; btn.setAttribute('aria-expanded','false'); }
   btn.addEventListener('click',function(e){ e.stopPropagation(); pop.hidden=!pop.hidden; btn.setAttribute('aria-expanded', String(!pop.hidden)); sync(); });
+  var HINT={fast:'Fast: residents answer in groups of 25. About 45 seconds for four districts. Support close to a site reads too high.',
+            accurate:'Accurate: every resident is asked alone, so nobody is swayed by who else is in the group. About 3 minutes per district.'};
+  function syncSpeed(){ var m=runSpeed(); pop.querySelectorAll('[data-speed-set]').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.speedSet===m); });
+    document.getElementById('speedHint').textContent=HINT[m]; }
+  pop.addEventListener('click',function(e){ var b=e.target.closest('[data-speed-set]'); if(!b) return; e.stopPropagation();
+    try{ localStorage.setItem('citysim-speed', b.dataset.speedSet); }catch(err){} window.CITYSIM_SPEED=b.dataset.speedSet; syncSpeed(); });
+  syncSpeed();
   pop.addEventListener('click',function(e){ e.stopPropagation(); var b=e.target.closest('[data-theme-set]'); if(!b) return;
     var t=b.dataset.themeSet; document.documentElement.dataset.theme=t; try{ localStorage.setItem('citysim-theme',t); }catch(err){}
     mapView.setTheme(t); sync(); });
@@ -1283,8 +1322,15 @@ function syncRoute(){
 // a proposal waiting on a place can run once every place field has something; the server re-checks it
 function placesReady(){
   if(!state.spec || state.spec.status!=='needs_info') return;
-  var run=document.getElementById('runBtn'), fields=body.querySelectorAll('.placefield input');
-  var ok=fields.length && Array.prototype.every.call(fields,function(i){ return i.value.trim(); });
+  // a route needs From and To; anything else needs Where. The other place boxes may stay empty.
+  var run=document.getElementById('runBtn'), ok=true, any=false;
+  state.spec.actions.forEach(function(a){
+    var val=function(id){ var i=body.querySelector('input[data-k="'+a.action_id+'.'+id+'"]'); return i ? i.value.trim() : null; };
+    var f=val('from'), t=val('to'), w=val('where');
+    if(f===null && t===null && w===null) return; any=true;
+    var route = a.type==='add_drone_route' || a.type==='change_transit';
+    if(route ? !((f && t) || (w && f===null)) : !(w || (w===null && f && t))) ok=false; });
+  ok = ok && any;
   run.disabled=!ok; run.textContent= ok ? (state.asked?'Ask again':'Ask residents') : 'Answer the question above first';
 }
 document.getElementById('pickCancel').addEventListener('click',function(){ mapView.cancelPick(); });
@@ -1356,7 +1402,7 @@ function showResult(res){
   var lean = o.support>50?'Majority supports':o.oppose>50?'Majority opposes':o.neutral>=50?'Mostly neutral'+(o.support>o.oppose?', leaning yes':o.oppose>o.support?', leaning no':''):o.support>o.oppose?'Leaning yes':o.oppose>o.support?'Leaning no':'Evenly split';
   document.getElementById('ovLean').textContent=lean;
   var st=res.run_stats||{};
-  document.getElementById('ovBadge').textContent='Live · '+(st.valid||0).toLocaleString()+' residents';
+  document.getElementById('ovBadge').textContent='Live · '+(st.valid||0).toLocaleString()+' residents'+(st.mode?' · '+(st.mode==='accurate'?'Accurate':'Fast'):'');
   Object.keys(DISTRICTS).forEach(function(d){ delete DISTRICTS[d].s; delete DISTRICTS[d].n; delete DISTRICTS[d].o; delete DISTRICTS[d].w; });
   (res.districts||[]).forEach(function(d){ var x=DISTRICTS[d.district]; if(!x) return;
     x.s=r(d.split.support); x.n=r(d.split.neutral); x.o=100-x.s-r(d.split.neutral); x.w=REASON_LABEL[d.top_reason]||d.top_reason; });
@@ -1364,6 +1410,14 @@ function showResult(res){
   document.getElementById('worries').innerHTML='<h3>Top reasons</h3>'+(top.length?top.map(function(x){
     return '<div class="worry"><div class="worry__row"><span>'+(REASON_LABEL[x.reason]||x.reason)+'</span><b class="num">'+r(x.share)+'%</b></div><div class="meter"><span style="width:'+Math.round(100*x.share/max)+'%"></span></div></div>';
   }).join(''):'<p class="muted">No resident gave a main reason.</p>');
+  var near=(res.groups||[]).filter(function(g){ return g.dimension==='exposure'; }), bd=document.getElementById('byDistance');
+  bd.hidden=!near.length;
+  bd.innerHTML = near.length ? '<h3>By distance from the proposal</h3>'+near.map(function(g){ var has=g.oppose!=null;
+    return '<div class="worry"><div class="worry__row"><span>'+(SHORT_G[g.label]||g.label)+' <span class="muted" style="font-size:13px">· '+g.n.toLocaleString()+' resident'+(g.n===1?'':'s')+'</span></span>'+
+      '<b class="num">'+r(g.support)+'% yes'+(has?' · '+r(g.oppose)+'% no':'')+'</b></div>'+
+      (has?'<div class="split" style="height:10px;border-radius:5px" role="img" aria-label="'+r(g.support)+'% support, '+r(g.neutral)+'% neutral, '+r(g.oppose)+'% oppose"><span style="width:'+g.support+'%"></span><span style="width:'+g.neutral+'%"></span><span style="width:'+g.oppose+'%"></span></div>'
+          :'<div class="meter"><span style="width:'+g.support+'%"></span></div>')+'</div>'; }).join('')+
+    (near.some(function(g){return g.n<30;})?'<p class="muted" style="font-size:13px;margin:6px 0 0">Groups with fewer than 30 residents are too small to rely on.</p>':'') : '';
   var seg=(res.segments||[])[0], esc=function(t){return String(t).replace(/</g,'&lt;');}, notes=(res.engine_notes||[]).map(esc).join(' ');
   var head = seg ? '<b>'+esc(seg.name)+': '+seg.aadt_before.toLocaleString()+' → '+seg.aadt_after.toLocaleString()+' cars/day</b>'
     : res.transit ? '<b>Bus route: '+res.transit.straight_line_miles+' mi</b>'
@@ -1381,19 +1435,29 @@ function showResult(res){
 }
 function runLive(btn){
   var api=(window.CITYSIM_API||'').replace(/\/$/,''), spec=specWithEdits(), n=spec.districts.length*500;
+  var mode=runSpeed(), t0=Date.now(), limit=(mode==='accurate'?25:4)*60*1000;      // accurate: 200 model calls a minute is the account's cap
   btn.disabled=true; btn.textContent='Asking '+n.toLocaleString()+' residents…';
+  mapView.setAnswers(null);
   var fail=function(msg, j){ btn.disabled=false; setMode(state.asked);
     if(j && j.spec && j.spec.questions){ openBlocks(state.question, j.spec); return; }
     body.insertAdjacentHTML('afterbegin','<div class="changed-note"><span>Could not run: '+String(msg).replace(/</g,'&lt;')+'</span></div>'); };
-  fetch(api+'/runs',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({spec:spec})})
+  fetch(api+'/runs',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({spec:spec, mode:mode})})
     .then(function(r){ return r.json().then(function(j){ if(!r.ok){ var e=new Error(j.error||r.status); e.body=j; throw e; } return j.run_id; }); })
-    .then(function(id){ var tries=0; (function poll(){
+    .then(function(id){ var errs=0; (function poll(){
       fetch(api+'/runs/'+id).then(function(r){return r.json();}).then(function(run){
-        if(run.stage==='done' && run.result){ state.spec=spec; showResult(run.result); finishRun(btn); syncRoute(); }
-        else if(++tries>90) fail('the run did not finish in time');
-        else setTimeout(poll,2000);
-      }).catch(function(e){ fail(e.message); }); })(); })
+        errs=0;
+        if(run.stage==='done' && run.result){ state.spec=spec; state.runId=id; showResult(run.result); finishRun(btn); syncRoute(); loadAnswers(api,id); }
+        else if(Date.now()-t0>limit) fail('the run did not finish in time');
+        else { var a=+run.answered||0, tot=+run.total||n;
+          btn.textContent = a ? 'Asked '+Math.min(a,tot).toLocaleString()+' of '+tot.toLocaleString()+' residents…' : 'Asking '+tot.toLocaleString()+' residents…';
+          setTimeout(poll, mode==='accurate'?4000:2000); }
+      }).catch(function(e){ if(++errs>5) fail(e.message); else setTimeout(poll,4000); }); })(); })
     .catch(function(e){ fail(e.message, e.body); });
+}
+// each resident's own answer -> the figure on the map and the person card
+function loadAnswers(api,id){
+  fetch(api+'/runs/'+id+'/answers').then(function(r){ return r.json(); }).then(function(j){
+    if(state.runId!==id || !j.answers) return; mapView.setAnswers(j.answers); }).catch(function(){});
 }
 function finishRun(b){
     state.asked=true; b.disabled=false; app.classList.add('has-results'); map.dataset.state='results'; mapView.update();

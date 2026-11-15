@@ -433,6 +433,16 @@
         },
         "quotes_requested": {
           "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "fast",
+            "accurate"
+          ],
+          "description": "fast = 25 residents share a model call; accurate = one resident per call (slower, answers do not depend on who else is in the call)"
+        },
+        "model_cost_usd": {
+          "type": "number"
         }
       }
     },
