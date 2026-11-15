@@ -1507,7 +1507,7 @@ var mapView = (function () {
     },
     _roadPath: function (a, b) { return roadPath(a, b); },
     clearBuild: function () { build = null; if (buildMarker) { buildMarker.remove(); buildMarker = null; } render(); },
-    lastBuild: function () { return build && { kind: build.kind, a: build.a, moved: build.moved || 0, lines: build.opts && build.opts.lines ? build.opts.lines.length : 0, bike: build.opts && build.opts.bike, t: performance.now() - build.t0 }; },
+    lastBuild: function () { var o = build && build.opts || {}; return build && { kind: build.kind, ready: build.ready, a: build.a, b: build.b, moved: build.moved || 0, lines: o.lines || null, bike: o.bike, paths: o.paths || null, ring: o.ring || null, poly: o.poly || null, path: build.path || null, stops: build.stops ? build.stops.length : 0, t: performance.now() - build.t0 }; },
     pick: function (what, cb, key, near) {           // top-down view; next click on a road/intersection returns its name + point. near = [lon, lat] to look at
       if (pickCb) endPick(null);
       pickPrev = { center: map.getCenter(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(), duration: 600 };
