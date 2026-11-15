@@ -642,7 +642,12 @@ function showResult(res){
   document.getElementById('worries').innerHTML='<h3>Top reasons</h3>'+(top.length?top.map(function(x){
     return '<div class="worry"><div class="worry__row"><span>'+(REASON_LABEL[x.reason]||x.reason)+'</span><b class="num">'+r(x.share)+'%</b></div><div class="meter"><span style="width:'+Math.round(100*x.share/max)+'%"></span></div></div>';
   }).join(''):'<p class="muted">No resident gave a main reason.</p>');
-  document.getElementById('trafficNote').innerHTML='<div><b>Traffic: not calculated.</b> The traffic engine has not run for this proposal, so residents reacted to the proposal as described.'+
+  var seg=(res.segments||[])[0], esc=function(t){return String(t).replace(/</g,'&lt;');}, notes=(res.engine_notes||[]).map(esc).join(' ');
+  var head = seg ? '<b>Traffic: '+esc(seg.name)+' goes from '+seg.aadt_before.toLocaleString()+' to '+seg.aadt_after.toLocaleString()+' vehicles a day'+
+        (seg.load_after?' (load '+seg.load_before+' to '+seg.load_after+')':'')+'.</b> '
+    : res.transit ? '<b>Bus service: '+res.transit.adults_within_quarter_mile.toLocaleString()+' adults live within a quarter mile of the line.</b> '
+    : '<b>Traffic: not calculated.</b> ';
+  document.getElementById('trafficNote').innerHTML='<div>'+head+(notes||'Residents reacted to the proposal as described.')+
     (st.dropped?' '+st.dropped+' of '+st.residents+' residents gave no valid answer.':'')+(res.stopped?' The run stopped early: '+String(res.stopped[0]).replace(/</g,'&lt;'):'')+'</div>';
   var cal=res.calibration;
   document.getElementById('accuracyNote').innerHTML='<b>A forecast, not a poll.</b> Simulated residents built from census data for these districts. '+

@@ -68,6 +68,22 @@ def lines_for(persona: dict, places: list[dict]) -> tuple[list[str], float | Non
     return lines, nearest
 
 
+HALF_MILE_M = 805.0
+
+
+def street_lines(persona: dict, effects: list[dict]) -> list[str]:
+    """For residents within half a mile of a street the engine put added trips on."""
+    if persona.get("home_lon") is None:
+        return []
+    out = []
+    for e in effects:
+        d = min(distance_m(persona["home_lon"], persona["home_lat"], {"kind": "route", "from": a, "to": b})
+                for line in e["coords"] for a, b in zip(line, line[1:]))
+        if d <= HALF_MILE_M and e.get("added_daily"):
+            out.append(f"Up to {e['added_daily']:,} more vehicle trips a day are expected on {e['name']}, {how_far(d)} from your home")
+    return out
+
+
 def _noun(what: str) -> str:
     w = what.strip()
     for art in ("a ", "an ", "the "):
