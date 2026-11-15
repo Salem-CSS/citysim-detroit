@@ -936,15 +936,36 @@ var mapView = (function () {
     var lat0 = (a[1] + b[1]) / 2, kx = 111320 * Math.cos(lat0 * Math.PI / 180), ky = 110540, G = 4;   // nodes snapped to a 4 m grid (joins tile seams)
     var nodes = {}, pos = {}, adj = {};
     function id(c) { var k = Math.round(c[0] * kx / G) + ':' + Math.round(c[1] * ky / G); if (!pos[k]) { pos[k] = c; adj[k] = []; } return k; }
+    // 1. collect road segments (metres, around a)
+    var segs = [];
     feats.forEach(function (f) {
       var p = f.properties || {}, w = ROAD_W[p.kind || p.class]; if (!w || p.kind_detail === 'service' && w > 2) return;
       if (p.is_tunnel || p.brunnel === 'tunnel') w *= 1.2;
+      var hw = (p.kind || p.class) === 'highway' || (p.kind || p.class) === 'motorway' || p.is_bridge || p.is_tunnel || p.brunnel === 'bridge' || p.brunnel === 'tunnel';
       var g = f.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
-      lines.forEach(function (ln) { for (var i = 1; i < ln.length; i++) {
-        var u = id(ln[i - 1]), v = id(ln[i]); if (u === v) continue;
-        var d = Math.hypot((ln[i][0] - ln[i - 1][0]) * kx, (ln[i][1] - ln[i - 1][1]) * ky) * w;
-        adj[u].push([v, d]); adj[v].push([u, d]); } });
+      lines.forEach(function (ln) { for (var i = 1; i < ln.length; i++) segs.push({ a: ln[i - 1], b: ln[i], w: w, hw: hw, cut: [] }); });
     });
+    // 2. streets that cross without a shared point get a junction where they cross (not freeways / bridges / tunnels: those pass over)
+    var C2 = 60, hash = {};
+    function mx(c) { return [(c[0] - a[0]) * kx, (c[1] - a[1]) * ky]; }
+    segs.forEach(function (sg, si) { var p = mx(sg.a), q = mx(sg.b); sg.p = p; sg.q = q;
+      for (var cx = Math.floor(Math.min(p[0], q[0]) / C2); cx <= Math.floor(Math.max(p[0], q[0]) / C2); cx++)
+        for (var cy = Math.floor(Math.min(p[1], q[1]) / C2); cy <= Math.floor(Math.max(p[1], q[1]) / C2); cy++) (hash[cx + ':' + cy] = hash[cx + ':' + cy] || []).push(si); });
+    var seen = {};
+    Object.keys(hash).forEach(function (h) { var L = hash[h]; if (L.length > 400) return;
+      for (var i = 0; i < L.length; i++) for (var j = i + 1; j < L.length; j++) {
+        var A = segs[L[i]], B = segs[L[j]]; if (A.hw || B.hw) continue; var key = L[i] < L[j] ? L[i] + '_' + L[j] : L[j] + '_' + L[i]; if (seen[key]) continue; seen[key] = 1;
+        var rx = A.q[0] - A.p[0], ry = A.q[1] - A.p[1], sx = B.q[0] - B.p[0], sy = B.q[1] - B.p[1], den = rx * sy - ry * sx; if (Math.abs(den) < 1e-9) continue;
+        var qpx = B.p[0] - A.p[0], qpy = B.p[1] - A.p[1], t = (qpx * sy - qpy * sx) / den, u = (qpx * ry - qpy * rx) / den;
+        if (t > 0.001 && t < 0.999 && u > 0.001 && u < 0.999) { A.cut.push(t); B.cut.push(u); } } });
+    // 3. build the graph from the (split) segments
+    segs.forEach(function (sg) {
+      var ts = [0].concat(sg.cut.sort(function (x, y) { return x - y; }), [1]);
+      for (var i = 1; i < ts.length; i++) {
+        var c0 = [sg.a[0] + (sg.b[0] - sg.a[0]) * ts[i - 1], sg.a[1] + (sg.b[1] - sg.a[1]) * ts[i - 1]], c1 = [sg.a[0] + (sg.b[0] - sg.a[0]) * ts[i], sg.a[1] + (sg.b[1] - sg.a[1]) * ts[i]];
+        var u0 = id(c0), v0 = id(c1); if (u0 === v0) continue;
+        var dd = Math.hypot((c1[0] - c0[0]) * kx, (c1[1] - c0[1]) * ky) * sg.w;
+        adj[u0].push([v0, dd]); adj[v0].push([u0, dd]); } });
     // stitch loose ends (tile seams, clipped lines) to the closest node within 25 m
     var cell = {}, C = 25; for (var k0 in pos) { var q0 = pos[k0], ck = Math.floor(q0[0] * kx / C) + ':' + Math.floor(q0[1] * ky / C); (cell[ck] = cell[ck] || []).push(k0); }
     for (var k1 in adj) { if (adj[k1].length !== 1) continue; var q1 = pos[k1], cx = Math.floor(q1[0] * kx / C), cy = Math.floor(q1[1] * ky / C), bk = null, bd2 = C;
@@ -1471,6 +1492,7 @@ var mapView = (function () {
       requestAnimationFrame(buildLoop);
       return 1300 + (kind === 'building' ? 2100 : kind === 'road' ? 2600 : kind === 'event' ? 3600 : kind === 'rezone' ? (b ? 2700 : 1900) : b ? DRAW + DRIVE : RISE + 300);
     },
+    _roadPath: function (a, b) { return roadPath(a, b); },
     clearBuild: function () { build = null; if (buildMarker) { buildMarker.remove(); buildMarker = null; } render(); },
     lastBuild: function () { return build && { kind: build.kind, a: build.a, moved: build.moved || 0, lines: build.opts && build.opts.lines ? build.opts.lines.length : 0, bike: build.opts && build.opts.bike, t: performance.now() - build.t0 }; },
     pick: function (what, cb, key, near) {           // top-down view; next click on a road/intersection returns its name + point. near = [lon, lat] to look at
