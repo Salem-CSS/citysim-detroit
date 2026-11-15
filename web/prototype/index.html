@@ -1384,7 +1384,7 @@ var mapView = (function () {
     }
     var z = map.getZoom();
     if (z < PEOPLE_ZOOM) {
-      layers.push(new deck.ScatterplotLayer({
+      if (!(heatOn && st === 'results')) layers.push(new deck.ScatterplotLayer({   // heat map on: hide the dots so the clusters read clearly
         id: 'residents', data: here, pickable: true, getPosition: function (r) { return r.walk && r.walk.onStreet ? [r.pos[0], r.pos[1], 0] : r.p; },
         updateTriggers: { getFillColor: key, getPosition: snapRound + ':' + Math.round(walkClock) },
         radiusUnits: 'pixels', getRadius: theme === 'light' ? 3.6 : 3.2, stroked: true, lineWidthUnits: 'pixels', getLineWidth: theme === 'light' ? 1.2 : 1, getLineColor: theme === 'light' ? [255, 255, 255] : [15, 23, 42],
