@@ -11,6 +11,7 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/deck.gl@9.0.38/dist.min.js"></script>
 <script src="./config.js"></script>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("citysim-theme")||"dark";}catch(e){document.documentElement.dataset.theme="dark";}</script>
 <!--
   CitySim Detroit — static design prototype (combined design).
   Visual + interaction reference for web/ (Next.js + deck.gl).
@@ -48,6 +49,29 @@
   --r: 16px; --r-sm: 12px; --tap: 48px; --shadow: 0 12px 32px rgba(0,0,0,0.3);
   --font: 'Inter', system-ui, -apple-system, sans-serif;
 }
+:root[data-theme="light"] {
+  --bg: #EEF2F7; --panel: rgba(255,255,255,0.96); --panel-line: rgba(15,23,42,0.12); --raised: rgba(15,23,42,0.05);
+  --text: #0F172A; --text-2: #334155; --text-3: #64748B; --accent: #2563EB; --support: #0284C7; --neutral: #94A3B8; --oppose: #EA580C;
+  --warn: #92400E; --shadow: 0 10px 28px rgba(15,23,42,0.12);
+}
+:root[data-theme="light"] .map { background: #E5EAF1; }
+:root[data-theme="light"] .tag, :root[data-theme="light"] .badge { background: #FEF3C7; }
+:root[data-theme="light"] .dlabel-m { background: rgba(255,255,255,0.94); color: #0F172A; border-color: rgba(15,23,42,0.18); }
+:root[data-theme="light"] .hub-m { background: #0F172A; color: #F8FAFC; }
+:root[data-theme="light"] .seg button[aria-pressed="true"] { background: #0F172A; color: #F8FAFC; }
+:root[data-theme="light"] .stepper output, :root[data-theme="light"] .block select { background: #fff; }
+:root[data-theme="light"] .cmp thead th { background: #fff; }
+:root[data-theme="light"] .toggle:not([aria-pressed="true"]) .knob { background: #CBD5E1; }
+:root[data-theme="light"] .toast { background: #0F172A; color: #F8FAFC; }
+:root[data-theme="light"] .changed-note { background: #FEF9C3; border-color: #FDE68A; }
+:root[data-theme="light"] .note--ok { background: #DCFCE7; border-color: #86EFAC; }
+:root[data-theme="light"] .note--ok .icon { color: #15803D; }
+/* settings */
+.btn.settings-btn { height: auto; min-width: 56px; background: var(--panel); color: var(--text); }
+.settings { position: absolute; top: 92px; right: 16px; z-index: 6; width: 260px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.settings[hidden] { display: none; }
+.settings h3 { margin: 0; font-size: 16px; }
+.settings .seg { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--raised); }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body { font: 400 15px/1.5 var(--font); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
@@ -209,6 +233,9 @@ button { cursor: pointer; }
 .cmp .v.lo .track span { background: #3B5B8F; }
 .cmp .stack { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 6px; }
 .cmp .stack span { display: block; height: 100%; }
+.cmp .mix { display: flex; gap: 2px; height: 22px; border-radius: 6px; overflow: hidden; }
+.cmp .mix span { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; }
+.cmp .mix .a1 { background: #C7D2FE; color: #1E1B4B; } .cmp .mix .a2 { background: #818CF8; color: #1E1B4B; } .cmp .mix .a3 { background: #4338CA; color: #EEF2FF; }
 .cmp .big { font-size: 24px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .cmp .big.hi::after { content: " highest"; font-size: 12px; font-weight: 700; color: var(--support); vertical-align: 4px; }
 .cmp .sub3 { font-size: 13px; color: var(--text-2); margin-top: 4px; font-variant-numeric: tabular-nums; }
@@ -261,11 +288,12 @@ button { cursor: pointer; }
 .has-results [data-show="empty"] { display: none; }
 
 /* ask bar */
-.askbar { position: absolute; left: 392px; right: 432px; bottom: 16px; z-index: 3; display: flex; gap: 10px; align-items: center; padding: 8px 8px 8px 18px; border-radius: var(--r); background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.25); transition: left .25s ease; }
+.askbar { position: absolute; left: 392px; right: 432px; bottom: 16px; z-index: 3; display: flex; gap: 10px; align-items: center; padding: 8px 8px 8px 18px; border-radius: var(--r); background: var(--panel); border: 1px solid var(--panel-line); backdrop-filter: blur(8px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); transition: left .25s ease; }
 .app:not(.has-blocks) .askbar { left: 16px; }
 .askbar .icon { color: var(--ask); }
-.askbar input { flex: 1 1 auto; min-width: 0; height: 52px; border: 0; outline: none; background: transparent; color: #0F172A; font-size: 17px; }
-.askbar input::placeholder { color: #64748B; }
+.askbar input { flex: 1 1 auto; min-width: 0; height: 52px; border: 0; outline: none; background: transparent; color: var(--text); font-size: 17px; }
+.askbar input::placeholder { color: var(--text-3); }
+.askbar .icon { color: var(--brand-b); }
 .askbar button { height: 52px; padding: 0 24px; border-radius: var(--r-sm); border: 0; background: var(--ask); color: #fff; font-size: 17px; font-weight: 700; }
 
 /* resident card */
@@ -325,7 +353,13 @@ button { cursor: pointer; }
       <button type="button" class="dchip" data-d="1" aria-pressed="false" style="--c:#F59E0B"><span class="dot"></span>District 1</button><button type="button" class="dchip" data-d="2" aria-pressed="false" style="--c:#10B981"><span class="dot"></span>District 2</button><button type="button" class="dchip" data-d="3" aria-pressed="false" style="--c:#EF4444"><span class="dot"></span>District 3</button><button type="button" class="dchip" data-d="4" aria-pressed="true" style="--c:#A371F7"><span class="dot"></span>District 4</button><button type="button" class="dchip" data-d="5" aria-pressed="true" style="--c:#4C8DFF"><span class="dot"></span>District 5</button><button type="button" class="dchip" data-d="6" aria-pressed="true" style="--c:#DB61A2"><span class="dot"></span>District 6</button><button type="button" class="dchip" data-d="7" aria-pressed="true" style="--c:#2EC4B6"><span class="dot"></span>District 7</button>
     </div>
 
+      <button type="button" class="btn panel settings-btn" id="settingsBtn" aria-label="Settings" aria-expanded="false" aria-controls="settings"><svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   </header>
+
+  <div class="settings panel" id="settings" role="dialog" aria-label="Settings" hidden>
+    <h3>Appearance</h3>
+    <div class="seg" role="group" aria-label="Theme"><button type="button" data-theme-set="dark" aria-pressed="true">Dark</button><button type="button" data-theme-set="light" aria-pressed="false">Light</button></div>
+  </div>
 
   <!-- BLOCKS (left): built from the question -->
   <aside class="blocks panel" id="blocks" aria-label="Edit the details" hidden>
@@ -416,8 +450,15 @@ var mapView = (function () {
   var STYLE = q.get('style') === 'none'
     ? { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0B1220' } }] }
     : 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
+  var STYLES = { dark: STYLE, light: q.get('style') === 'none' ? STYLE : 'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json' };
+  var theme = (function () { try { return localStorage.getItem('citysim-theme') || 'dark'; } catch (e) { return 'dark'; } })();
+  if (theme === 'light') STYLE = STYLES.light;
   var PAD_OPEN = { left: 392, right: 432, top: 110, bottom: 100 }, PAD_CLOSED = { left: 40, right: 432, top: 110, bottom: 100 };
-  var RAMP = ['interpolate', ['linear'], ['get', 'h'], 0, '#58647A', 8, '#6E7D94', 15, '#7DA0D7', 40, '#A096EB', 120, '#EBE1FF'];
+  var RAMPS = {
+    dark: ['interpolate', ['linear'], ['get', 'h'], 0, '#58647A', 8, '#6E7D94', 15, '#7DA0D7', 40, '#A096EB', 120, '#EBE1FF'],
+    light: ['interpolate', ['linear'], ['get', 'h'], 0, '#C9D2DF', 8, '#B3BFD1', 15, '#93A8CB', 40, '#7F8FC6', 120, '#5B67A8'] };
+  var OFF = { dark: '#1E293B', light: '#E9EDF3' };
+  var RAMP = RAMPS[theme];
   var STANCE = { s: [56, 189, 248], n: [148, 163, 184], o: [249, 115, 22], x: [100, 116, 139], idle: [248, 250, 252] };
   var roadsOn = true, sel = [], districts = null, overlays = null, residents = [], labels = {}, hub = null, clickFn = null, padded = null, ready = false;
 
@@ -448,7 +489,7 @@ var mapView = (function () {
   function on(d) { return sel.indexOf(d) > -1; }
   function stanceOf(r) {
     var st = el.dataset.state, x = window.DISTRICTS && DISTRICTS[r.d];
-    if (st !== 'results') return STANCE.idle;
+    if (st !== 'results') return theme === 'light' ? [30, 41, 59] : STANCE.idle;
     if (r.stance) return r.stance === 'support' ? STANCE.s : r.stance === 'oppose' ? STANCE.o : STANCE.n;   // real per-resident answer
     if (!x || x.s == null) return STANCE.x;
     return r.u * 100 < x.s ? STANCE.s : r.u * 100 < x.s + x.n ? STANCE.n : STANCE.o;
@@ -456,7 +497,7 @@ var mapView = (function () {
 
   function paintBuildings() {
     if (!map.getLayer('buildings') || !sel.length) return;
-    map.setPaintProperty('buildings', 'fill-extrusion-color', ['match', ['get', 'd'], sel, RAMP, '#1E293B']);
+    map.setPaintProperty('buildings', 'fill-extrusion-color', ['match', ['get', 'd'], sel, RAMPS[theme], OFF[theme]]);
   }
 
 
@@ -756,6 +797,19 @@ var mapView = (function () {
       render();
     },
     onClick: function (fn) { clickFn = fn; },
+    setTheme: function (t) {
+      if (t === theme) return; theme = t;
+      // swap the basemap but carry our building source/layer across; deck re-inserts its layers on the new style
+      map.setStyle(STYLES[t], { transformStyle: function (prev, next) {
+        if (!prev || !prev.sources.bldg) return next;
+        next.sources.bldg = prev.sources.bldg;
+        var b = prev.layers.filter(function (l) { return l.id === 'buildings'; })[0];
+        if (b) next.layers.push(b);
+        return next;
+      } });
+      map.once('style.load', function () { paintBuildings(); render(); });
+      paintBuildings(); render();
+    },
     setRoads: function (v) { roadsOn = v; render(); }
   };
   var rt = document.getElementById('roadsToggle');
@@ -940,15 +994,15 @@ function openCompare(){
     body+=numRow('Rent their home', function(c){ return c.P?c.P.renters:null; }, pct, 100, '%');
     body+=numRow('No car', function(c){ return c.P?c.P.no_car:null; }, pct, 100, '%');
     body+=numRow('Median income', function(c){ return c.P&&c.P.median_income?c.P.median_income:null; }, function(v){ return '$'+r(v/1000)+'k'; }, null, '$');
-    var AGE=[['Under 35','#7DD3FC'],['35 to 64','#3B82F6'],['65 and over','#1E3A8A']];
+    var AGE=[['Under 35','a1'],['35 to 64','a2'],['65 and over','a3']];
     body+='<tr><td class="lab">Age mix</td>'+data.map(function(c){ if(!c.P||!c.P.age) return '<td><span class="muted">—</span></td>';
-      var a=c.P.age; return '<td title="District '+c.d+': '+AGE.map(function(k){return k[0]+' '+r(a[k[0]])+'%';}).join(', ')+'"><div class="stack" style="margin-top:0">'+
-        AGE.map(function(k){ return '<span style="width:'+a[k[0]]+'%;background:'+k[1]+'"></span>'; }).join('')+'</div><div class="sub3">'+AGE.map(function(k){return r(a[k[0]]);}).join(' · ')+'</div></td>'; }).join('')+
+      var a=c.P.age; return '<td title="District '+c.d+': '+AGE.map(function(k){return k[0]+' '+r(a[k[0]])+'%';}).join(', ')+'"><div class="mix">'+
+        AGE.map(function(k){ var v=r(a[k[0]]); return '<span class="'+k[1]+'" style="width:'+a[k[0]]+'%">'+(v>=18?v+'%':v>=11?v:'')+'</span>'; }).join('')+'</div></td>'; }).join('')+
       (n>1?'<td class="gap"></td>':'')+'</tr>';
   }
   var table='<table>'+head+'<tbody>'+body+'</tbody></table>';
   var key='<div class="key">'+(state.asked?'<span><i style="background:var(--support)"></i>Support</span><span><i style="background:var(--neutral)"></i>Neutral</span><span><i style="background:var(--oppose)"></i>Oppose</span>':'')+
-    (data.some(function(c){return c.P;})?'<span><i style="background:#7DD3FC"></i>Under 35</span><span><i style="background:#3B82F6"></i>35–64</span><span><i style="background:#1E3A8A"></i>65+</span>':'')+'<span>Bold = highest, dimmed = lowest. Gap = highest minus lowest.</span></div>';
+    (data.some(function(c){return c.P;})?'<span><i style="background:#C7D2FE"></i>Under 35</span><span><i style="background:#818CF8"></i>35–64</span><span><i style="background:#4338CA"></i>65+</span>':'')+'<span>Bold = highest, dimmed = lowest. Gap = highest minus lowest.</span></div>';
   // takeaway: the biggest gap among comparable % rows
   var big=gaps.filter(function(g){return g.unit==='%';}).sort(function(a,b){return b.gap-a.gap;})[0];
   var take='';
@@ -973,7 +1027,21 @@ document.getElementById('compareBtn').addEventListener('click',function(){
   if(document.getElementById('results').classList.contains('is-compare')) closeCompare(); else openCompare();
 });
 
-// (Share removed)
+// ---------- settings: light / dark ----------
+(function(){
+  var btn=document.getElementById('settingsBtn'), pop=document.getElementById('settings');
+  function sync(){ var t=document.documentElement.dataset.theme||'dark';
+    pop.querySelectorAll('[data-theme-set]').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.themeSet===t); }); }
+  function close(){ pop.hidden=true; btn.setAttribute('aria-expanded','false'); }
+  btn.addEventListener('click',function(e){ e.stopPropagation(); pop.hidden=!pop.hidden; btn.setAttribute('aria-expanded', String(!pop.hidden)); sync(); });
+  pop.addEventListener('click',function(e){ e.stopPropagation(); var b=e.target.closest('[data-theme-set]'); if(!b) return;
+    var t=b.dataset.themeSet; document.documentElement.dataset.theme=t; try{ localStorage.setItem('citysim-theme',t); }catch(err){}
+    mapView.setTheme(t); sync(); });
+  document.addEventListener('click',function(){ if(!pop.hidden) close(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !pop.hidden){ close(); btn.focus(); } });
+  sync();
+})();
+
 function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(function(){ t.classList.remove('on'); },1800); }
 
 // Build blocks from the question

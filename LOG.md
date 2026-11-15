@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 01:40 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** (1) Comparison "Age mix" bar shows each share inside its own segment (no misaligned numbers below), with three distinct indigo steps, kept apart from the stance colours. (2) Ask bar uses the app's panel style (it was white). (3) Settings (gear, top right) with Appearance: Dark / Light. Light theme sets the CSS variables, swaps the basemap to CARTO Positron while carrying our building layer across (`setStyle` + `transformStyle`), lightens building colours, and draws idle resident dots dark. Choice saved in localStorage and applied before first paint.
+**Files:** web/prototype/index.html, LOG.md (branch only)
+**Contracts changed:** none
+**Decisions:** none
+**Blocked / needs:** none
+**Next:** —
+
 ### 2026-11-15 01:20 ET · Salem (AI) · Web (branch `salem/frontend-try`)
 **Did:** Comparison table redesigned: grouped sections (How they feel / Support by group / Who lives here); each % cell has a thin bar on a shared 0–100 scale; highest value per row bold, lowest dimmed; a Gap column (highest minus lowest); support shown big with a support/neutral/oppose stacked bar and a "highest" marker; the two age rows merged into one Age mix stacked bar; numbers in text colour (bars carry colour); a one-line takeaway (most/least supportive, biggest difference between districts); sticky district headers; hover titles on cells; legend for bar colours.
 **Files:** web/prototype/index.html, LOG.md (branch only)
