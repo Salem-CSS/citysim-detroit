@@ -64,6 +64,12 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: grey roads back, sample drone corridor removed, pins clear on submit
+- Restored the grey 'all-roads' layer and road-name lookup from it (reverts the previous entry's removal).
+- Removed the blue sample drone route + noise band (and the Newlab hub marker): it showed for every drone question regardless of the user's own From/To.
+- Each picked place keeps its orange pin (one per field); all pins clear when a question is submitted or residents are asked.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: no road highlight layer, no pin marker
 - Removed the 'all-roads' overlay line layer (basemap roads only again; outside-district dim stays). Map pick reads road names from the basemap road layers.
 - No orange marker after picking a place.
