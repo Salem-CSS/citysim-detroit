@@ -65,6 +65,11 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: cleaner persona card, styled scrollbars
+- Person card: distance moves into the subtitle ("District 6 · North Corktown · 0.5 mi away"); one strip of three stats (Income $199k · Cars · Commute); "More about them" opens a 2-column grid with short labels and shortened values (Detached house, 20–29 yrs ago, 5 people, Bachelor's). No repeated fields.
+- Scrollbars: thin, rounded, slate-tinted on a transparent track in every panel (both themes).
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: people stand out on the light map
 - Light theme: residents use deeper colours (not asked = dark slate, support = sky-600, oppose = orange-600, neutral = slate-500) with a white outline and slightly bigger dots; walkers use the same colours. Dark theme unchanged.
 - Files: web/prototype/index.html only.
