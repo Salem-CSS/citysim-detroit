@@ -1240,7 +1240,13 @@ function corrIntro(){
   document.getElementById('correction').innerHTML='<div><h2>Find a better version</h2><p class="muted">Now: '+r(o.support)+'% support, '+r(o.neutral)+'% neutral, '+r(o.oppose)+'% oppose.</p></div>'+
     '<section><p>This works out why residents said no, then tries real changed versions of your proposal on the same residents: other sites from the city\'s Land Bank lots, a smaller size, or other hours. At most 5 reruns.</p>'+
     '<h3>Stop when</h3><div class="seg" role="group" aria-label="Target" id="corrTarget">'+TARGETS.map(function(t,i){ return '<button type="button" data-t="'+t[0]+'" aria-pressed="'+(i===0)+'">'+t[1]+'</button>'; }).join('')+'</div></section>'+
-    '<button type="button" class="btn btn--go" id="corrStart">Start</button><p class="muted" id="corrMsg"></p>';
+    '<button type="button" class="btn btn--go" id="corrStart">Start</button><p class="muted" id="corrMsg"></p>'+
+    '<section><h3>Or look at one that already ran</h3><p class="muted">A correction reruns your proposal several times and takes several minutes. This opens the full report of a real one that was run earlier, for a different proposal.</p>'+
+    '<button type="button" class="btn btn--outline" id="corrSaved">See a saved example</button></section>';
+  document.getElementById('corrSaved').addEventListener('click',function(){ var btn=this; btn.disabled=true; btn.textContent='Opening…';
+    fetch('corrections/example.json').then(function(r){ if(!r.ok) throw new Error('not found'); return r.json(); })
+      .then(function(st){ clearTimeout(corr.timer); corr.id=null; corrReport(st); })
+      .catch(function(e){ btn.disabled=false; btn.textContent='See a saved example'; document.getElementById('corrMsg').textContent='Could not open the saved example: '+e.message; }); });
   document.getElementById('corrTarget').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
     this.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); }); });
   document.getElementById('corrStart').addEventListener('click',function(){
@@ -1289,7 +1295,10 @@ function corrAfter(a){
 function corrReport(st){
   var el=document.getElementById('correction'), r=Math.round, best=st.best||{}, has=st.original&&st.attempts;
   var near=function(w){ return w?'<td class="num">'+w.adults_within_quarter_mile.toLocaleString()+'</td><td class="num">'+w.adults_within_1_mile.toLocaleString()+'</td><td class="num">'+(w.renters_pct==null?'–':r(w.renters_pct)+'%')+'</td><td class="num">'+(w.no_car_pct==null?'–':r(w.no_car_pct)+'%')+'</td><td class="num">'+(w.age_65_plus_pct==null?'–':r(w.age_65_plus_pct)+'%')+'</td>':'<td colspan="5" class="muted">not a single site</td>'; };
-  var h='<div><h2>'+(best.rerun?'Best version found':'No better version found')+'</h2><p class="muted">Stopped: '+esc(st.stop_reason||'')+'. Target: '+esc(st.target_text||'')+'.</p></div>';
+  var snap=st.snapshot, h='';
+  if(snap) h+='<section class="try" style="border-style:dashed"><div class="try__head"><span>Saved example, not your proposal</span></div><small>A real correction run on '+esc(snap.ran_on)+' in '+esc(snap.mode)+' mode on '+snap.residents.toLocaleString()+' simulated residents of '+esc(snap.districts)+'. Original proposal: '+esc(snap.proposal)+'</small>'+
+    '<small>The correction engine is still being tuned; it is shown here as a preview of a later feature.</small><button type="button" class="btn btn--outline" id="corrBack" style="margin-top:8px">Back</button></section>';
+  h+='<div><h2>'+(best.rerun?'Best version found':'No better version found')+'</h2><p class="muted">Stopped: '+esc(st.stop_reason||'')+'. Target: '+esc(st.target_text||'')+'.</p></div>';
   if(has){
     if(best.rerun) h+='<section class="try is-best"><div class="try__head"><span>'+esc(best.proposal||best.label)+'</span></div>'+corrBar(best.split)+'</section>';
     h+='<section>'+corrWhy(st)+'</section>';
@@ -1307,6 +1316,7 @@ function corrReport(st){
     h+='<section><h3>Limits</h3>'+(st.limits||[]).map(function(x){ return '<p class="muted">'+esc(x)+'</p>'; }).join('')+'</section>';
   }
   el.innerHTML=h; corrPins(st);
+  var back=document.getElementById('corrBack'); if(back) back.addEventListener('click',function(){ corr.pins.forEach(function(m){ m.remove(); }); corr.pins=[]; corrIntro(); });
 }
 function corrPins(st){
   corr.pins.forEach(function(m){ m.remove(); }); corr.pins=[];
