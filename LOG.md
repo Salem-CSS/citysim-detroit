@@ -65,6 +65,10 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · main: panel side tabs centred and wider
+- Hide/show tabs for both panels are now 36×72 px with bigger arrows, vertically centred on the panel edge (and on the screen edge when a panel is hidden).
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · main: curved drone path, white dropdown text, distance selector on Public approval
 - Drone animation: flight path bows to one side (quadratic curve, 22% of the distance), drone faces along the curve.
 - Block dropdown lists: option text was forced black; now white on dark (dark theme) / dark on white (light theme).

@@ -191,18 +191,18 @@ button { cursor: pointer; }
 /* blocks (left) */
 .blocks { position: absolute; top: 108px; left: 16px; bottom: 104px; width: 360px; z-index: 2; display: flex; flex-direction: column; transform: translateX(0); transition: transform .25s ease, opacity .25s ease; }
 .blocks[hidden] { display: flex; transform: translateX(-110%); opacity: 0; pointer-events: none; }
-.side-tab { width: 28px; height: 56px; border: 1px solid var(--panel-line); background: var(--panel); color: var(--text-2); display: grid; place-items: center; cursor: pointer;
+.side-tab { width: 36px; height: 72px; border: 1px solid var(--panel-line); background: var(--panel); color: var(--text-2); display: grid; place-items: center; cursor: pointer;
   box-shadow: 0 6px 20px rgba(0,0,0,.25); backdrop-filter: blur(8px); padding: 0; }
 .side-tab:hover { color: var(--text); border-color: rgba(148,163,184,.5); }
-.blocks-hide { position: absolute; top: 16px; right: -29px; z-index: 1; border-left: 0; border-radius: 0 12px 12px 0; }
-.results-hide { position: absolute; top: 16px; left: -29px; z-index: 1; border-right: 0; border-radius: 12px 0 0 12px; }
+.blocks-hide { position: absolute; top: 50%; transform: translateY(-50%); right: -37px; z-index: 1; border-left: 0; border-radius: 0 12px 12px 0; }
+.results-hide { position: absolute; top: 50%; transform: translateY(-50%); left: -37px; z-index: 1; border-right: 0; border-radius: 12px 0 0 12px; }
 .app.results-min .results { transform: translateX(calc(100% + 24px)); opacity: 0; pointer-events: none; }
 .results { transition: width .25s ease, transform .25s ease, opacity .25s ease; }
-.results-tab { position: absolute; z-index: 3; top: 124px; right: 0; border-right: 0; border-radius: 12px 0 0 12px; }
+.results-tab { position: absolute; z-index: 3; top: 50%; transform: translateY(-50%); right: 0; border-right: 0; border-radius: 12px 0 0 12px; }
 .results-tab[hidden] { display: none; }
 .app.results-min .map-key { right: 40px; }
 .app.blocks-min .blocks { transform: translateX(calc(-100% - 24px)); opacity: 0; pointer-events: none; }
-.blocks-tab { position: absolute; z-index: 3; top: 124px; left: 0; border-left: 0; border-radius: 0 12px 12px 0; }
+.blocks-tab { position: absolute; z-index: 3; top: 50%; transform: translateY(-50%); left: 0; border-left: 0; border-radius: 0 12px 12px 0; }
 .blocks-tab[hidden] { display: none; }
 
 .blocks__head { padding: 18px 20px 10px; }
@@ -514,9 +514,9 @@ button { cursor: pointer; }
   </div>
 
   <!-- BLOCKS (left): built from the question -->
-  <button type="button" class="side-tab blocks-tab" id="blocksTab" aria-label="Show the details panel" title="Show the details" hidden><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5l4.5 4.5L6 12.5"/></svg></button>
+  <button type="button" class="side-tab blocks-tab" id="blocksTab" aria-label="Show the details panel" title="Show the details" hidden><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5l4.5 4.5L6 12.5"/></svg></button>
   <aside class="blocks panel" id="blocks" aria-label="Edit the details" hidden>
-    <button type="button" class="side-tab blocks-hide" id="blocksHide" aria-label="Hide the details panel" title="Hide the details"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5L5.5 8l4.5 4.5"/></svg></button>
+    <button type="button" class="side-tab blocks-hide" id="blocksHide" aria-label="Hide the details panel" title="Hide the details"><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5L5.5 8l4.5 4.5"/></svg></button>
     <div class="blocks__head">
       <h2 id="blocksTitle">Check the details</h2>
       <p id="blocksSub">Here's what we understood. Change anything, then ask residents.</p>
@@ -530,9 +530,9 @@ button { cursor: pointer; }
   </aside>
 
   <!-- RESULTS (right) -->
-  <button type="button" class="side-tab results-tab" id="resultsTab" aria-label="Show the results panel" title="Show results" hidden><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5L5.5 8l4.5 4.5"/></svg></button>
+  <button type="button" class="side-tab results-tab" id="resultsTab" aria-label="Show the results panel" title="Show results" hidden><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5L5.5 8l4.5 4.5"/></svg></button>
   <aside class="results panel" id="results" aria-label="What residents think" aria-live="polite">
-    <button type="button" class="side-tab results-hide" id="resultsHide" aria-label="Hide the results panel" title="Hide results"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5l4.5 4.5L6 12.5"/></svg></button>
+    <button type="button" class="side-tab results-hide" id="resultsHide" aria-label="Hide the results panel" title="Hide results"><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5l4.5 4.5L6 12.5"/></svg></button>
     <div class="results__body">
       <section class="ddetail" id="ddetail" hidden aria-live="polite"></section>
       <section class="cmp" id="compare" hidden aria-live="polite"></section>
