@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 23:40 ET · Salem (AI) · Web (branch `salem/frontend-try`)
+**Did:** Residents walk. At zoom 14+ each resident is a small 3D figure (body + two swinging legs, deck.gl SimpleMeshLayer, mesh built in code) pacing a short stretch near their home, colored by stance after a run (white before). Zoomed out they stay dots. Figures scale with zoom (~8 px tall). Animation stops when zoomed out or the tab is hidden. Merged latest main into the branch first.
+**Files:** web/prototype/index.html, LOG.md (branch only, not on main)
+**Contracts changed:** none
+**Decisions:** One figure = one resident. Stance per figure is still drawn from the district split; runs don't return per-resident answers with locations yet.
+**Blocked / needs:** for real per-person cards: run result needs `residents: [{persona_id, block_geoid, stance, reason, age, tenure, vehicles}]` (Partner's lane, later).
+**Next:** —
+
 ### 2026-11-14 23:15 ET · Salem (AI) · Web (branch `salem/frontend-try`)
 **Did:** Created branch `salem/frontend-try` from main (8ea8879) for Salem's frontend experiments. Vercel builds a preview for it; production stays on `main`.
 **Files:** LOG.md (this branch only)
