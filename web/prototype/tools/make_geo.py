@@ -5,7 +5,9 @@
 - detroit.geojson    real city limits (Overture locality, simplified ~80 m; hole = Hamtramck + Highland Park)
 - districts.geojson  APPROXIMATE council districts: hand-drawn regions clipped to city limits.
                      Replace with data/raw/detroit/council_districts_2026.geojson when Partner downloads it.
-- overlays.geojson   arteries (with demo load), drone route + 400 m noise band, Michigan Central hub
+- overlays.geojson   12 road corridors on REAL street geometry (Overture transportation segments, see
+                     roads_overture.json) with a DEMO load until the engine supplies real ones,
+                     drone route + 400 m noise band, Michigan Central hub
 """
 import json, sys
 from pathlib import Path
@@ -13,7 +15,23 @@ from shapely import wkt
 from shapely.geometry import LineString, Point, mapping
 
 sys.path.insert(0, str(Path(__file__).parent))
-from detroit_map import REGIONS, ARTS, ROUTE_LL, MC_LL, DCOL  # noqa: E402
+from detroit_map import REGIONS, ROUTE_LL, MC_LL, DCOL  # noqa: E402
+
+# corridor label, kind, demo load (volume / capacity), Overture names.primary values that make it up
+CORRIDORS = [
+    ("Michigan Ave", "arterial", 0.32, ["Michigan Avenue"]),
+    ("Woodward Ave", "arterial", 0.41, ["Woodward Avenue"]),
+    ("Gratiot Ave", "arterial", 0.47, ["Gratiot Avenue"]),
+    ("Grand River Ave", "arterial", 0.44, ["Grand River Avenue", "West Grand River Avenue"]),
+    ("Jefferson Ave", "arterial", 0.38, ["East Jefferson Avenue", "West Jefferson Avenue"]),
+    ("8 Mile Rd", "arterial", 0.52, ["8 Mile Road", "East 8 Mile Road", "West 8 Mile Road"]),
+    ("I-94 Edsel Ford Fwy", "freeway", 0.62, ["Edsel Ford Freeway"]),
+    ("I-75 Fisher Fwy", "freeway", 0.78, ["Fisher Freeway"]),
+    ("I-75 Chrysler Fwy", "freeway", 0.69, ["Walter P. Chrysler Freeway", "North Walter P. Chrysler Freeway", "South Walter P. Chrysler Freeway"]),
+    ("M-10 Lodge Fwy", "freeway", 0.66, ["John C Lodge Freeway"]),
+    ("I-96 Jeffries Fwy", "freeway", 0.58, ["Jeffries Freeway"]),
+    ("M-39 Southfield Fwy", "freeway", 0.55, ["Southfield Freeway"]),
+]
 
 OUT = Path(__file__).resolve().parents[1] / "geo"
 
@@ -48,7 +66,12 @@ def main():
 
     route = LineString(ROUTE_LL)
     band = route.buffer(0.0045, cap_style=1)          # ~400 m each side
-    over = [feat(LineString(pts), kind="artery", name=n, load=l) for n, l, pts in ARTS]
+    from shapely.ops import linemerge, unary_union
+    raw = json.loads((Path(__file__).parent / "roads_overture.json").read_text())
+    over = []
+    for name, road, load, parts in CORRIDORS:
+        g = linemerge(unary_union([wkt.loads(raw[p]) for p in parts if p in raw]))
+        over.append(feat(g, kind="artery", road=road, name=name, load=load))
     over += [feat(route, kind="drone_route"), feat(band, kind="noise_band"),
              feat(Point(MC_LL), kind="hub", name="Michigan Central · Newlab")]
     (OUT / "overlays.geojson").write_text(json.dumps(r6(fc(over))))

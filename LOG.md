@@ -59,6 +59,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 20:10 ET · Salem (AI) · Web
+**Did:** Road overlay now uses real street geometry: 12 corridors (Michigan, Woodward, Gratiot, Grand River, Jefferson, 8 Mile, I-94, I-75 Fisher + Chrysler, M-10 Lodge, I-96 Jeffries, M-39 Southfield) pulled from Overture transportation segments in Athena (`overture.segments`), clipped to city limits. Freeways drawn wider; hover shows name + traffic band; map key shows Light / Busy / Heavy.
+**Files:** web/prototype/tools/roads_overture.json (raw WKT from Athena), web/prototype/tools/make_geo.py (CORRIDORS), web/prototype/geo/overlays.geojson, web/prototype/index.html, LOG.md
+**Contracts changed:** none
+**Decisions:** The road loads in overlays.geojson are DEMO values. Engine output (`impacts` per road segment) replaces them; join on corridor name for now, segment id later.
+**Blocked / needs:** none
+**Next:** W Vernor Hwy isn't in the corridor set (not tagged as a primary road in Overture); add it if the road-change block keeps using it.
+
 ### 2026-11-14 20:00 ET · Salem (AI) · Web + Data
 **Did:** Main prototype (`web/prototype/index.html`) now runs on a real 3D Detroit map: MapLibre `fill-extrusion` buildings from vector tiles + deck.gl overlays (district outlines, busy roads after a run, drone route + noise band, resident dots by stance). District picker dims other districts and flies to the selection; blocks panel pads the map. Replaced the JSON tile format with Mapbox Vector Tiles because it's much faster: shapes are processed in web workers and low zooms only carry big buildings. Loaded in 1.8 s even in a software-rendered test browser; the JSON version took minutes there.
 **Files:** data/buildings/export_mvt.py (new, replaces export_tiles.py), data/buildings/tests/test_export.py, web/prototype/{index.html,map3d.html}, web/prototype/tiles/** (generated), web/prototype/geo/{detroit,districts,overlays,residents_demo}.geojson, web/prototype/tools/make_geo.py, BUILDINGS.md, data/requirements.txt (+mapbox-vector-tile). Removed web/prototype/buildings/, js/buildings.js.
