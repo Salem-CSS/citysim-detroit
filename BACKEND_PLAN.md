@@ -500,6 +500,15 @@ Steps 4–5, 6, 7 and 10 can run in parallel once 2 and 3 are done.
 
 Sorting by distance does not help. One at a time is the fix: batch-mates cannot matter, totals hold within 2.5 points, and residents near the route split by vehicles (no vehicle 24/0/0, one 13/20/4, two or more 5/17/8) where random batches had nearly all of them supporting. Cost is about 1.85 times batched. Not yet switched on.
 
+**P2 result (Nov 15): run-to-run variation.** The same proposal ("Build a 120-unit apartment building at Michigan Ave and Trumbull", Districts 5 and 6) was run twice in each mode on `citysim-partner`:
+
+| Mode | Run 1 (support / neutral / oppose) | Run 2 | Totals differ by | Residents whose answer changed | Time, cost per run |
+| --- | --- | --- | --- | --- | --- |
+| Fast (25 per call) | 7.9 / 78.0 / 14.1 | 8.3 / 78.4 / 13.3 | 0.4 / 0.4 / 0.8 pts | 22 of 983 (2.2%), 10 of them support to oppose or back | 17 s, $0.16 |
+| Accurate (one per call) | 2.2 / 88.6 / 9.2 | 2.4 / 88.1 / 9.5 | 0.2 / 0.5 / 0.3 pts | 8 of 943 (0.8%), none support to oppose | 359 s and 388 s, $0.28 and $0.29 |
+
+Two identical runs agree to within one point in both modes, so a change of a few points between two versions of a proposal is more than chance. What this does not show: in Fast mode the totals also depend on who shares a call, and that only shows up when the proposal changes (the same site scored 28% to 34% oppose in three Fast corrections). The two modes also disagree with each other on the same proposal (14% oppose in Fast, 9% in Accurate). Accurate dropped 52 and 55 of 1,000 residents (no valid answer after one retry) against 9 and 13 in Fast; not investigated.
+
 ### 15.2 The loop
 
 ```
