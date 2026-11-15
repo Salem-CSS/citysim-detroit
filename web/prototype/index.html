@@ -864,7 +864,7 @@ var mapView = (function () {
   var DRAW = 1400, RISE = 800, DRIVE = 3000, POLE = 45, SIGN = 14;
   // shortest drivable path between two points over the basemap's own road lines (no outside service)
   var ROAD_W = { highway: 1.6, motorway: 1.6, trunk: 1.2, major_road: 1, primary: 1, secondary: 1, medium_road: 1.05, tertiary: 1.05, minor_road: 1.35, minor: 1.35, residential: 1.35, service: 2.5, living_street: 2 };
-  function roadPath(a, b) {
+  function roadGraph(a, b) {
     var src = basemapSource(); if (!src) return null;
     var feats = [];
     ['roads', 'transportation'].forEach(function (sl) { try { feats = feats.concat(map.querySourceFeatures(src, { sourceLayer: sl })); } catch (e) {} });
@@ -887,16 +887,45 @@ var mapView = (function () {
         if (k2 === k1 || adj[k1][0][0] === k2) return; var q2 = pos[k2], d2 = Math.hypot((q2[0] - q1[0]) * kx, (q2[1] - q1[1]) * ky); if (d2 < bd2) { bd2 = d2; bk = k2; } });
       if (bk) { adj[k1].push([bk, bd2 * 1.5]); adj[bk].push([k1, bd2 * 1.5]); } }
     function nearest(c) { var best = null, bd = 250; for (var k in pos) { var q = pos[k], d = Math.hypot((q[0] - c[0]) * kx, (q[1] - c[1]) * ky); if (d < bd && adj[k].length) { bd = d; best = k; } } return best; }
-    var s = nearest(a), t = nearest(b); if (!s || !t) return null;
-    var dist = {}, prev = {}, heap = [[0, s]]; dist[s] = 0;                       // Dijkstra, binary heap
+    return { pos: pos, adj: adj, nearest: nearest };
+  }
+  function dijkstra(G, s, t) {                // from s; stops at t if given. returns {dist, prev}
+    var dist = {}, prev = {}, heap = [[0, s]]; dist[s] = 0;
     function push(x) { heap.push(x); var i = heap.length - 1; while (i) { var j = (i - 1) >> 1; if (heap[j][0] <= heap[i][0]) break; var tmp = heap[i]; heap[i] = heap[j]; heap[j] = tmp; i = j; } }
     function pop() { var top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; var i = 0; for (;;) { var l = 2 * i + 1, r = l + 1, m = i;
       if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; var tmp = heap[i]; heap[i] = heap[m]; heap[m] = tmp; i = m; } } return top; }
     while (heap.length) { var cur = pop(), u = cur[1]; if (cur[0] > dist[u]) continue; if (u === t) break;
-      adj[u].forEach(function (e) { var nd = cur[0] + e[1]; if (dist[e[0]] == null || nd < dist[e[0]]) { dist[e[0]] = nd; prev[e[0]] = u; push([nd, e[0]]); } }); }
-    if (dist[t] == null) return null;
-    var path = [], k = t; while (k) { path.push(pos[k]); k = prev[k]; } path.reverse();
+      G.adj[u].forEach(function (e) { var nd = cur[0] + e[1]; if (dist[e[0]] == null || nd < dist[e[0]]) { dist[e[0]] = nd; prev[e[0]] = u; push([nd, e[0]]); } }); }
+    return { dist: dist, prev: prev };
+  }
+  function roadPath(a, b) {
+    var G = roadGraph(a, b); if (!G) return null;
+    var s = G.nearest(a), t = G.nearest(b); if (!s || !t) return null;
+    var D = dijkstra(G, s, t); if (D.dist[t] == null) return null;
+    var path = [], k = t; while (k) { path.push(G.pos[k]); k = D.prev[k]; } path.reverse();
     return [a].concat(path, [b]);
+  }
+  function roadPathsTo(target, origins) {     // street paths from each origin into target (one search)
+    var G = roadGraph(target, target); if (!G) return [];
+    var t = G.nearest(target); if (!t) return [];
+    var D = dijkstra(G, t, null), out = [];
+    origins.forEach(function (o) { var k = G.nearest(o); if (!k || D.dist[k] == null) return;
+      var p = []; while (k) { p.push(G.pos[k]); k = D.prev[k]; } if (p.length > 3) out.push(p.concat([target])); });
+    return out;
+  }
+  // segments of one named street within r metres of c (for road changes)
+  function streetNear(c, name, r) {
+    var src = basemapSource(); if (!src) return [];
+    var kx = 111320 * Math.cos(c[1] * Math.PI / 180), ky = 110540, out = [], want = String(name || '').toLowerCase().replace(/\b(avenue|ave|street|st|road|rd|highway|hwy|boulevard|blvd|drive|dr)\b\.?/g, '').replace(/\s+/g, ' ').trim();
+    function norm(n) { return String(n || '').toLowerCase().replace(/\b(avenue|ave|street|st|road|rd|highway|hwy|boulevard|blvd|drive|dr)\b\.?/g, '').replace(/\s+/g, ' ').trim(); }
+    ['roads', 'transportation'].forEach(function (sl) { try { map.querySourceFeatures(src, { sourceLayer: sl }).forEach(function (f) {
+      var p = f.properties || {}; if (!want || norm(p.name) !== want) return;
+      var g = f.geometry, lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+      lines.forEach(function (ln) { var cur = null; ln.forEach(function (q) {
+        var d = Math.hypot((q[0] - c[0]) * kx, (q[1] - c[1]) * ky);
+        if (d <= r) { if (!cur) { cur = []; out.push(cur); } cur.push(q); } else cur = null; }); });
+    }); } catch (e) {} });
+    return out.filter(function (l) { return l.length > 1; });
   }
   function along(path, f) {                   // point + heading at fraction f of the path's length, and the path up to it
     if (!path._len) { path._cum = [0]; for (var i = 1; i < path.length; i++) path._cum.push(path._cum[i - 1] + Math.hypot((path[i][0] - path[i - 1][0]) * Math.cos(path[0][1] * Math.PI / 180), path[i][1] - path[i - 1][1])); path._len = path._cum[path._cum.length - 1] || 1e-9; }
@@ -911,6 +940,9 @@ var mapView = (function () {
     if (!build || !build.ready) return [];
     if (build.kind === 'building') return buildingLayers();
     if (build.kind === 'drone') return droneLayers();
+    if (build.kind === 'road') return roadLayers();
+    if (build.kind === 'event') return eventLayers();
+    if (build.kind === 'rezone') return rezoneLayers();
     var t = performance.now() - build.t0, L = [], a = build.a, b = build.b || build.a, route = !!build.b, path = build.path || [a, b];
     var pd = route ? ease(t / DRAW) : 1;                                         // 1. the route draws itself along the streets
     var head = along(path, pd).head;
@@ -1014,6 +1046,55 @@ var mapView = (function () {
     }
     return L;
   }
+  // ---- road change: the street stretch traces along the real road; bike lane draws inside it in green ----
+  function roadLayers() {
+    var t = performance.now() - build.t0, o = build.opts, lines = o.lines || [], pd = ease(t / 1600), L = [];
+    var heads = lines.map(function (ln) { return along(ln, pd).head; });
+    var col = o.change === 'close' ? [239, 68, 68, 240] : o.change === 'bike_lane' ? [74, 222, 128, 240] : [249, 115, 22, 240];
+    L.push(new deck.PathLayer({ id: 'r-glow', data: heads, getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 18,
+      getColor: [col[0], col[1], col[2], 60], capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
+    L.push(new deck.PathLayer({ id: 'r-line', data: heads, getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 8,
+      getColor: col, capRounded: true, jointRounded: true, updateTriggers: { getPath: pd } }));
+    if (o.bike && o.change !== 'bike_lane' && t > 900) { var bd = ease((t - 900) / 1400);
+      L.push(new deck.PathLayer({ id: 'r-bike', data: lines.map(function (ln) { return along(ln, bd).head; }), getPath: function (d) { return d; },
+        widthUnits: 'pixels', getWidth: 3, getColor: [74, 222, 128, 255], capRounded: true, jointRounded: true, updateTriggers: { getPath: bd } })); }
+    var ends = []; lines.forEach(function (ln) { if (ln.length) { ends.push(ln[0]); } }); if (lines.length) { var last = lines[lines.length - 1]; ends.push(last[last.length - 1]); }
+    if (o.change === 'close' && t > 1200) L.push(new deck.ScatterplotLayer({ id: 'r-ends', data: ends, getPosition: function (p) { return p; },
+      radiusUnits: 'pixels', getRadius: 7 * ease((t - 1200) / 300), getFillColor: [239, 68, 68, 255], stroked: true, getLineColor: [248, 250, 252], lineWidthUnits: 'pixels', getLineWidth: 2, updateTriggers: { getRadius: t } }));
+    return L;
+  }
+  // ---- event surge: rings pulse at the venue, then crowds flow in along the streets ----
+  function eventLayers() {
+    var t = performance.now() - build.t0, o = build.opts, a = build.a, L = [];
+    var rings = [0, 1, 2].map(function (i) { var k = ((t - i * 350) % 1400) / 1400; return { k: t < i * 350 || t > 3800 ? -1 : k }; });
+    L.push(new deck.ScatterplotLayer({ id: 'e-rings', data: rings, getPosition: function () { return a; }, stroked: true, filled: false, radiusUnits: 'meters',
+      lineWidthUnits: 'pixels', getLineWidth: 3, getRadius: function (d) { return 30 + 260 * Math.max(0, d.k); },
+      getLineColor: function (d) { return [250, 204, 21, d.k < 0 ? 0 : Math.round(230 * (1 - d.k))]; }, updateTriggers: { getRadius: t, getLineColor: t } }));
+    L.push(new deck.ColumnLayer({ id: 'e-venue', data: [a], diskResolution: 32, radius: 45, extruded: true, getPosition: function (p) { return p; },
+      getElevation: 14 * ease(t / 700), getFillColor: [250, 204, 21, 230], material: { ambient: .6, diffuse: .6 }, updateTriggers: { getElevation: t } }));
+    var paths = o.paths || [], dots = [];
+    if (t > 600) paths.forEach(function (p, pi) { for (var j = 0; j < 7; j++) { var f = ((t - 600) / 3200 - j * 0.13 - pi * 0.03); if (f > 0 && f < 1) dots.push(along(p, ease(f)).p); } });
+    L.push(new deck.ScatterplotLayer({ id: 'e-crowd', data: dots, getPosition: function (p) { return p; }, radiusUnits: 'pixels', getRadius: 4,
+      getFillColor: [250, 204, 21, 240], stroked: true, getLineColor: [15, 23, 42], lineWidthUnits: 'pixels', getLineWidth: 1, updateTriggers: { getPosition: t } }));
+    L.push(new deck.PathLayer({ id: 'e-paths', data: paths, getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 3,
+      getColor: [250, 204, 21, Math.round(110 * ease((t - 300) / 800))], capRounded: true, jointRounded: true, updateTriggers: { getColor: t } }));
+    return L;
+  }
+  // ---- rezoning: the area fills with the new zone's colour, with its name ----
+  function rezoneLayers() {
+    var t = performance.now() - build.t0, o = build.opts, a = build.a, k = ease(t / 1300), R = o.r * (0.4 + 0.6 * k);
+    var kx = 111320 * Math.cos(a[1] * Math.PI / 180), ring = [];
+    for (var i = 0; i <= 48; i++) { var g = 2 * Math.PI * i / 48; ring.push([a[0] + R * Math.cos(g) / kx, a[1] + R * Math.sin(g) / 110540]); }
+    var c = o.color;
+    return [
+      new deck.SolidPolygonLayer({ id: 'z-fill', data: [{ p: ring }], getPolygon: function (d) { return d.p; }, getFillColor: [c[0], c[1], c[2], Math.round(110 * k)], updateTriggers: { getPolygon: k, getFillColor: k } }),
+      new deck.PathLayer({ id: 'z-edge', data: [ring], getPath: function (d) { return d; }, widthUnits: 'pixels', getWidth: 3, getColor: [c[0], c[1], c[2], Math.round(255 * k)],
+        getDashArray: [6, 4], updateTriggers: { getPath: k, getColor: k } }),
+      new deck.TextLayer({ id: 'z-label', data: [{ p: a, s: o.label }], getPosition: function (d) { return d.p; }, getText: function (d) { return d.s; },
+        getSize: 16, getColor: [248, 250, 252, Math.round(255 * ease((t - 600) / 500))], getBackgroundColor: [15, 23, 42, Math.round(220 * ease((t - 600) / 500))], background: true,
+        backgroundPadding: [8, 5], fontWeight: 700, fontFamily: 'Inter, system-ui, sans-serif', updateTriggers: { getColor: t, getBackgroundColor: t } })
+    ];
+  }
   function boxMesh(parts) {                  // parts: [[cx, cy, cz, sx, sy, sz], ...] -> one mesh
     var P = [], N = [];
     parts.forEach(function (b) { var x0 = b[0] - b[3] / 2, x1 = b[0] + b[3] / 2, y0 = b[1] - b[4] / 2, y1 = b[1] + b[4] / 2, z0 = b[2] - b[5] / 2, z1 = b[2] + b[5] / 2;
@@ -1031,7 +1112,7 @@ var mapView = (function () {
     q(v[4],v[5],v[6],v[7],[0,0,1]); q(v[0],v[1],v[5],v[4],[0,-1,0]); q(v[2],v[3],v[7],v[6],[0,1,0]); q(v[1],v[2],v[6],v[5],[1,0,0]); q(v[3],v[0],v[4],v[7],[-1,0,0]);
     return { attributes: { positions: { value: new Float32Array(P), size: 3 }, normals: { value: new Float32Array(N), size: 3 } } };
   })();
-  function buildLoop() { if (!build) return; render(); if (!build.ready || performance.now() - build.t0 < DRAW + DRIVE + 600) requestAnimationFrame(buildLoop); }
+  function buildLoop() { if (!build) return; render(); if (!build.ready || performance.now() - build.t0 < (build.kind === 'event' ? 4600 : DRAW + DRIVE + 600)) requestAnimationFrame(buildLoop); }
   function cached(name, key, fn) { if (memo[name] && memo[name].key === key) return memo[name].v; var v = fn(); memo[name] = { key: key, v: v }; return v; }
 
 
@@ -1212,17 +1293,27 @@ var mapView = (function () {
       var left = document.getElementById('app').classList.contains('has-blocks') ? 400 : 60;
       var pad = { top: 140, bottom: 140, left: left, right: 460 };
       var cam = map.cameraForBounds([lo, hi], { padding: pad, maxZoom: 16 }) || {};
-      if (kind === 'building') map.easeTo({ center: a, zoom: 17.2, pitch: 58, bearing: map.getBearing(), offset: [(left - 460) / 2, 60], duration: 800 });
+      if (kind === 'road' && opts.ends) { var cr = map.cameraForBounds([[Math.min(opts.ends[0][0], opts.ends[1][0]), Math.min(opts.ends[0][1], opts.ends[1][1])], [Math.max(opts.ends[0][0], opts.ends[1][0]), Math.max(opts.ends[0][1], opts.ends[1][1])]], { padding: pad, maxZoom: 16.5 }) || {};
+        map.easeTo({ center: cr.center || a, zoom: Math.min((cr.zoom || 16) - 0.3, 16.5), pitch: 50, bearing: map.getBearing(), duration: 700 }); }
+      else if (kind === 'road' || kind === 'rezone') map.easeTo({ center: a, zoom: 16, pitch: 50, bearing: map.getBearing(), offset: [(left - 460) / 2, 40], duration: 700 });
+      else if (kind === 'event') map.easeTo({ center: a, zoom: 15.2, pitch: 50, bearing: map.getBearing(), offset: [(left - 460) / 2, 40], duration: 700 });
+      else if (kind === 'building') map.easeTo({ center: a, zoom: 17.2, pitch: 58, bearing: map.getBearing(), offset: [(left - 460) / 2, 60], duration: 800 });
       else map.easeTo({ center: cam.center || a, zoom: Math.min((cam.zoom || 16) - 0.4, 16), pitch: kind === 'drone' ? 60 : 50, bearing: map.getBearing(), duration: 700 });
       if (kind === 'building') { var cb = map.cameraForBounds([[a[0] - .002, a[1] - .0015], [a[0] + .002, a[1] + .0015]], { padding: pad, maxZoom: 17 }) || {}; cam = cb; }
       var go = function () { if (build !== B || B.ready) return; if (b && kind === 'transit') { try { B.path = roadPath(a, b); } catch (e) { B.path = null; } }
+        if (kind === 'road') { var ls = [];
+          if (opts.ends) { var rp = null; try { rp = roadPath(opts.ends[0], opts.ends[1]); } catch (e) {} ls = [rp || opts.ends]; }
+          else { try { ls = streetNear(a, opts.street, 320); } catch (e) {} if (!ls.length) ls = [[[a[0] - .002, a[1]], [a[0] + .002, a[1]]]]; }
+          opts.lines = ls; }
+        if (kind === 'event') { var org = []; for (var oi = 0; oi < 8; oi++) { var g = 2 * Math.PI * oi / 8 + .3; org.push([a[0] + 750 * Math.cos(g) / (111320 * Math.cos(a[1] * Math.PI / 180)), a[1] + 750 * Math.sin(g) / 110540]); }
+          try { opts.paths = roadPathsTo(a, org); } catch (e) { opts.paths = []; } }
         if (kind === 'building') { var sp = null; try { sp = openSpot(a, opts.w || 40, opts.d || 28); } catch (e) {}
           if (sp) { B.a = sp; opts.poly = footprint(sp, opts.w || 40, opts.d || 28, opts.ang || 0); B.moved = Math.round(Math.hypot((sp[0] - a[0]) * 111320 * Math.cos(a[1] * Math.PI / 180), (sp[1] - a[1]) * 110540)); if (B.moved > 25) map.easeTo({ center: sp, offset: [(left - 460) / 2, 60], duration: 500 }); } }
         B.ready = true; B.t0 = performance.now(); };
       map.once('moveend', function () { map.once('idle', go); setTimeout(go, 900); });   // street tiles for the framed view are loaded by then
       setTimeout(go, 2000);
       requestAnimationFrame(buildLoop);
-      return 1300 + (kind === 'building' ? 2100 : b ? DRAW + DRIVE : RISE + 300);
+      return 1300 + (kind === 'building' ? 2100 : kind === 'road' ? 2600 : kind === 'event' ? 3600 : kind === 'rezone' ? 1900 : b ? DRAW + DRIVE : RISE + 300);
     },
     clearBuild: function () { build = null; render(); },
     lastBuild: function () { return build && { a: build.a, moved: build.moved || 0 }; },
@@ -1605,6 +1696,10 @@ var PRESET_LL={ michigan_14th:[-83.0789,42.3306], bagley_16th:[-83.0806,42.3262]
 function presetOf(a,id){ var el=body.querySelector('[data-k="'+a.action_id+'.'+id+'"]'), c=(a.constraints||[]).filter(function(x){return x.id===id;})[0]; if(!c) return null;
   var v=c.value; if(el){ var lab=el.tagName==='SELECT'?el.value:(el.querySelector('[aria-pressed="true"]')||{}).textContent; var m=(c.options||[]).filter(function(o){return o.label===lab;})[0]; if(m) v=m.value; }
   return PRESET_LL[v]||null; }
+var PRESET_ROAD={ michigan_trumbull_14th:[[-83.0679,42.3318],[-83.0789,42.3306]], vernor_w:[[-83.0790,42.3255],[-83.0990,42.3190]], trumbull:[[-83.0676,42.3318],[-83.0705,42.3440]] };
+var ZONE_COL={ R3:[74,222,128], R5:[250,204,21], B4:[167,139,250], SD2:[45,212,191] };
+function presetVal(a,id){ var c=(a.constraints||[]).filter(function(x){return x.id===id;})[0]; if(!c) return null; var el=body.querySelector('[data-k="'+a.action_id+'.'+id+'"]'), v=c.value;
+  if(el){ var lab=el.tagName==='SELECT'?el.value:(el.querySelector('[aria-pressed="true"]')||{}).textContent; var m=(c.options||[]).filter(function(o){return o.label===lab;})[0]; if(m) v=m.value; } return v; }
 function valOf(a,id){ var c=(a.constraints||[]).filter(function(x){return x.id===id;})[0]; if(!c) return null;
   var el=body.querySelector('[data-k="'+a.action_id+'.'+id+'"]');
   if(el && el.querySelector('output')) return +el.querySelector('output').dataset.v;
@@ -1623,6 +1718,17 @@ function playProposal(){
   var dr=acts.filter(function(x){ return x.type==='add_drone_route'; })[0];
   if(dr){ var a0=placeOf(dr,'from')||presetOf(dr,'hub'), b0=placeOf(dr,'to')||placeOf(dr,'where');
     if(a0&&b0){ var ft=+valOf(dr,'altitude_ft')||200; return mapView.playBuild('drone',a0,b0,{alt:Math.max(30,Math.min(150,ft*0.3048))}); } }
+  var rd=acts.filter(function(x){ return x.type==='modify_road'; })[0];
+  if(rd){ var ch=presetVal(rd,'change')||'remove_lanes', bk=presetVal(rd,'bike_lane'), bike=bk===true||bk==='true'||ch==='bike_lane';
+    var wp=placeOf(rd,'where'), inp=body.querySelector('input[data-k="'+rd.action_id+'.where"]'), nm=inp&&inp.value?inp.value.split(/\s*(?:&| and | between | from )\s*/i)[0]:'';
+    if(wp) return mapView.playBuild('road',wp,null,{street:nm,change:ch,bike:bike});
+    var ends=PRESET_ROAD[presetVal(rd,'street')]; if(ends) return mapView.playBuild('road',[(ends[0][0]+ends[1][0])/2,(ends[0][1]+ends[1][1])/2],null,{ends:ends,change:ch,bike:bike}); }
+  var ev=acts.filter(function(x){ return x.type==='add_event_surge'; })[0];
+  if(ev){ var vp=placeOf(ev,'where')||presetOf(ev,'site'); if(vp) return mapView.playBuild('event',vp,null,{}); }
+  var rz=acts.filter(function(x){ return x.type==='rezone'; })[0];
+  if(rz){ var zp=placeOf(rz,'where'); if(zp){ var z=presetVal(rz,'new_zone')||'SD2', zc=(rz.constraints||[]).filter(function(x){return x.id==='new_zone';})[0];
+    var zl=zc&&(zc.options||[]).filter(function(o){return o.value===z;})[0];
+    return mapView.playBuild('rezone',zp,null,{r:180,color:ZONE_COL[z]||[56,189,248],label:'Rezoned: '+(zl?zl.label:z)}); } }
   return 0;
 }
 function syncRoute(){
