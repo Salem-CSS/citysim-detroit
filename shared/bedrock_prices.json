@@ -5,6 +5,7 @@
   "models": {
     "amazon.nova-lite-v1:0": {"input": 0.06, "output": 0.24, "usagetype": "USE2-NovaLite-input-tokens / -output-tokens"},
     "amazon.nova-pro-v1:0": {"input": 0.80, "output": 3.20, "usagetype": "USE2-NovaPro-input-tokens / -output-tokens"},
-    "amazon.nova-2-lite-v1:0": {"input": 0.33, "output": 2.75, "usagetype": "USE2-Nova2.0Lite-input-tokens / -output-tokens"}
+    "amazon.nova-2-lite-v1:0": {"input": 0.33, "output": 2.75, "usagetype": "USE2-Nova2.0Lite-input-tokens / -output-tokens"},
+    "anthropic.claude-haiku-5-5": {"input": 0.11, "output": 0.55, "usagetype": "USE2-MP:USE2_input_tokens_standard-Units / USE2_output_tokens_standard-Units (service code AmazonBedrockFoundationModels, standard context; long-context calls are listed at 0.55 / 2.75 and are not covered)"}
   }
 }
