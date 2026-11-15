@@ -11,7 +11,7 @@ REGION="${AWS_REGION:-us-east-1}"
 
 # Package only the backend code (keeps the web tiles out of the Lambda zip).
 rm -rf infra/.build && mkdir -p infra/.build/src
-cp -r agent contracts engine residents infra/.build/src/
+cp -r agent contracts engine residents shared infra/.build/src/
 mkdir -p infra/.build/src/infra && cp infra/__init__.py infra/runs.py infra/.build/src/infra/
 find infra/.build/src -name tests -type d -prune -exec rm -rf {} + -o -name __pycache__ -type d -prune -exec rm -rf {} +
 

@@ -31,11 +31,43 @@ Never commit keys or `.env` files.
 
 No AWS tools on hand? AWS CloudShell (the `>_` icon in the console) has the AWS CLI and SAM preinstalled: `git clone https://github.com/Salem-CSS/citysim-detroit && cd citysim-detroit`.
 
-## 3. Bedrock (once per account, Salem)
+## 3. Bedrock
 
-Bedrock console (us-east-1) → Model access → enable **Amazon Nova Pro** (turns questions into blocks) and **Nova Lite / Nova 2 Lite** (residents). If the account is on the AWS Free plan and Bedrock is blocked, decide whether to upgrade before deploying. Add a $5 budget alert first if you upgrade.
+New accounts can't call Bedrock until AWS finishes verifying them (error: "Your account is currently being verified"). Until then, use **dual-account mode**: the stack runs in the main account and only Bedrock calls go through a second, already-verified account. No code changes; it's one deploy setting.
 
-Check: `aws bedrock-runtime converse --model-id us.amazon.nova-pro-v1:0 --messages '[{"role":"user","content":[{"text":"hi"}]}]' --region us-east-1`
+| | Main account (`574246332084`) | Second account (any verified one) |
+| --- | --- | --- |
+| Runs | Lambdas, API, DynamoDB, Step Functions, S3 | Bedrock calls only |
+| Pays for | everything except Bedrock | Bedrock tokens |
+
+### Dual-account setup (≈10 min)
+
+**A. In the second account** (whoever owns it, signed in to its console):
+
+1. Check Bedrock works there: open CloudShell (`>_` icon, region us-east-1) and run
+   ```bash
+   aws bedrock-runtime converse --model-id us.amazon.nova-pro-v1:0 --region us-east-1 \
+     --messages '[{"role":"user","content":[{"text":"Reply OK"}]}]' --query 'output.message.content[0].text' --output text
+   ```
+   It should print `OK`. If it says "being verified", this account can't help either.
+2. Create the access role: CloudFormation → Create stack → Upload `infra/bedrock-role.yaml` (or in CloudShell after cloning the repo:
+   `aws cloudformation deploy --template-file infra/bedrock-role.yaml --stack-name citysim-bedrock-role --capabilities CAPABILITY_NAMED_IAM --region us-east-1`).
+   Keep `BackendAccountId=574246332084` and `ExternalId=citysim-detroit` unless you change both sides.
+3. Copy the **RoleArn** output (`arn:aws:iam::<second-account-id>:role/citysim-bedrock-access`) and send it to the main-account owner. It's not a secret on its own; the role only trusts the main account and only allows `bedrock:InvokeModel`.
+
+**B. In the main account** (deploy as usual, plus one setting):
+
+```bash
+./infra/deploy.sh salem BedrockRoleArn=arn:aws:iam::<second-account-id>:role/citysim-bedrock-access
+```
+
+Same for `partner` / `main` stacks. The Lambdas then borrow that role for every Bedrock call (`shared/aws.py`).
+
+**C. Test:** `curl -s -X POST "$API/scenario" -H 'content-type: application/json' -d '{"question":"200 drone flights a day from Newlab","districts":[5,6]}' | jq .spec.actions[0].constraints`. An `AccessDenied ... AssumeRole` error means the RoleArn or ExternalId doesn't match; an `AccessDenied ... InvokeModel` error means the second account's Bedrock isn't working (repeat A1).
+
+**Switch back** once the main account is verified: redeploy with `BedrockRoleArn=""`. Then delete the `citysim-bedrock-role` stack in the second account.
+
+**Costs:** Nova Pro / Nova Lite cost fractions of a cent per call; a 2,000-resident run is ~80 calls. The second account's owner should add a $5 budget alert.
 
 ## 4. Deploy your stack
 
@@ -43,8 +75,8 @@ Check: `aws bedrock-runtime converse --model-id us.amazon.nova-pro-v1:0 --messag
 ./infra/deploy.sh salem        # or: partner / main
 ```
 
-It prints the API URL. Model ids and the data bucket are parameters:
-`./infra/deploy.sh salem AgentModelId=us.amazon.nova-pro-v1:0 DataBucket=citysim-data-574246332084`
+It prints the API URL. Model ids, the data bucket and the Bedrock account are parameters:
+`./infra/deploy.sh salem AgentModelId=us.amazon.nova-pro-v1:0 DataBucket=citysim-data-574246332084 BedrockRoleArn=arn:aws:iam::<id>:role/citysim-bedrock-access`
 
 Try it:
 

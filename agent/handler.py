@@ -119,8 +119,8 @@ def build_spec(tool_input: dict, question: str, districts: list[int], parent: di
 
 # ---------- Bedrock ----------
 def ask_model(question: str, parent: dict | None, client=None) -> dict:
-    import boto3
-    client = client or boto3.client("bedrock-runtime")
+    from shared.aws import bedrock_runtime
+    client = client or bedrock_runtime()      # may borrow a role in another account (BEDROCK_ROLE_ARN)
     user = question if not parent else (
         f"Current proposal (edit it, keep what the user doesn't change):\n{json.dumps(parent['actions'])}\n\nFollow-up: {question}")
     resp = client.converse(

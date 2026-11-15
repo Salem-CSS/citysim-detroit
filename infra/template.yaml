@@ -22,9 +22,20 @@ Parameters:
   PersonasPerDistrict:
     Type: Number
     Default: 500
+  BedrockRoleArn:
+    Type: String
+    Default: ""
+    Description: Role in a second AWS account to call Bedrock through (infra/bedrock-role.yaml). Empty = this account.
+  BedrockExternalId:
+    Type: String
+    Default: citysim-detroit
+  BedrockRegion:
+    Type: String
+    Default: us-east-1
 
 Conditions:
   HasDataBucket: !Not [!Equals [!Ref DataBucket, ""]]
+  HasBedrockRole: !Not [!Equals [!Ref BedrockRoleArn, ""]]
 
 Globals:
   Function:
@@ -41,6 +52,9 @@ Globals:
         AGENT_MODEL_ID: !Ref AgentModelId
         RESIDENT_MODEL_ID: !Ref ResidentModelId
         PERSONAS_PER_DISTRICT: !Ref PersonasPerDistrict
+        BEDROCK_ROLE_ARN: !Ref BedrockRoleArn
+        BEDROCK_EXTERNAL_ID: !Ref BedrockExternalId
+        BEDROCK_REGION: !Ref BedrockRegion
 
 Resources:
   Api:
@@ -71,6 +85,10 @@ Resources:
             - Effect: Allow
               Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
               Resource: "*"
+        - !If
+          - HasBedrockRole
+          - Statement: [{Effect: Allow, Action: sts:AssumeRole, Resource: !Ref BedrockRoleArn}]
+          - !Ref AWS::NoValue
       Events:
         Post: {Type: HttpApi, Properties: {ApiId: !Ref Api, Path: /scenario, Method: POST}}
 
@@ -124,6 +142,10 @@ Resources:
             - Effect: Allow
               Action: [bedrock:InvokeModel]
               Resource: "*"
+        - !If
+          - HasBedrockRole
+          - Statement: [{Effect: Allow, Action: sts:AssumeRole, Resource: !Ref BedrockRoleArn}]
+          - !Ref AWS::NoValue
         - !If [HasDataBucket, {S3ReadPolicy: {BucketName: !Ref DataBucket}}, !Ref AWS::NoValue]
 
   AggregateFunction:

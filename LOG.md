@@ -61,6 +61,14 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-14 20:45 ET · Salem (AI) · Agent+Infra
+**Did:** Dual-account mode. Main account (574246332084) is still being verified by AWS, so Bedrock calls are refused there. The stack can now call Bedrock through a role in a second, verified account: `infra/bedrock-role.yaml` (deploy in the second account) + `BedrockRoleArn=` deploy parameter. `shared/aws.py:bedrock_runtime()` borrows the role (cached temporary credentials) or uses this account when the parameter is empty. Steps in AWS_ACCESS.md §3.
+**Files:** shared/{aws.py,tests/test_aws.py}, infra/{template.yaml,bedrock-role.yaml,deploy.sh}, agent/handler.py, residents/batch.py (docstring), AWS_ACCESS.md, LOG.md
+**Contracts changed:** none
+**Decisions:** All Bedrock calls go through `shared.aws.bedrock_runtime()`. Partner: use it in residents/batch.py instead of boto3.client("bedrock-runtime").
+**Blocked / needs:** a verified second account to deploy bedrock-role.yaml and send its RoleArn; then deploy citysim-salem with it.
+**Next:** deploy + test real questions.
+
 ### 2026-11-14 20:35 ET · Salem (AI) · Agent+Infra
 **Did:** Backend skeleton as code. `agent/handler.py` = `POST /scenario`: question → Bedrock (tool call with the action catalog from contracts/actions.json) → values checked against the contract (clamped / defaulted with notes) → draft v2 spec with `from_question` / `assumed` / `edited` sources and a summary built from the values. `infra/template.yaml` (SAM): HTTP API, scenario + run Lambdas, DynamoDB runs table, Step Functions (engine → Map over 25-resident batches, 10 at a time → aggregate). Stubbed steps record `not_implemented` instead of failing. `infra/deploy.sh <stage>` deploys a per-person stack. Prototype calls `/scenario` when `web/prototype/config.js` sets `CITYSIM_API`, and falls back to the offline mock otherwise.
 **Files:** agent/handler.py, agent/tests/test_handler.py, infra/{template.yaml,runs.py,deploy.sh,README.md,__init__.py}, AWS_ACCESS.md, web/prototype/{config.js,index.html}, CLAUDE.md, .gitignore
