@@ -65,6 +65,11 @@ Lanes: `Data`, `Engine`, `Residents`, `Agent+Infra`, `Web`, `Docs`, `Deploy`.
 
 ## Entries
 
+### 2026-11-15 · Salem (AI) · branch salem/frontend-try: map pick snaps to a named road; bus route really follows streets
+- Map pick always lands on a named road: snaps to the nearest point on the closest named road (wider search if needed; asks to click closer if none). Two roads at that point → "A & B" at their meeting point. The field shows only the road name; the snapped point is kept on the input (data-ll) and appended as "(lat, lon)" only in the spec sent to the backend, so the resolver gets an exact point and residents never see coordinates.
+- Road path fix: tile seams left the road graph disconnected, so every path fell back to a straight line. Loose ends now stitch to the nearest node within 25 m; tested Midtown path = 50 points along the streets.
+- Files: web/prototype/index.html only.
+
 ### 2026-11-15 · Salem (AI) · branch salem/frontend-try: bus animation follows the streets
 - The route line and the bus now follow the shortest drivable path over the basemap's own road lines (Dijkstra in the browser, nodes snapped to 4 m so tile seams join; freeways and service roads weighted down). Falls back to a straight line if no path is found. No outside routing service.
 - Files: web/prototype/index.html only.
